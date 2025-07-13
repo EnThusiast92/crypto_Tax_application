@@ -38,7 +38,7 @@ export default function LandingPage() {
         <section 
           className="relative w-full py-20 md:py-32 lg:py-40 bg-cover bg-center bg-fixed"
           style={{backgroundImage: "url('https://placehold.co/1920x1080.png')"}}
-          data-ai-hint="abstract background"
+          data-ai-hint="abstract network"
         >
              <div className="absolute inset-0 bg-background/70 backdrop-blur-sm"></div>
             <div className="container mx-auto px-4 md:px-6 text-center relative z-10">
@@ -81,6 +81,7 @@ export default function LandingPage() {
                     {feature.icon}
                     <h3 className="text-xl font-bold">{feature.title}</h3>
                     <p className="text-muted-foreground">{feature.description}</p>
+
                   </CardContent>
                 </Card>
               ))}
