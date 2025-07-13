@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -15,11 +16,13 @@ import {
   FileText,
   Sparkles,
   Settings,
+  List,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const links = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Transactions', href: '/transactions', icon: List },
   { name: 'Import', href: '/import', icon: Upload },
   { name: 'Reports', href: '/reports', icon: FileText },
   { name: 'Classifier', href: '/classifier', icon: Sparkles },
@@ -62,9 +65,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   if (!isClient) {
+    // Return a placeholder or null on the server to avoid hydration mismatch
     return null;
   }
-
+  
   return (
     <div className="flex min-h-screen w-full bg-muted/40">
       <aside className="hidden md:flex h-screen w-64 flex-col border-r bg-background sticky top-0">
