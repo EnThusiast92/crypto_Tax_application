@@ -97,12 +97,12 @@ export default function LandingPage() {
                        </svg>
                     </div>
                     <Image
-                        src="https://placehold.co/600x600.png"
+                        src="https://images.unsplash.com/photo-1642683213524-6bab7e10394f?q=80&w=600"
                         alt="Crypto illustration"
                         width={600}
                         height={600}
                         className="rounded-2xl"
-                        data-ai-hint="crypto coin"
+                        data-ai-hint="crypto illustration"
                     />
                     <div className="absolute -bottom-16 left-0 w-20 h-20">
                        <svg viewBox="0 0 100 100" className="text-primary-foreground text-glow-hard opacity-70">
