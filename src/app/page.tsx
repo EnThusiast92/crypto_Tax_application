@@ -41,7 +41,7 @@ export default function LandingPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
               
               {/* Left Content */}
-              <div className="flex flex-col justify-center space-y-6 lg:pl-8">
+              <div className="flex flex-col justify-center space-y-6 lg:pl-16">
                 <div className="space-y-4">
                   <h1 className="text-5xl font-bold tracking-tighter sm:text-6xl md:text-7xl text-glow">
                     Crypto Taxes, <br/> <span className="text-primary">Simplified.</span>
