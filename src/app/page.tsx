@@ -47,7 +47,7 @@ export default function LandingPage() {
                     Crypto Taxes, <br/> <span className="text-primary">Simplified.</span>
                   </h1>
                   <p className="max-w-[600px] text-muted-foreground md:text-lg">
-                    Stop stressing over spreadsheets. TaxWise uses AI to automate your crypto tax reporting, ensuring accuracy and compliance.
+                    Take control of your crypto taxes. TaxWise delivers accurate reports for effortless compliance.
                   </p>
                   <div className="flex items-center gap-4 pt-2 text-muted-foreground">
                     <CheckCircle className="h-5 w-5 text-accent" />
