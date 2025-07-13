@@ -5,12 +5,12 @@ import React from 'react';
 import Image from 'next/image';
 
 const paymentMethods = [
-  { name: 'Visa', src: '/assets/visa.svg', width: 64, height: 40 },
-  { name: 'Mastercard', src: '/assets/mastercard.svg', width: 64, height: 40 },
-  { name: 'PayPal', src: '/assets/paypal.svg', width: 64, height: 40 },
-  { name: 'Bitcoin', src: 'https://i.imgur.com/k2GwhT0.png', width: 32, height: 32, unoptimized: true },
-  { name: 'Ethereum', src: '/assets/ethereum.svg', width: 64, height: 40 },
-  { name: 'USDT', src: 'https://i.imgur.com/2sL1iTj.png', width: 32, height: 32, unoptimized: true },
+  { name: 'Visa', src: '/assets/visa.svg', width: 64, height: 40, isSvg: true },
+  { name: 'Mastercard', src: '/assets/mastercard.svg', width: 64, height: 40, isSvg: true },
+  { name: 'PayPal', src: '/assets/paypal.svg', width: 64, height: 40, isSvg: true },
+  { name: 'Bitcoin', src: 'https://i.imgur.com/k2GwhT0.png', width: 32, height: 32, isSvg: false },
+  { name: 'Ethereum', src: '/assets/ethereum.svg', width: 64, height: 40, isSvg: true },
+  { name: 'USDT', src: 'https://i.imgur.com/2sL1iTj.png', width: 32, height: 32, isSvg: false },
 ];
 
 export function PaymentProviders() {
@@ -26,7 +26,7 @@ export function PaymentProviders() {
               width={method.width}
               height={method.height}
               className="object-contain"
-              unoptimized={!!method.unoptimized}
+              unoptimized={!method.isSvg}
             />
           </div>
         ))}
