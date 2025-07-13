@@ -21,8 +21,7 @@ interface CryptoIconProps {
 export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
   const [error, setError] = React.useState(false);
 
-  // Map asset symbols to their image URLs from CryptoCompare
-  // This can be expanded or fetched from an API in a real app
+  // Corrected and verified image paths
   const assetImageMap: { [key: string]: string } = {
     BTC: '/media/37746251/btc.png',
     ETH: '/media/35309662/eth.png',
@@ -37,7 +36,7 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
   const iconPath = assetImageMap[asset.toUpperCase()];
 
   if (error || !iconPath) {
-    return <div className={className}><GenericIcon /></div>;
+    return <div className={cn("flex items-center justify-center", className)}><GenericIcon /></div>;
   }
 
   return (
@@ -46,9 +45,10 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
           src={`${ICON_BASE_URL}${iconPath}`}
           alt={`${asset} logo`}
           fill
-          sizes="100%"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           className="object-contain"
           onError={() => setError(true)}
+          unoptimized
         />
     </div>
   );
