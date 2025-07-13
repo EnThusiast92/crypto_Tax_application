@@ -32,7 +32,6 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
     LINK: '/media/37746248/link.png',
     USDC: '/media/37746338/usdc.png',
     JTO: '/media/44064431/jto.png',
-    // Add other assets here
   };
   
   const iconPath = assetImageMap[asset.toUpperCase()];
