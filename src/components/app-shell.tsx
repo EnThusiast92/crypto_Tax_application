@@ -21,7 +21,7 @@ import {
 import { cn } from '@/lib/utils';
 
 const links = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Transactions', href: '/transactions', icon: List },
   { name: 'Import', href: '/import', icon: Upload },
   { name: 'Reports', href: '/reports', icon: FileText },
@@ -74,7 +74,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <aside className="hidden md:flex h-screen w-64 flex-col border-r bg-background sticky top-0">
         <div className="flex h-full max-h-screen flex-col gap-2">
           <div className="flex h-16 items-center border-b px-6">
-            <Link href="/" className="flex items-center gap-2 font-semibold">
+            <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-primary">
                   <path d="M12 2L2 7V17L12 22L22 17V7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="neon-purple-text" />
                   <path d="M2 7L12 12L22 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="neon-purple-text"/>
@@ -106,7 +106,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <SheetContent side="left" className="w-full max-w-xs bg-background p-0">
               <div className="flex h-full max-h-screen flex-col gap-2">
                 <div className="flex h-16 items-center border-b px-6">
-                   <Link href="/" className="flex items-center gap-2 font-semibold">
+                   <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-primary">
                         <path d="M12 2L2 7V17L12 22L22 17V7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="neon-purple-text" />
                         <path d="M2 7L12 12L22 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="neon-purple-text"/>
