@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -55,6 +56,9 @@ export function AddTransactionDialog({
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionSchema),
     defaultValues: {
+      asset: '',
+      quantity: 0,
+      price: 0,
       date: new Date().toISOString().split('T')[0],
       type: 'Buy',
       exchange: 'Coinbase',
