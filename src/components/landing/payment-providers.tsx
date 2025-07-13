@@ -9,7 +9,7 @@ const paymentMethods = [
   { name: 'Mastercard', src: '/assets/mastercard.svg' },
   { name: 'PayPal', src: '/assets/paypal.svg' },
   { name: 'Bitcoin', src: 'https://i.imgur.com/k2GwhT0.png', unoptimized: true },
-  { name: 'Ethereum', src: 'https://i.imgur.com/D4s2MAV.png', unoptimized: true },
+  { name: 'Ethereum', src: '/assets/ethereum.svg' },
   { name: 'USDT', src: 'https://i.imgur.com/62QCcU3.png', unoptimized: true },
 ];
 
@@ -23,7 +23,7 @@ export function PaymentProviders() {
             <Image
               src={method.src}
               alt={`${method.name} logo`}
-              width={method.name === 'Bitcoin' || method.name === 'Ethereum' || method.name === 'USDT' ? 32 : 48}
+              width={method.name === 'Bitcoin' || method.name === 'USDT' ? 32 : 48}
               height={32}
               className="object-contain h-8 w-auto"
               unoptimized={!!method.unoptimized}
