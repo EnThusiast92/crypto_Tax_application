@@ -1,11 +1,18 @@
-import { statCards, transactions } from '@/lib/data';
+'use client';
+
+import * as React from 'react';
+import { statCards } from '@/lib/data';
 import { StatCard } from '@/components/dashboard/stat-card';
 import { TransactionsTable } from '@/components/dashboard/transactions-table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileDown } from 'lucide-react';
+import { useTransactions } from '@/context/transactions-context';
 
 export default function DashboardPage() {
+  const { transactions } = useTransactions();
+  const recentTransactions = transactions.slice(0, 5);
+
   return (
     <div className="flex flex-col gap-8 animate-in fade-in-0 duration-1000">
       <header>
@@ -31,7 +38,7 @@ export default function DashboardPage() {
             </Button>
           </CardHeader>
           <CardContent>
-            <TransactionsTable data={transactions} />
+            <TransactionsTable data={recentTransactions} />
           </CardContent>
         </Card>
       </div>
