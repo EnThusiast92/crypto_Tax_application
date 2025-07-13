@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -12,17 +13,18 @@ import {
 
 const SolanaIcon = () => (
     <svg role="img" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" className="h-full w-full">
-      <defs>
-        <linearGradient id="solana-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style={{stopColor: '#9945FF'}} />
-          <stop offset="100%" style={{stopColor: '#14F195'}} />
-        </linearGradient>
-      </defs>
-      <path d="M68.23 34.84c-3.53-6.1-9.35-8.8-14.88-7.22-5.52 1.58-9.15 6.33-12.68 12.43-3.53 6.1-5.45 11.23-3.87 16.75s6.33 9.15 12.43 12.68c6.1 3.53 11.23 5.45 16.75 3.87 5.53-1.58 9.15-6.33 12.68-12.43 3.53-6.1 5.45-11.23 3.87-16.75s-6.33-9.15-12.43-12.68Zm-4.9 23.32c-3.13 5.4-8.1 7.6-12.85 6.22-4.75-1.37-7.85-5.4-10.98-10.8-3.13-5.4-4.52-10.05-3.15-14.8 1.37-4.75 5.4-7.85 10.8-10.98s10.05-4.52 14.8-3.15c4.75 1.37 7.85 5.4 10.98 10.8 3.13 5.4 4.52 10.05 3.15 14.8-1.37 4.75-5.4 7.85-10.8 10.98Zm-5.3-26.2-1.7 2.94c-3.13-1.8-6.42-2.8-9.74-2.8-5.32 0-9.42 2.2-9.42 6.13 0 2.95 2.1 4.8 4.6 6.03l1.8 1.08c4.27 2.5 7.1 4.8 7.1 9.4 0 5.17-3.8 8.6-10.1 8.6-4.63 0-8.5-1.9-11.37-3.9l-1.6 2.9c3.25 2.2 7.3 3.5 11.8 3.5 6.53 0 11.8-3.2 11.8-9.4 0-3.62-2.2-5.8-5.2-7.5l-1.8-1.08c-3.5-2.1-5.6-3.9-5.6-7.3 0-3.5 2.9-5.4 8.2-5.4 3.7 0 6.9 1 9.6 2.5Z" fill="url(#solana-gradient)"></path>
-      <path d="m142.23 75.84-1.7 2.94c-3.13-1.8-6.42-2.8-9.74-2.8-5.32 0-9.42 2.2-9.42 6.13 0 2.95 2.1 4.8 4.6 6.03l1.8 1.08c4.27 2.5 7.1 4.8 7.1 9.4 0 5.17-3.8 8.6-10.1 8.6-4.63 0-8.5-1.9-11.37-3.9l-1.6 2.9c3.25 2.2 7.3 3.5 11.8 3.5 6.53 0 11.8-3.2 11.8-9.4 0-3.62-2.2-5.8-5.2-7.5l-1.8-1.08c-3.5-2.1-5.6-3.9-5.6-7.3 0-3.5 2.9-5.4 8.2-5.4 3.7 0 6.9 1 9.6 2.5Z" fill="#14F195"></path>
-      <path d="M189 74h-4.2l-5.6 15.1-5.9-15.1h-4.2l8 20.9h4l8-20.9Z" fill="#14F195"></path>
+        <defs>
+            <linearGradient id="solana_gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style={{stopColor: 'rgb(0, 255, 163)', stopOpacity: 1}} />
+                <stop offset="100%" style={{stopColor: 'rgb(220, 31, 255)', stopOpacity: 1}} />
+            </linearGradient>
+        </defs>
+        <path d="M68.32,382.52,214,44.25a12.33,12.33,0,0,1,22.86-1.5L382.52,316.09a12.33,12.33,0,0,1-10.77,18.5H233.91L83.14,378.84A12.33,12.33,0,0,1,68.32,382.52Z" fill="url(#solana_gradient)"></path>
+        <path d="M331.68,17.48,186,271.75a12.33,12.33,0,0,1-22.86,1.5L17.48,83.91a12.33,12.33,0,0,1,10.77-18.5H166.09L316.86,21.16A12.33,12.33,0,0,1,331.68,17.48Z" fill="url(#solana_gradient)"></path>
+        <path d="M122.4,147.23,243.66,111.14a12.33,12.33,0,0,1,13.6,9.54l36.3,121.24a12.33,12.33,0,0,1-9.54,13.6L162.75,291.6a12.33,12.33,0,0,1-13.6-9.54L112.85,160.82A12.33,12.33,0,0,1,122.4,147.23Z" fill="#000000"></path>
     </svg>
 );
+
 
 const paymentMethods = [
   { name: 'Visa', icon: faCcVisa },
@@ -30,7 +32,7 @@ const paymentMethods = [
   { name: 'PayPal', icon: faCcPaypal },
   { name: 'Bitcoin', icon: faBitcoin },
   { name: 'Ethereum', icon: faEthereum },
-  { name: 'Solana', icon: SolanaIcon, isComponent: true },
+  { name: 'Solana', icon: SolanaIcon },
 ];
 
 export function PaymentProviders() {
@@ -39,8 +41,8 @@ export function PaymentProviders() {
       <h3 className="text-sm font-medium text-muted-foreground">Accepted Payment Methods</h3>
       <div className="flex flex-wrap justify-center md:justify-center items-center gap-x-6 gap-y-4 text-3xl text-gray-400">
         {paymentMethods.map((method) => (
-          <div key={method.name} className="opacity-80 hover:opacity-100 transition-opacity flex items-center h-8">
-            {method.isComponent ? <method.icon /> : <FontAwesomeIcon icon={method.icon} />}
+          <div key={method.name} className="opacity-80 hover:opacity-100 transition-opacity flex items-center h-8 w-12">
+            {typeof method.icon === 'function' ? <method.icon /> : <FontAwesomeIcon icon={method.icon} />}
           </div>
         ))}
       </div>
