@@ -5,12 +5,12 @@ import React from 'react';
 import Image from 'next/image';
 
 const paymentMethods = [
-  { name: 'Visa', src: 'https://i.imgur.com/TV2oO8c.png' },
-  { name: 'Mastercard', src: 'https://i.imgur.com/7OF2pLg.png' },
-  { name: 'PayPal', src: 'https://i.imgur.com/J8TRh1c.png' },
-  { name: 'Bitcoin', src: 'https://i.imgur.com/k2GwhT0.png' },
-  { name: 'Ethereum', src: 'https://i.imgur.com/D4s2MAV.png' },
-  { name: 'USDT', src: 'https://i.imgur.com/62QCcU3.png' },
+  { name: 'Visa', src: '/assets/visa.svg', unoptimized: false },
+  { name: 'Mastercard', src: 'https://i.imgur.com/7OF2pLg.png', unoptimized: true },
+  { name: 'PayPal', src: 'https://i.imgur.com/J8TRh1c.png', unoptimized: true },
+  { name: 'Bitcoin', src: 'https://i.imgur.com/k2GwhT0.png', unoptimized: true },
+  { name: 'Ethereum', src: 'https://i.imgur.com/D4s2MAV.png', unoptimized: true },
+  { name: 'USDT', src: 'https://i.imgur.com/62QCcU3.png', unoptimized: true },
 ];
 
 export function PaymentProviders() {
@@ -26,7 +26,7 @@ export function PaymentProviders() {
               width={48}
               height={32}
               className="object-contain h-full w-auto"
-              unoptimized
+              unoptimized={method.unoptimized}
             />
           </div>
         ))}
