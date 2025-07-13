@@ -67,7 +67,7 @@ export default function LandingPage() {
               {/* Right Image */}
               <div className="relative flex items-center justify-center -mr-24">
                  <Image
-                    src="https://i.imgur.com/nv6SMAS.png"
+                    src="https://i.imgur.com/xt0RaoQ.png"
                     width="700"
                     height="700"
                     alt="Crypto Assets"
