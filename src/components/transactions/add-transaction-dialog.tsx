@@ -31,26 +31,26 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import type { AddTransactionDialogProps } from '@/lib/types';
+
 
 const transactionSchema = z.object({
-  asset: z.string().min(1, 'Asset is required'),
+  asset: z.string().min(1, 'Asset is required').toUpperCase(),
   type: z.enum(['Buy', 'Sell', 'Staking', 'Airdrop', 'Gift']),
   quantity: z.coerce.number().positive('Quantity must be positive'),
   price: z.coerce.number().positive('Price must be positive'),
   date: z.string().min(1, 'Date is required'),
   exchange: z.enum(['Binance', 'Coinbase', 'Kraken', 'Self-custody']),
+  classification: z.string().min(1, 'Classification is required'),
+  fee: z.coerce.number().min(0, 'Fee cannot be negative'),
 });
 
 type TransactionFormValues = z.infer<typeof transactionSchema>;
 
-interface AddTransactionDialogProps {
-  isOpen: boolean;
-  onOpenChange: (isOpen: boolean) => void;
-}
-
 export function AddTransactionDialog({
   isOpen,
   onOpenChange,
+  onAddTransaction,
 }: AddTransactionDialogProps) {
   const { toast } = useToast();
   const form = useForm<TransactionFormValues>({
@@ -59,11 +59,13 @@ export function AddTransactionDialog({
       date: new Date().toISOString().split('T')[0],
       type: 'Buy',
       exchange: 'Coinbase',
+      classification: 'Capital Purchase',
+      fee: 0,
     },
   });
 
   const onSubmit = (data: TransactionFormValues) => {
-    console.log('New Transaction:', data);
+    onAddTransaction(data);
     toast({
       title: 'Transaction Added',
       description: `Successfully added transaction for ${data.quantity} ${data.asset}.`,
@@ -130,7 +132,7 @@ export function AddTransactionDialog({
                     <FormItem>
                         <FormLabel>Quantity</FormLabel>
                         <FormControl>
-                        <Input type="number" placeholder="e.g. 0.5" {...field} />
+                        <Input type="number" step="any" placeholder="e.g. 0.5" {...field} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -143,26 +145,41 @@ export function AddTransactionDialog({
                     <FormItem>
                         <FormLabel>Price per unit (£)</FormLabel>
                         <FormControl>
-                        <Input type="number" placeholder="e.g. 34000" {...field} />
+                        <Input type="number" step="any" placeholder="e.g. 34000" {...field} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
                     )}
                 />
             </div>
-            <FormField
-                control={form.control}
-                name="date"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Date</FormLabel>
-                    <FormControl>
-                        <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                  control={form.control}
+                  name="date"
+                  render={({ field }) => (
+                      <FormItem>
+                      <FormLabel>Date</FormLabel>
+                      <FormControl>
+                          <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                      </FormItem>
+                  )}
+              />
+               <FormField
+                  control={form.control}
+                  name="fee"
+                  render={({ field }) => (
+                  <FormItem>
+                      <FormLabel>Fee (£)</FormLabel>
+                      <FormControl>
+                      <Input type="number" step="any" placeholder="e.g. 5.50" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                  </FormItem>
+                  )}
+              />
+            </div>
             <FormField
                 control={form.control}
                 name="exchange"
@@ -186,6 +203,19 @@ export function AddTransactionDialog({
                     </FormItem>
                 )}
             />
+             <FormField
+                control={form.control}
+                name="classification"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Classification</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. Capital Purchase" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button type="submit">Save Transaction</Button>

@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from 'react';
-import { transactions } from '@/lib/data';
+import { transactions as initialTransactions } from '@/lib/data';
 import { TransactionsTable } from '@/components/dashboard/transactions-table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,9 +16,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import type { Transaction } from '@/lib/types';
 
 export default function TransactionsPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [transactions, setTransactions] = React.useState<Transaction[]>(initialTransactions);
+
+  const handleAddTransaction = (newTransactionData: Omit<Transaction, 'id' | 'value'>) => {
+    const newTransaction: Transaction = {
+      ...newTransactionData,
+      id: `TXN${(transactions.length + 1).toString().padStart(3, '0')}`,
+      value: newTransactionData.quantity * newTransactionData.price,
+    };
+    setTransactions(prevTransactions => [newTransaction, ...prevTransactions]);
+  };
+
 
   return (
     <>
@@ -62,7 +74,11 @@ export default function TransactionsPage() {
           </CardContent>
         </Card>
       </div>
-      <AddTransactionDialog isOpen={isDialogOpen} onOpenChange={setIsDialogOpen} />
+      <AddTransactionDialog 
+        isOpen={isDialogOpen} 
+        onOpenChange={setIsDialogOpen}
+        onAddTransaction={handleAddTransaction}
+      />
     </>
   );
 }

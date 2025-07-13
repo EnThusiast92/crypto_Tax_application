@@ -25,3 +25,9 @@ export type ClassificationResult = {
   suggestedClassification: string;
   confidence: number;
 };
+
+export interface AddTransactionDialogProps {
+  isOpen: boolean;
+  onOpenChange: (isOpen: boolean) => void;
+  onAddTransaction: (data: Omit<Transaction, 'id' | 'value'>) => void;
+}
