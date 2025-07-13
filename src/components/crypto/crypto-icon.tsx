@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 const ICON_BASE_URL = 'https://www.cryptocompare.com';
 
 const GenericIcon = () => (
-    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Generic crypto icon">
       <circle cx="50" cy="50" r="50" fill="hsl(var(--muted))" />
     </svg>
 );
@@ -21,7 +21,6 @@ interface CryptoIconProps {
 export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
   const [error, setError] = React.useState(false);
 
-  // Corrected and verified image paths
   const assetImageMap: { [key: string]: string } = {
     BTC: '/media/37746251/btc.png',
     ETH: '/media/35309662/eth.png',
@@ -31,12 +30,31 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
     LINK: '/media/37746248/link.png',
     USDC: '/media/37746338/usdc.png',
     JTO: '/media/44064431/jto.png',
+    XRP: '/media/37746339/xrp.png',
+    MATIC: '/media/37746733/matic.png',
+    BNB: '/media/40485194/bnb.png',
+    AVAX: '/media/37747059/avax.png',
+    TRX: '/media/37746346/trx.png',
+    SHIB: '/media/37747199/shib.png',
+    TON: '/media/40485458/ton.png',
+    DOT: '/media/37746719/dot.png',
   };
   
-  const iconPath = assetImageMap[asset.toUpperCase()];
+  const upperCaseAsset = asset.toUpperCase();
+  const iconPath = assetImageMap[upperCaseAsset];
+
+  React.useEffect(() => {
+    if (asset && !iconPath) {
+      console.warn(`[CryptoIcon] No icon path found for asset: ${asset}`);
+    }
+  }, [asset, iconPath]);
 
   if (error || !iconPath) {
-    return <div className={cn("flex items-center justify-center", className)}><GenericIcon /></div>;
+    return (
+        <div className={cn("flex items-center justify-center", className)}>
+            <GenericIcon />
+        </div>
+    );
   }
 
   return (
