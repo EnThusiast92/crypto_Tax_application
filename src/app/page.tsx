@@ -45,16 +45,7 @@ export default function LandingPage() {
               <div className="flex flex-col justify-center space-y-6 lg:pl-32">
                 <div className="space-y-4">
                   <h1 className="text-5xl font-bold tracking-tighter sm:text-6xl md:text-7xl">
-                     <TypingAnimation
-                        texts={[
-                          'Crypto Taxes,<br/><span class="text-primary">Simplified.</span>',
-                          'Effortless Crypto<br/><span class="text-primary">Tax Reporting.</span>',
-                          'Stress-Free<br/><span class="text-primary">Tax Compliance.</span>',
-                        ]}
-                        typingSpeed={70}
-                        deletingSpeed={35}
-                        delay={2500}
-                      />
+                     Crypto Taxes,<br/><span className="text-primary">Simplified.</span>
                   </h1>
                   <p className="max-w-[600px] text-muted-foreground md:text-lg">
                     Take control of your crypto taxes. TaxWise delivers accurate reports for effortless compliance.
