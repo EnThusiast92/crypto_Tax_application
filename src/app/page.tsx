@@ -63,10 +63,12 @@ export default function LandingPage() {
             <div className="container mx-auto px-4 md:px-6 grid md:grid-cols-2 gap-16 items-center">
                 <div className="relative flex flex-col items-start space-y-6">
                     <div className="absolute -left-16 top-0 hidden md:flex items-center justify-center transform -rotate-90">
-                        <span className="text-sm text-muted-foreground tracking-widest uppercase">AI Powered - UK</span>
+                        <span className="text-sm text-muted-foreground tracking-widest uppercase">AI POWERED - UK</span>
                     </div>
                      <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tighter text-glow">
-                        Effortless<span className="text-primary-foreground">-</span><br/>Crypto Taxes
+                        Effortless-
+                        <br/>
+                        <span className="text-primary-foreground">Crypto Taxes</span>
                     </h1>
                     <p className="max-w-[500px] text-lg text-muted-foreground">
                         TaxWise uses AI to simplify your crypto tax reporting. Connect your exchanges, import CSVs, and get your compliant tax reports in minutes.
