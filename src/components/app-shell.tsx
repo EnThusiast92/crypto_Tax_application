@@ -19,6 +19,7 @@ import {
   List,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Footer } from '@/components/layout/footer';
 
 const links = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -137,6 +138,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <main className="flex-1 p-6">
           {children}
         </main>
+        <Footer />
       </div>
     </div>
   );
