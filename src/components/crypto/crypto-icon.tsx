@@ -5,7 +5,7 @@ import React from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
-const ICON_BASE_URL = 'https://www.cryptocompare.com';
+const ICON_BASE_URL = 'https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/';
 
 const GenericIcon = () => (
     <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Generic crypto icon">
@@ -21,36 +21,21 @@ interface CryptoIconProps {
 export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
   const [error, setError] = React.useState(false);
 
-  const assetImageMap: { [key: string]: string } = {
-    BTC: '/media/37746251/btc.png',
-    ETH: '/media/37746238/eth.png',
-    ADA: '/media/37746235/ada.png',
-    SOL: '/media/37747734/sol.png',
-    DOGE: '/media/37746339/doge.png',
-    LINK: '/media/37746248/link.png',
-    USDC: '/media/37746338/usdc.png',
-    JTO: '/media/44064431/jto.png',
-    XRP: '/media/19972/xrp.png',
-    MATIC: '/media/37746733/matic.png',
-    BNB: '/media/40485194/bnb.png',
-    AVAX: '/media/37747059/avax.png',
-    TRX: '/media/37746346/trx.png',
-    SHIB: '/media/37747199/shib.png',
-    TON: '/media/40485458/ton.png',
-    DOT: '/media/37746719/dot.png',
-  };
-  
-  const upperCaseAsset = asset.toUpperCase();
-  const iconPath = assetImageMap[upperCaseAsset];
-
   React.useEffect(() => {
-    setError(false); // Reset error state when asset changes
-    if (asset && !iconPath) {
-      console.warn(`[CryptoIcon] No icon path found for asset: ${asset}`);
-    }
-  }, [asset, iconPath]);
+    setError(false);
+  }, [asset]);
 
-  if (error || !iconPath) {
+  if (!asset) {
+    return (
+        <div className={cn("flex items-center justify-center", className)}>
+            <GenericIcon />
+        </div>
+    );
+  }
+
+  const iconUrl = `${ICON_BASE_URL}${asset.toLowerCase()}.png`;
+
+  if (error) {
     return (
         <div className={cn("flex items-center justify-center", className)}>
             <GenericIcon />
@@ -61,7 +46,7 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
   return (
     <div className={cn("relative", className)}>
        <Image
-          src={`${ICON_BASE_URL}${iconPath}`}
+          src={iconUrl}
           alt={`${asset} logo`}
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
