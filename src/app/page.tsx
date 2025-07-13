@@ -10,7 +10,7 @@ export default function LandingPage() {
   return (
     <div className="flex flex-col min-h-dvh bg-background text-foreground overflow-hidden">
       {/* Background Gradient */}
-      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-primary/20 via-transparent to-transparent z-0"></div>
+      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-primary/20 via-transparent to-transparent z-0"></div>
       
       <div className="relative z-10 flex flex-col flex-1">
         {/* Header */}
