@@ -6,11 +6,11 @@ import Image from 'next/image';
 
 const paymentMethods = [
   { name: 'Visa', src: 'https://i.imgur.com/TV2oO8c.png' },
-  { name: 'Mastercard', src: '/assets/mastercard.svg' },
-  { name: 'PayPal', src: '/assets/paypal.svg' },
-  { name: 'Bitcoin', src: '/assets/bitcoin.svg' },
-  { name: 'Ethereum', src: '/assets/ethereum.svg' },
-  { name: 'USDT', src: '/assets/usdt.svg' },
+  { name: 'Mastercard', src: 'https://i.imgur.com/7OF2pLg.png' },
+  { name: 'PayPal', src: 'https://i.imgur.com/J8TRh1c.png' },
+  { name: 'Bitcoin', src: 'https://i.imgur.com/k2GwhT0.png' },
+  { name: 'Ethereum', src: 'https://i.imgur.com/D4s2MAV.png' },
+  { name: 'USDT', src: 'https://i.imgur.com/62QCcU3.png' },
 ];
 
 export function PaymentProviders() {
@@ -32,7 +32,7 @@ export function PaymentProviders() {
         ))}
       </div>
       <p className="text-xs text-muted-foreground/50 mt-2">
-        Icons by <a href="https://www.flaticon.com" title="flaticon" className="hover:underline">Flaticon</a>
+        Icons sourced from various platforms.
       </p>
     </div>
   );
