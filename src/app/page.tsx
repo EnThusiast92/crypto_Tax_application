@@ -43,7 +43,7 @@ export default function LandingPage() {
               {/* Left Content */}
               <div className="flex flex-col justify-center space-y-6 lg:pl-16">
                 <div className="space-y-4">
-                  <h1 className="text-5xl font-bold tracking-tighter sm:text-6xl md:text-7xl text-glow">
+                  <h1 className="text-5xl font-bold tracking-tighter sm:text-6xl md:text-7xl">
                     Crypto Taxes, <br/> <span className="text-primary">Simplified.</span>
                   </h1>
                   <p className="max-w-[600px] text-muted-foreground md:text-lg">
