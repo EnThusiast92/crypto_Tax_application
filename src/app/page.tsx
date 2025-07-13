@@ -42,10 +42,18 @@ export default function LandingPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
               
               {/* Left Content */}
-              <div className="flex flex-col justify-center space-y-6 lg:pl-24">
+              <div className="flex flex-col justify-center space-y-6 lg:pl-32">
                 <div className="space-y-4">
                   <h1 className="text-5xl font-bold tracking-tighter sm:text-6xl md:text-7xl">
-                    Crypto Taxes, <br/> <span className="text-primary">Simplified.</span>
+                     <TypingAnimation
+                        texts={[
+                          'Effortless Crypto<br/><span class="text-primary">Tax Reporting.</span>',
+                          'Stress-Free<br/><span class="text-primary">Tax Compliance.</span>',
+                        ]}
+                        typingSpeed={50}
+                        deletingSpeed={25}
+                        delay={2500}
+                      />
                   </h1>
                   <p className="max-w-[600px] text-muted-foreground md:text-lg">
                     Take control of your crypto taxes. TaxWise delivers accurate reports for effortless compliance.
@@ -76,7 +84,7 @@ export default function LandingPage() {
               </div>
 
               {/* Right Image */}
-              <div className="relative flex items-center justify-center -mr-48">
+              <div className="relative flex items-center justify-center -mr-64">
                  <Image
                     src="https://i.imgur.com/xt0RaoQ.png"
                     width="700"

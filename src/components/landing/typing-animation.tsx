@@ -53,8 +53,9 @@ export function TypingAnimation({
   }, [text, handleTyping, isDeleting, deletingSpeed, typingSpeed]);
 
   return (
-    <p className={cn('inline-block border-r-2 border-r-transparent caret-blink', className)}>
-      {text}&nbsp;
-    </p>
+    <span
+      className={cn('inline-block border-r-2 border-r-transparent caret-blink', className)}
+      dangerouslySetInnerHTML={{ __html: text + '&nbsp;' }}
+    />
   );
 }
