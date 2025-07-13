@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Facebook, Twitter, Instagram, ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react';
 import Image from 'next/image';
+import { TypingAnimation } from '@/components/landing/typing-animation';
 
 export default function LandingPage() {
   return (
@@ -53,7 +54,10 @@ export default function LandingPage() {
                     <CheckCircle className="h-5 w-5 text-accent" />
                     <div className="flex flex-col sm:flex-row sm:gap-4">
                       <p className="font-medium">Get HMRC Ready reports.</p>
-                      <p className="font-medium">UK Tax Compliant</p>
+                      <TypingAnimation
+                        className="font-medium"
+                        texts={['UK Tax Compliant', 'US Tax Compliant', 'AU Tax Compliant']}
+                      />
                     </div>
                   </div>
                 </div>

@@ -94,4 +94,17 @@
   .neon-icon {
     @apply text-accent drop-shadow-[0_0_5px_hsl(var(--accent))];
   }
+  .caret-blink {
+    animation: blink 1s step-end infinite;
+  }
+
+  @keyframes blink {
+    from,
+    to {
+      border-right-color: transparent;
+    }
+    50% {
+      border-right-color: hsl(var(--foreground));
+    }
+  }
 }
