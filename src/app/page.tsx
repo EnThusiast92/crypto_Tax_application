@@ -35,13 +35,16 @@ export default function LandingPage() {
     <div className="flex flex-col min-h-screen bg-background text-foreground">
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="relative w-full py-20 md:py-32 lg:py-40 overflow-hidden">
-             <div className="absolute inset-0 bg-grid-white/[0.05] bg-center [mask-image:linear-gradient(to_bottom,white,transparent)]"></div>
-             <div className="absolute inset-0 bg-gradient-to-b from-background via-background/80 to-transparent"></div>
+        <section 
+          className="relative w-full py-20 md:py-32 lg:py-40 bg-cover bg-center bg-fixed"
+          style={{backgroundImage: "url('https://placehold.co/1920x1080.png')"}}
+          data-ai-hint="abstract background"
+        >
+             <div className="absolute inset-0 bg-background/70 backdrop-blur-sm"></div>
             <div className="container mx-auto px-4 md:px-6 text-center relative z-10">
                 <div className="flex flex-col items-center space-y-6">
                      <div className="inline-block rounded-lg bg-primary/10 px-3 py-1 text-sm text-primary">
-                        Powered by AI
+                        UK Tax Compliant
                     </div>
                     <h1 className="text-4xl md:text-5xl lg:text-7xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-neutral-400">
                         Effortless Crypto Taxes for the UK
