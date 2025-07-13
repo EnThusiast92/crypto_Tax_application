@@ -38,10 +38,10 @@ export default function LandingPage() {
 
         <main className="flex-1 flex items-center">
           <div className="container px-4 md:px-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
               
               {/* Left Content */}
-              <div className="flex flex-col justify-center space-y-6">
+              <div className="flex flex-col justify-center space-y-6 lg:pl-8">
                 <div className="space-y-4">
                   <h1 className="text-5xl font-bold tracking-tighter sm:text-6xl md:text-7xl text-glow">
                     Crypto Taxes, <br/> <span className="text-primary">Simplified.</span>
@@ -65,13 +65,13 @@ export default function LandingPage() {
               </div>
 
               {/* Right Image */}
-              <div className="relative flex items-center justify-center">
+              <div className="relative flex items-center justify-center -mr-16">
                  <Image
                     src="https://i.imgur.com/GqwhjLj.png"
-                    width="800"
-                    height="800"
+                    width="700"
+                    height="700"
                     alt="Crypto Assets"
-                    className="mx-auto aspect-square overflow-hidden object-contain"
+                    className="aspect-square overflow-hidden object-contain"
                     data-ai-hint="crypto illustration"
                   />
               </div>
