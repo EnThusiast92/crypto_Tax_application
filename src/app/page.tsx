@@ -97,7 +97,7 @@ export default function LandingPage() {
                        </svg>
                     </div>
                     <Image
-                        src="https://placehold.co/600x600.png"
+                        src="https://i.imgur.com/GqwhjLj.png"
                         alt="Crypto illustration"
                         width={600}
                         height={600}
