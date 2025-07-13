@@ -49,7 +49,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     </Button>
                  </div>
             </header>
-            <main className="p-6">{children}</main>
+            <main className="p-6">
+                <div className="mx-auto w-full max-w-screen-2xl">
+                    {children}
+                </div>
+            </main>
         </SidebarInset>
       </div>
     </SidebarProvider>

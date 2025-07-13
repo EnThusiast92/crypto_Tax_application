@@ -8,6 +8,12 @@ import { FileDown } from 'lucide-react';
 export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-8 animate-in fade-in-0 duration-1000">
+      <header>
+        <h1 className="text-3xl font-bold font-headline">Dashboard</h1>
+        <p className="text-muted-foreground">
+          Welcome back! Here's a summary of your crypto tax situation.
+        </p>
+      </header>
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {statCards.map((card, index) => (
           <div key={card.title} className="animate-in fade-in-0 slide-in-from-bottom-5 duration-500" style={{animationDelay: `${index * 100}ms`}}>
