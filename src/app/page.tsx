@@ -62,7 +62,7 @@ export default function LandingPage() {
         <section className="w-full min-h-screen flex items-center justify-center pt-24 pb-12 md:pt-32 lg:pt-40">
             <div className="container mx-auto px-4 md:px-6 grid md:grid-cols-2 gap-16 items-center">
                 <div className="relative flex flex-col items-start space-y-6">
-                    <div className="absolute -left-16 top-0 hidden md:flex items-center justify-center transform -rotate-90">
+                    <div className="absolute -left-20 top-0 hidden md:flex items-center justify-center transform -rotate-90">
                         <span className="text-sm text-muted-foreground tracking-widest uppercase">AI POWERED - UK</span>
                     </div>
                      <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tighter text-glow">
