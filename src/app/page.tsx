@@ -36,7 +36,7 @@ export default function LandingPage() {
       <main className="flex-1">
         {/* Hero Section */}
         <section 
-          className="relative w-full py-20 md:py-32 lg:py-40 bg-cover bg-center bg-fixed"
+          className="relative w-full py-20 md:py-32 lg:py-40 bg-cover bg-center"
           style={{backgroundImage: "url('https://placehold.co/1920x1080.png')"}}
           data-ai-hint="abstract network"
         >
