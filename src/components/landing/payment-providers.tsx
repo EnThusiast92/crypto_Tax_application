@@ -5,7 +5,7 @@ import React from 'react';
 import Image from 'next/image';
 
 const paymentMethods = [
-  { name: 'Visa', src: '/assets/visa.svg' },
+  { name: 'Visa', src: 'https://i.imgur.com/TV2oO8c.png' },
   { name: 'Mastercard', src: '/assets/mastercard.svg' },
   { name: 'PayPal', src: '/assets/paypal.svg' },
   { name: 'Bitcoin', src: '/assets/bitcoin.svg' },
