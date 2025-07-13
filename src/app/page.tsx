@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Facebook, Twitter, Instagram, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Facebook, Twitter, Instagram, ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react';
 import Image from 'next/image';
 
 export default function LandingPage() {
@@ -49,6 +49,13 @@ export default function LandingPage() {
                   <p className="max-w-[600px] text-muted-foreground md:text-lg">
                     Stop stressing over spreadsheets. TaxWise uses AI to automate your crypto tax reporting, ensuring accuracy and compliance.
                   </p>
+                  <div className="flex items-center gap-4 pt-2 text-muted-foreground">
+                    <CheckCircle className="h-5 w-5 text-accent" />
+                    <div className="flex flex-col sm:flex-row sm:gap-4">
+                      <p className="font-medium">Get HMRC Ready reports.</p>
+                      <p className="font-medium">UK Tax Compliant</p>
+                    </div>
+                  </div>
                 </div>
                 <div className="flex flex-col sm:flex-row items-start gap-4">
                   <Button asChild size="lg">
@@ -65,7 +72,7 @@ export default function LandingPage() {
               </div>
 
               {/* Right Image */}
-              <div className="relative flex items-center justify-center -mr-32">
+              <div className="relative flex items-center justify-center -mr-48">
                  <Image
                     src="https://i.imgur.com/xt0RaoQ.png"
                     width="700"
