@@ -23,14 +23,14 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
 
   const assetImageMap: { [key: string]: string } = {
     BTC: '/media/37746251/btc.png',
-    ETH: '/media/35309662/eth.png',
+    ETH: '/media/37746238/eth.png',
     ADA: '/media/37746235/ada.png',
     SOL: '/media/37747734/sol.png',
     DOGE: '/media/37746339/doge.png',
     LINK: '/media/37746248/link.png',
     USDC: '/media/37746338/usdc.png',
     JTO: '/media/44064431/jto.png',
-    XRP: '/media/37746339/xrp.png',
+    XRP: '/media/19972/xrp.png',
     MATIC: '/media/37746733/matic.png',
     BNB: '/media/40485194/bnb.png',
     AVAX: '/media/37747059/avax.png',
@@ -44,6 +44,7 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
   const iconPath = assetImageMap[upperCaseAsset];
 
   React.useEffect(() => {
+    setError(false); // Reset error state when asset changes
     if (asset && !iconPath) {
       console.warn(`[CryptoIcon] No icon path found for asset: ${asset}`);
     }
