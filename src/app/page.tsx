@@ -47,11 +47,12 @@ export default function LandingPage() {
                   <h1 className="text-5xl font-bold tracking-tighter sm:text-6xl md:text-7xl">
                      <TypingAnimation
                         texts={[
+                          'Crypto Taxes,<br/><span class="text-primary">Simplified.</span>',
                           'Effortless Crypto<br/><span class="text-primary">Tax Reporting.</span>',
                           'Stress-Free<br/><span class="text-primary">Tax Compliance.</span>',
                         ]}
-                        typingSpeed={50}
-                        deletingSpeed={25}
+                        typingSpeed={70}
+                        deletingSpeed={35}
                         delay={2500}
                       />
                   </h1>
