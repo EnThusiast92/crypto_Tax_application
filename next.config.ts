@@ -16,6 +16,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'www.cryptocompare.com',
+        port: '',
+        pathname: '/media/**',
+      },
     ],
   },
 };
