@@ -11,7 +11,6 @@ const paymentMethods = [
   { name: 'PayPal', icon: fab.faCcPaypal },
   { name: 'Bitcoin', icon: fab.faBitcoin },
   { name: 'Ethereum', icon: fab.faEthereum },
-  { name: 'Solana', icon: fab.faSolana },
 ];
 
 export function PaymentProviders() {
