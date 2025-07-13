@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Facebook, Twitter, Instagram, ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react';
 import Image from 'next/image';
 import { TypingAnimation } from '@/components/landing/typing-animation';
-import { PaymentProviders } from '@/components/landing/payment-providers';
 
 export default function LandingPage() {
   return (
@@ -91,13 +90,6 @@ export default function LandingPage() {
             </div>
           </div>
         </main>
-
-        {/* Footer Controls */}
-        <footer className="w-full py-6 px-4 md:px-6">
-            <div className="container flex flex-col md:flex-row justify-center items-center gap-6">
-                <PaymentProviders />
-            </div>
-        </footer>
       </div>
     </div>
   );
