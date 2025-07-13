@@ -15,6 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import type { Transaction } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { CryptoIcon } from '@/components/crypto/crypto-icon';
 
 export const columns: ColumnDef<Transaction>[] = [
   {
@@ -62,7 +63,12 @@ export const columns: ColumnDef<Transaction>[] = [
   {
     accessorKey: 'asset',
     header: 'Asset',
-    cell: ({ row }) => <div className="font-bold">{row.getValue('asset')}</div>,
+    cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+            <CryptoIcon asset={row.getValue('asset')} />
+            <span className="font-bold">{row.getValue('asset')}</span>
+        </div>
+    )
   },
   {
     accessorKey: 'value',
