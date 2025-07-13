@@ -5,7 +5,13 @@ import React from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
-const ICON_BASE_URL = 'https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/';
+const GITHUB_ICON_BASE_URL = 'https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/';
+
+// A special map for icons not found in the GitHub library or for overrides.
+const specialIconMap: { [key: string]: string } = {
+  JTO: 'https://www.cryptocompare.com/media/44033842/jto.png',
+  // Add other special cases here if needed in the future
+};
 
 const GenericIcon = () => (
     <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Generic crypto icon">
@@ -32,8 +38,12 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
         </div>
     );
   }
+  
+  const upperCaseAsset = asset.toUpperCase();
+  const lowerCaseAsset = asset.toLowerCase();
 
-  const iconUrl = `${ICON_BASE_URL}${asset.toLowerCase()}.png`;
+  // Check for a special-cased icon first, otherwise use the default library URL.
+  const iconUrl = specialIconMap[upperCaseAsset] || `${GITHUB_ICON_BASE_URL}${lowerCaseAsset}.png`;
 
   if (error) {
     return (
