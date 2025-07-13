@@ -65,7 +65,7 @@ export default function LandingPage() {
               </div>
 
               {/* Right Image */}
-              <div className="relative flex items-center justify-center -mr-16">
+              <div className="relative flex items-center justify-center -mr-24">
                  <Image
                     src="https://i.imgur.com/GqwhjLj.png"
                     width="700"
