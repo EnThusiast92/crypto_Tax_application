@@ -10,7 +10,7 @@ const paymentMethods = [
   { name: 'PayPal', src: '/assets/paypal.svg', width: 64, height: 40 },
   { name: 'Bitcoin', src: 'https://i.imgur.com/k2GwhT0.png', width: 32, height: 32, unoptimized: true },
   { name: 'Ethereum', src: '/assets/ethereum.svg', width: 64, height: 40 },
-  { name: 'USDT', src: '/assets/usdt.svg', width: 64, height: 40 },
+  { name: 'USDT', src: 'https://i.imgur.com/2sL1iTj.png', width: 32, height: 32, unoptimized: true },
 ];
 
 export function PaymentProviders() {
@@ -19,7 +19,7 @@ export function PaymentProviders() {
       <h3 className="text-sm font-medium text-muted-foreground">Accepted Payment Methods</h3>
       <div className="flex flex-wrap justify-center items-center gap-x-6 gap-y-4">
         {paymentMethods.map((method) => (
-          <div key={method.name} className="flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity">
+          <div key={method.name} className="flex items-center justify-center h-10 opacity-80 hover:opacity-100 transition-opacity">
             <Image
               src={method.src}
               alt={`${method.name} logo`}
