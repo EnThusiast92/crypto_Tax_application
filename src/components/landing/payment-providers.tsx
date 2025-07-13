@@ -62,9 +62,9 @@ export function PaymentProviders() {
   ];
 
   return (
-    <div className="flex flex-col items-center md:items-start gap-4">
+    <div className="flex flex-col items-center md:items-center gap-4">
       <h3 className="text-sm font-medium text-muted-foreground">Accepted Payment Methods</h3>
-      <div className="flex flex-wrap justify-center md:justify-start items-center gap-x-6 gap-y-4">
+      <div className="flex flex-wrap justify-center md:justify-center items-center gap-x-6 gap-y-4">
         {paymentMethods.map((method) => (
           <div key={method.name} className="opacity-70 hover:opacity-100 transition-opacity">
             {method.icon}
