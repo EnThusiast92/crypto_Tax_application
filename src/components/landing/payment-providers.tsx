@@ -5,12 +5,12 @@ import React from 'react';
 import Image from 'next/image';
 
 const paymentMethods = [
-  { name: 'Visa', src: '/assets/visa.svg' },
-  { name: 'Mastercard', src: '/assets/mastercard.svg' },
-  { name: 'PayPal', src: '/assets/paypal.svg' },
-  { name: 'Bitcoin', src: 'https://i.imgur.com/k2GwhT0.png', unoptimized: true },
-  { name: 'Ethereum', src: '/assets/ethereum.svg' },
-  { name: 'USDT', src: 'https://i.imgur.com/62QCcU3.png', unoptimized: true },
+  { name: 'Visa', src: '/assets/visa.svg', width: 64, height: 40 },
+  { name: 'Mastercard', src: '/assets/mastercard.svg', width: 64, height: 40 },
+  { name: 'PayPal', src: '/assets/paypal.svg', width: 64, height: 40 },
+  { name: 'Bitcoin', src: 'https://i.imgur.com/k2GwhT0.png', width: 32, height: 32, unoptimized: true },
+  { name: 'Ethereum', src: '/assets/ethereum.svg', width: 64, height: 40 },
+  { name: 'USDT', src: '/assets/usdt.svg', width: 64, height: 40 },
 ];
 
 export function PaymentProviders() {
@@ -23,15 +23,15 @@ export function PaymentProviders() {
             <Image
               src={method.src}
               alt={`${method.name} logo`}
-              width={method.name === 'Bitcoin' || method.name === 'USDT' ? 32 : 48}
-              height={32}
-              className="object-contain h-8 w-auto"
+              width={method.width}
+              height={method.height}
+              className="object-contain"
               unoptimized={!!method.unoptimized}
             />
           </div>
         ))}
       </div>
-       <p className="text-xs text-muted-foreground/50 mt-2">
+      <p className="text-xs text-muted-foreground/50 mt-2">
         Icons by Flaticon.
       </p>
     </div>
