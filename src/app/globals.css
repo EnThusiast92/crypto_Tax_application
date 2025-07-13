@@ -4,25 +4,25 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 279 67% 51%; /* Electric Purple */
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 215.4 16.3% 46.9%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 128 100% 52%; /* Neon Green */
-    --accent-foreground: 0 0% 12%; /* Dark Charcoal for text on neon */
+    --background: 257 50% 10%;
+    --foreground: 257 30% 92%;
+    --card: 257 50% 12%;
+    --card-foreground: 257 30% 92%;
+    --popover: 257 50% 10%;
+    --popover-foreground: 257 30% 92%;
+    --primary: 260 89% 72%; /* Bright Purple */
+    --primary-foreground: 0 0% 100%; /* White */
+    --secondary: 257 50% 20%;
+    --secondary-foreground: 257 30% 92%;
+    --muted: 257 50% 20%;
+    --muted-foreground: 257 30% 70%;
+    --accent: 128 100% 52%; /* Neon Green (kept for internal UI) */
+    --accent-foreground: 0 0% 12%; 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 279 67% 51%;
+    --border: 257 50% 25%;
+    --input: 257 50% 25%;
+    --ring: 260 89% 75%;
     --radius: 0.5rem;
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
@@ -32,25 +32,25 @@
   }
 
   .dark {
-    --background: 0 0% 12%; /* Dark Charcoal */
-    --foreground: 0 0% 98%;
-    --card: 0 0% 14%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 12%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 279 67% 51%; /* Electric Purple */
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 18%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 18%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 128 100% 52%; /* Neon Green */
+    --background: 257 50% 10%;
+    --foreground: 257 30% 92%;
+    --card: 257 50% 12%;
+    --card-foreground: 257 30% 92%;
+    --popover: 257 50% 10%;
+    --popover-foreground: 257 30% 92%;
+    --primary: 260 89% 72%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 257 50% 20%;
+    --secondary-foreground: 257 30% 92%;
+    --muted: 257 50% 20%;
+    --muted-foreground: 257 30% 70%;
+    --accent: 128 100% 52%;
     --accent-foreground: 0 0% 7%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
-    --ring: 279 67% 60%;
+    --border: 257 50% 25%;
+    --input: 257 50% 25%;
+    --ring: 260 89% 75%;
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
@@ -73,10 +73,18 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-image: radial-gradient(circle at 1px 1px, hsl(var(--border)) 1px, transparent 0);
+    background-size: 2rem 2rem;
   }
 }
 
 @layer utilities {
+  .text-glow {
+    text-shadow: 0 0 8px hsl(var(--primary-foreground)), 0 0 20px hsl(var(--primary-foreground) / 0.5);
+  }
+  .text-glow-hard {
+      filter: drop-shadow(0 0 8px hsl(var(--primary-foreground)));
+  }
   .neon-green-text {
     @apply text-accent drop-shadow-[0_0_8px_hsl(var(--accent))];
   }
