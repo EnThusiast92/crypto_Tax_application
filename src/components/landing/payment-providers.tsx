@@ -19,13 +19,13 @@ export function PaymentProviders() {
       <h3 className="text-sm font-medium text-muted-foreground">Accepted Payment Methods</h3>
       <div className="flex flex-wrap justify-center items-center gap-x-6 gap-y-4">
         {paymentMethods.map((method) => (
-          <div key={method.name} className="relative h-8 w-12 opacity-80 hover:opacity-100 transition-opacity flex items-center justify-center">
+          <div key={method.name} className="flex items-center justify-center h-8 opacity-80 hover:opacity-100 transition-opacity">
             <Image
               src={method.src}
               alt={`${method.name} logo`}
               width={48}
               height={32}
-              className="object-contain"
+              className="object-contain h-full w-auto"
               unoptimized
             />
           </div>
