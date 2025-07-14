@@ -1,5 +1,3 @@
-
-
 export type Transaction = {
   id: string;
   date: string;
@@ -34,7 +32,7 @@ export interface AddTransactionDialogProps {
   onAddTransaction: (data: Omit<Transaction, 'id' | 'value'>) => void;
 }
 
-export type WalletProvider = 'Binance' | 'Coinbase' | 'Kraken' | 'MetaMask' | 'Phantom';
+export type WalletProvider = 'Binance' | 'Coinbase' | 'Kraken' | 'MetaMask' | 'Phantom' | 'Ledger';
 export type Blockchain = 'Bitcoin' | 'Ethereum' | 'BSC' | 'Solana' | 'Polygon';
 
 export type Wallet = {

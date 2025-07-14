@@ -1,4 +1,3 @@
-
 import * as React from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
@@ -11,6 +10,7 @@ const iconMap: Record<WalletProvider, string> = {
   Kraken: '/icons/kraken.svg',
   MetaMask: '/icons/metamask.svg',
   Phantom: '/icons/phantom.svg',
+  Ledger: '/icons/ledger.svg',
 };
 
 const IconWrapper = ({ className }: { className?: string }) => (
