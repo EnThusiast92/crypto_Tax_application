@@ -46,11 +46,10 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
       })
       .then(data => {
         if (!isCancelled) {
-          // Check if the URL is an absolute path (from coingecko) or a fallback path
           if (data.iconUrl && data.iconUrl.startsWith('http')) {
             setIconUrl(data.iconUrl);
           } else {
-            setIconUrl(null); // Explicitly set to null for fallback
+            setIconUrl(null); 
           }
         }
       })
@@ -82,8 +81,7 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           className="object-contain rounded-full"
-          onError={() => setIconUrl(null)} // Fallback if image fails to load
-          unoptimized // Useful for external SVGs or non-standard image formats
+          onError={() => setIconUrl(null)} 
         />
     </div>
   );

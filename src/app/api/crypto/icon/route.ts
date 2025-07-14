@@ -1,107 +1,72 @@
+// app/api/crypto/icon/route.ts
 
-// /src/app/api/crypto/icon/route.ts
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
-interface Coin {
-  id: string;
-  symbol: string;
-  name: string;
-}
+let coinListCache: { [symbol: string]: string } = {};
+let cacheTimestamp = 0;
 
-// A path to a generic icon in your public folder.
-// Note: This path is resolved by the client, not the server.
-const FALLBACK_ICON_URL = '/generic-crypto-icon.svg';
-
-async function getCoinIdBySymbol(symbol: string): Promise<string | null> {
-    const normalizedSymbol = symbol.toLowerCase();
+async function getCoinGeckoId(symbol: string): Promise<string | null> {
+  const now = Date.now();
+  // Refresh cache every 24 hours
+  if (Object.keys(coinListCache).length === 0 || now - cacheTimestamp > 86400000) {
     try {
-        console.log(`[API] Fetching coins list to find ID for symbol: ${normalizedSymbol}`);
-        const response = await fetch('https://api.coingecko.com/api/v3/coins/list', { next: { revalidate: 3600 } }); // Revalidate once per hour
-        if (!response.ok) {
-            console.error(`[API] Failed to fetch coins list from CoinGecko, status: ${response.status}`);
-            return null;
+        const res = await fetch('https://api.coingecko.com/api/v3/coins/list');
+        if (!res.ok) {
+            console.error('Failed to fetch coin list from CoinGecko');
+            return null; // Or use stale cache if available
         }
-        const coinsList: Coin[] = await response.json();
-
-        // Special case for JTO, as its symbol in coingecko is 'jito' but we use 'jto'
-        if (normalizedSymbol === 'jto') {
-            const jtoCoin = coinsList.find(coin => coin.id === 'jito');
-            if (jtoCoin) {
-                 console.log(`[API] Found special case ID for jto: ${jtoCoin.id}`);
-                 return jtoCoin.id;
+        const data = await res.json();
+        const newCache: { [symbol: string]: string } = {};
+        for (const coin of data) {
+            // To handle duplicate symbols, we can decide on a strategy.
+            // For now, the first one wins, which is often the main one.
+            if (!newCache[coin.symbol.toLowerCase()]) {
+                newCache[coin.symbol.toLowerCase()] = coin.id;
             }
         }
-        
-        // Find all coins with the matching symbol.
-        const potentialMatches = coinsList.filter(coin => coin.symbol.toLowerCase() === normalizedSymbol);
-
-        if (potentialMatches.length === 0) {
-            console.log(`[API] Could not find any coin with symbol: ${normalizedSymbol}`);
-            return null;
-        }
-
-        if (potentialMatches.length === 1) {
-            console.log(`[API] Found unique match for ${normalizedSymbol}: ${potentialMatches[0].id}`);
-            return potentialMatches[0].id;
-        }
-
-        // Heuristic: When multiple coins share a symbol, the main one often has the simplest/shortest ID.
-        // e.g., for 'eth', we want 'ethereum', not 'ethereum-pow' or other variants.
-        // Sort by the length of the ID string, ascending.
-        potentialMatches.sort((a, b) => a.id.length - b.id.length);
-        const bestMatch = potentialMatches[0];
-
-        console.log(`[API] Found best match for ${normalizedSymbol} (out of ${potentialMatches.length}): ${bestMatch.id}`);
-        return bestMatch.id;
-
-    } catch (error) {
-        console.error('[API] Error in getCoinIdBySymbol:', error);
-        return null;
+        coinListCache = newCache;
+        cacheTimestamp = now;
+        console.log('CoinGecko coin list cache refreshed.');
+    } catch(error) {
+        console.error('Error refreshing CoinGecko cache:', error);
+        // Return null or use stale cache if an error occurs
+        return coinListCache[symbol.toLowerCase()] || null;
     }
+  }
+
+  return coinListCache[symbol.toLowerCase()] || null;
 }
 
-async function getCoinIconById(id: string): Promise<string | null> {
-    try {
-        console.log(`[API] Fetching details for coin ID: ${id}`);
-        const response = await fetch(`https://api.coingecko.com/api/v3/coins/${id}`);
-        if (!response.ok) {
-            console.error(`[API] Failed to fetch details for coin ${id}, status: ${response.status}`);
-            return null;
-        }
-        const data = await response.json();
-        // Use large for better quality, fallback to thumb
-        const iconUrl = data.image?.large || data.image?.thumb || null;
-        if (iconUrl) {
-            console.log(`[API] Found icon for ${id}: ${iconUrl}`);
-        } else {
-            console.log(`[API] No icon URL found in details for ${id}`);
-        }
-        return iconUrl;
-    } catch (error) {
-        console.error(`[API] Error in getCoinIconById for ${id}:`, error);
-        return null;
-    }
-}
-
-export async function GET(request: NextRequest) {
+export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const symbol = searchParams.get('symbol');
 
   if (!symbol) {
-    return NextResponse.json({ error: 'Symbol parameter is required' }, { status: 400 });
+    return NextResponse.json({ iconUrl: null, error: 'Missing symbol' }, { status: 400 });
   }
 
-  const coinId = await getCoinIdBySymbol(symbol);
+  try {
+    const id = await getCoinGeckoId(symbol);
+    if (!id) {
+        console.log(`Symbol not found in cache: ${symbol}`);
+        return NextResponse.json({ iconUrl: null, error: 'Symbol not found' }, { status: 404 });
+    }
 
-  if (!coinId) {
-    return NextResponse.json({ iconUrl: FALLBACK_ICON_URL });
+    const coinRes = await fetch(`https://api.coingecko.com/api/v3/coins/${id}`);
+     if (!coinRes.ok) {
+      console.error(`Failed to fetch details for coin ${id}`);
+      return NextResponse.json({ iconUrl: null, error: 'Failed to fetch coin details' }, { status: coinRes.status });
+    }
+    const coinData = await coinRes.json();
+    const iconUrl = coinData.image?.large || coinData.image?.thumb || coinData.image?.small || null;
+    
+    if(!iconUrl){
+      console.log(`Icon URL not found for ${id}`);
+    }
+
+    return NextResponse.json({ iconUrl });
+  } catch (err) {
+    console.error('Error fetching CoinGecko icon:', err);
+    return NextResponse.json({ iconUrl: null, error: 'Failed to fetch icon' }, { status: 500 });
   }
-
-  const iconUrl = await getCoinIconById(coinId);
-
-  if (!iconUrl) {
-    return NextResponse.json({ iconUrl: FALLBACK_ICON_URL });
-  }
-
-  return NextResponse.json({ iconUrl });
 }
