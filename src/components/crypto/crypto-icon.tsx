@@ -5,7 +5,7 @@ import React from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
-const GITHUB_ICON_BASE_URL = 'https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/';
+const GITHUB_ICON_BASE_URL = 'https://raw.githubusercontent.com/ErikThiart/cryptocurrency-icons/master/v1/128x128/';
 
 // A special map for icons not found in the GitHub library or for overrides.
 const specialIconMap: { [key: string]: string } = {
