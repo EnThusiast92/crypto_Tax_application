@@ -21,7 +21,6 @@ const GenericIcon = ({ className }: { className?: string }) => (
     </div>
 );
 
-
 interface CryptoIconProps {
   asset: string;
   className?: string;
@@ -30,19 +29,15 @@ interface CryptoIconProps {
 export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
   const [iconUrl, setIconUrl] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
-  const [error, setError] = React.useState(false);
 
   React.useEffect(() => {
     if (!asset) {
       setIsLoading(false);
-      setError(true);
       return;
     }
     
     let isCancelled = false;
     setIsLoading(true);
-    setError(false);
-    setIconUrl(null);
 
     fetch(`/api/crypto/icon?symbol=${asset.toLowerCase()}`)
       .then(res => {
@@ -51,15 +46,16 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
       })
       .then(data => {
         if (!isCancelled) {
-          if (data.iconUrl && !data.iconUrl.includes('generic-crypto-icon')) {
+          // Check if the URL is an absolute path (from coingecko) or a fallback path
+          if (data.iconUrl && data.iconUrl.startsWith('http')) {
             setIconUrl(data.iconUrl);
           } else {
-            setError(true);
+            setIconUrl(null); // Explicitly set to null for fallback
           }
         }
       })
       .catch(() => {
-          if (!isCancelled) setError(true);
+          if (!isCancelled) setIconUrl(null);
       })
       .finally(() => {
           if (!isCancelled) setIsLoading(false);
@@ -74,7 +70,7 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
     return <Skeleton className={cn("rounded-full", className)} />;
   }
 
-  if (error || !iconUrl) {
+  if (!iconUrl) {
     return <GenericIcon className={className} />;
   }
 
@@ -86,7 +82,7 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           className="object-contain rounded-full"
-          onError={() => setError(true)}
+          onError={() => setIconUrl(null)} // Fallback if image fails to load
           unoptimized // Useful for external SVGs or non-standard image formats
         />
     </div>

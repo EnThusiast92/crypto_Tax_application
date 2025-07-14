@@ -7,65 +7,62 @@ interface Coin {
   name: string;
 }
 
-// In-memory cache for the coins list and details
-let coinsList: Coin[] | null = null;
-let symbolToIdMap: Map<string, string> | null = null;
-const coinDetailsCache = new Map<string, string | null>();
+// A path to a generic icon in your public folder. 
+// Note: This path is resolved by the client, not the server.
+const FALLBACK_ICON_URL = '/generic-crypto-icon.svg'; 
 
-const FALLBACK_ICON_URL = '/generic-crypto-icon.svg'; // A path to a generic icon in your public folder
-
-async function initializeCoinListCache() {
-  // If cache is already populated, do nothing.
-  if (coinsList && symbolToIdMap) {
-    return;
-  }
-  try {
-    const response = await fetch('https://api.coingecko.com/api/v3/coins/list');
-    if (!response.ok) {
-      throw new Error(`Failed to fetch coins list from CoinGecko, status: ${response.status}`);
-    }
-    const data: Coin[] = await response.json();
-    coinsList = data;
-    symbolToIdMap = new Map(coinsList.map(coin => [coin.symbol.toLowerCase(), coin.id]));
-    // Special override for JTO, as its symbol in coingecko is 'jito'
-    if (symbolToIdMap && !symbolToIdMap.has('jto')) {
-        const jitoCoin = coinsList.find(c => c.id === 'jito');
-        if (jitoCoin) {
-            symbolToIdMap.set('jto', 'jito');
-        }
-    }
-    console.log('CoinGecko list cached successfully.');
-  } catch (error) {
-    console.error('CoinGecko API error (coins/list):', error);
-    // Reset cache on error to allow for retries on subsequent requests
-    coinsList = null; 
-    symbolToIdMap = null;
-  }
-}
-
-async function getCoinIcon(id: string): Promise<string | null> {
-    if (coinDetailsCache.has(id)) {
-        const cachedUrl = coinDetailsCache.get(id);
-        // Return cached URL even if it's null (which signifies a previous fetch failure)
-        return cachedUrl !== undefined ? cachedUrl : null;
-    }
+async function getCoinIdBySymbol(symbol: string): Promise<string | null> {
+    const normalizedSymbol = symbol.toLowerCase();
     try {
-        const response = await fetch(`https://api.coingecko.com/api/v3/coins/${id}`);
+        console.log(`[API] Fetching coins list to find ID for symbol: ${normalizedSymbol}`);
+        const response = await fetch('https://api.coingecko.com/api/v3/coins/list', { next: { revalidate: 3600 } }); // Revalidate once per hour
         if (!response.ok) {
-            coinDetailsCache.set(id, null); // Cache failure to avoid refetching
+            console.error(`[API] Failed to fetch coins list from CoinGecko, status: ${response.status}`);
             return null;
         }
-        const data = await response.json();
-        const iconUrl = data.image?.thumb || null;
-        coinDetailsCache.set(id, iconUrl);
-        return iconUrl;
+        const coinsList: Coin[] = await response.json();
+        
+        let foundCoin = coinsList.find(coin => coin.symbol.toLowerCase() === normalizedSymbol);
+
+        // Special case for JTO, as its symbol in coingecko is 'jito'
+        if (!foundCoin && normalizedSymbol === 'jto') {
+            foundCoin = coinsList.find(coin => coin.id === 'jito');
+        }
+
+        if (foundCoin) {
+            console.log(`[API] Found ID for ${normalizedSymbol}: ${foundCoin.id}`);
+            return foundCoin.id;
+        } else {
+            console.log(`[API] Could not find ID for symbol: ${normalizedSymbol}`);
+            return null;
+        }
     } catch (error) {
-        console.error(`Failed to fetch details for coin ${id}:`, error);
-        coinDetailsCache.set(id, null); // Cache failure
+        console.error('[API] Error in getCoinIdBySymbol:', error);
         return null;
     }
 }
 
+async function getCoinIconById(id: string): Promise<string | null> {
+    try {
+        console.log(`[API] Fetching details for coin ID: ${id}`);
+        const response = await fetch(`https://api.coingecko.com/api/v3/coins/${id}`);
+        if (!response.ok) {
+            console.error(`[API] Failed to fetch details for coin ${id}, status: ${response.status}`);
+            return null;
+        }
+        const data = await response.json();
+        const iconUrl = data.image?.thumb || null;
+        if (iconUrl) {
+            console.log(`[API] Found icon for ${id}: ${iconUrl}`);
+        } else {
+            console.log(`[API] No icon URL found in details for ${id}`);
+        }
+        return iconUrl;
+    } catch (error) {
+        console.error(`[API] Error in getCoinIconById for ${id}:`, error);
+        return null;
+    }
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -75,22 +72,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Symbol parameter is required' }, { status: 400 });
   }
 
-  // Ensure the coins list is fetched and cached
-  await initializeCoinListCache();
-  
-  if (!symbolToIdMap) {
-      // If the list couldn't be fetched, we can't proceed.
-      return NextResponse.json({ iconUrl: FALLBACK_ICON_URL }, { status: 503, statusText: "Could not connect to CoinGecko API" });
-  }
-  
-  const normalizedSymbol = symbol.toLowerCase();
-  const coinId = symbolToIdMap.get(normalizedSymbol);
+  const coinId = await getCoinIdBySymbol(symbol);
 
   if (!coinId) {
     return NextResponse.json({ iconUrl: FALLBACK_ICON_URL });
   }
 
-  const iconUrl = await getCoinIcon(coinId);
+  const iconUrl = await getCoinIconById(coinId);
   
   if (!iconUrl) {
     return NextResponse.json({ iconUrl: FALLBACK_ICON_URL });
