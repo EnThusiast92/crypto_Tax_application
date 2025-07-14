@@ -9,6 +9,7 @@ export type Transaction = {
   value: number;
   exchange: 'Binance' | 'Coinbase' | 'Kraken' | 'Self-custody';
   classification: string;
+  walletId?: string;
 };
 
 export type StatCardData = {
