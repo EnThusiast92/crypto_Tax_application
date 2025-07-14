@@ -32,14 +32,30 @@ async function getCoinIdBySymbol(symbol: string): Promise<string | null> {
             }
         }
         
-        // Find the first coin with the matching symbol.
-        const foundCoin = coinsList.find(coin => coin.symbol.toLowerCase() === normalizedSymbol);
+        // Find all coins with the matching symbol.
+        const potentialMatches = coinsList.filter(coin => coin.symbol.toLowerCase() === normalizedSymbol);
+
+        if (potentialMatches.length === 0) {
+            console.log(`[API] Could not find any coin with symbol: ${normalizedSymbol}`);
+            return null;
+        }
+
+        // Heuristic 1: Find the coin where the ID is the same as the symbol (e.g., symbol: 'btc', id: 'bitcoin'). This is often the main one.
+        // Or if the symbol is the name (e.g. solana)
+        let foundCoin = potentialMatches.find(c => c.id.toLowerCase() === normalizedSymbol || c.name.toLowerCase() === normalizedSymbol);
+
+        // Heuristic 2: If no direct match on ID, prefer the one with the simplest ID (often the base coin).
+        if (!foundCoin) {
+             potentialMatches.sort((a, b) => a.id.length - b.id.length);
+             foundCoin = potentialMatches[0];
+        }
 
         if (foundCoin) {
-            console.log(`[API] Found ID for ${normalizedSymbol}: ${foundCoin.id}`);
+            console.log(`[API] Found best match for ${normalizedSymbol}: ${foundCoin.id}`);
             return foundCoin.id;
         } else {
-            console.log(`[API] Could not find ID for symbol: ${normalizedSymbol}`);
+            // This case should not be reached if potentialMatches.length > 0, but as a safeguard:
+            console.log(`[API] Could not find a suitable match for symbol: ${normalizedSymbol}`);
             return null;
         }
     } catch (error) {
