@@ -23,7 +23,7 @@ async function getCoinIdBySymbol(symbol: string): Promise<string | null> {
         }
         const coinsList: Coin[] = await response.json();
 
-        // Special case for JTO, as its symbol in coingecko is 'jito' but its id is also 'jito'
+        // Special case for JTO, as its symbol in coingecko is 'jito' but we use 'jto'
         if (normalizedSymbol === 'jto') {
             const jtoCoin = coinsList.find(coin => coin.id === 'jito');
             if (jtoCoin) {
