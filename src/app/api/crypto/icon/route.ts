@@ -7,7 +7,7 @@ let cacheTimestamp = 0;
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
 // A priority map for common symbols to their correct CoinGecko IDs.
-// This solves ambiguity for symbols like "BTC", "ETH", etc.
+// This solves ambiguity for symbols like "btc", "eth", etc. and is the most reliable method.
 const PRIORITY_MAP: { [symbol: string]: string } = {
     'btc': 'bitcoin',
     'eth': 'ethereum',
