@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -12,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import type { WalletProvider, Wallet, Blockchain } from '@/lib/types';
 import { ProviderGrid, walletProviders } from './provider-grid';
-import { ArrowLeft, FileUp, Zap } from 'lucide-react';
+import { ArrowLeft, FileUp, KeyRound, Zap } from 'lucide-react';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import {
@@ -40,9 +41,12 @@ export function AddWalletDialog({ isOpen, onOpenChange, onWalletAdd }: AddWallet
   const [selectedProvider, setSelectedProvider] = React.useState<WalletProvider | null>(null);
   const [walletName, setWalletName] = React.useState('');
   const [walletAddress, setWalletAddress] = React.useState<string | null>(null);
+  const [apiKey, setApiKey] = React.useState<string | null>(null);
+  const [apiSecret, setApiSecret] = React.useState<string | null>(null);
   const [selectedBlockchain, setSelectedBlockchain] = React.useState<Blockchain | null>(null);
   
   const providerDetails = selectedProvider ? walletProviders.find(p => p.name === selectedProvider) : null;
+  const isCex = providerDetails?.type === 'CEX';
 
   const resetState = () => {
     setStep('provider');
@@ -50,6 +54,8 @@ export function AddWalletDialog({ isOpen, onOpenChange, onWalletAdd }: AddWallet
     setWalletName('');
     setWalletAddress(null);
     setSelectedBlockchain(null);
+    setApiKey(null);
+    setApiSecret(null);
   };
 
   const handleClose = (open: boolean) => {
@@ -61,6 +67,10 @@ export function AddWalletDialog({ isOpen, onOpenChange, onWalletAdd }: AddWallet
   
   const handleProviderSelect = (provider: WalletProvider) => {
     setSelectedProvider(provider);
+    if (walletProviders.find(p => p.name === provider)?.type === 'CEX') {
+        // CEXs have a default "blockchain" for display purposes
+        setSelectedBlockchain('BSC'); // Default to a common CEX chain
+    }
     setStep('details');
   };
 
@@ -74,7 +84,7 @@ export function AddWalletDialog({ isOpen, onOpenChange, onWalletAdd }: AddWallet
   };
 
   const handleDetailsSubmit = () => {
-    if (!walletName || !selectedBlockchain) return;
+    if (!walletName || (!isCex && !selectedBlockchain)) return;
     setStep('sync');
   };
 
@@ -88,8 +98,8 @@ export function AddWalletDialog({ isOpen, onOpenChange, onWalletAdd }: AddWallet
       type: providerDetails.type,
       address: walletAddress,
       blockchain: selectedBlockchain,
-      apiKey: null,
-      apiSecret: null,
+      apiKey: apiKey,
+      apiSecret: apiSecret,
     });
     
     handleClose(false);
@@ -118,40 +128,54 @@ export function AddWalletDialog({ isOpen, onOpenChange, onWalletAdd }: AddWallet
         );
 
       case 'details':
+        if (!providerDetails) return null;
         return (
           <>
              <DialogHeader>
-                <DialogTitle>Wallet Details</DialogTitle>
+                <DialogTitle>{isCex ? 'Exchange Details' : 'Wallet Details'}</DialogTitle>
                 <DialogDescription>
-                    Enter a name and choose a blockchain for your {selectedProvider} wallet.
+                    Enter a name for your {selectedProvider} {isCex ? 'account' : 'wallet'}.
                 </DialogDescription>
             </DialogHeader>
             <div className="py-4 space-y-4">
                 <div className="space-y-2">
-                    <Label htmlFor="wallet-name">Wallet Name</Label>
-                    <Input id="wallet-name" value={walletName} onChange={(e) => setWalletName(e.target.value)} placeholder={`e.g. My ${selectedProvider} Wallet`} />
+                    <Label htmlFor="wallet-name">Name</Label>
+                    <Input id="wallet-name" value={walletName} onChange={(e) => setWalletName(e.target.value)} placeholder={`e.g. My ${selectedProvider} ${isCex ? 'Account' : 'Wallet'}`} />
                 </div>
-                 {providerDetails?.type === 'Wallet' && (
-                    <div className="space-y-2">
-                        <Label htmlFor="wallet-address">Wallet Address (Optional)</Label>
-                        <Input id="wallet-address" value={walletAddress ?? ''} onChange={(e) => setWalletAddress(e.target.value)} placeholder="e.g. 0x... or Sol..." />
-                    </div>
-                )}
-                 <div className="space-y-2">
-                    <Label htmlFor="blockchain">Blockchain</Label>
-                    <Select onValueChange={(value: Blockchain) => setSelectedBlockchain(value)}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select a blockchain" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {blockchains.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                 </div>
+                 {isCex ? (
+                    <>
+                        <div className="space-y-2">
+                            <Label htmlFor="api-key">API Key</Label>
+                            <Input id="api-key" value={apiKey ?? ''} onChange={(e) => setApiKey(e.target.value)} placeholder="Enter your API Key" />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="api-secret">API Secret</Label>
+                            <Input id="api-secret" type="password" value={apiSecret ?? ''} onChange={(e) => setApiSecret(e.target.value)} placeholder="Enter your API Secret" />
+                        </div>
+                    </>
+                 ) : (
+                    <>
+                        <div className="space-y-2">
+                            <Label htmlFor="wallet-address">Wallet Address (Optional)</Label>
+                            <Input id="wallet-address" value={walletAddress ?? ''} onChange={(e) => setWalletAddress(e.target.value)} placeholder="e.g. 0x... or Sol..." />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="blockchain">Blockchain</Label>
+                            <Select onValueChange={(value: Blockchain) => setSelectedBlockchain(value)}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a blockchain" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {blockchains.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                         </div>
+                     </>
+                 )}
             </div>
             <DialogFooter>
                 <Button variant="ghost" onClick={handleBack}><ArrowLeft className="mr-2 h-4 w-4" />Back</Button>
-                <Button onClick={handleDetailsSubmit} disabled={!walletName || !selectedBlockchain}>Continue</Button>
+                <Button onClick={handleDetailsSubmit} disabled={!walletName || (!isCex && !selectedBlockchain)}>Continue</Button>
             </DialogFooter>
           </>
         );
@@ -167,14 +191,14 @@ export function AddWalletDialog({ isOpen, onOpenChange, onWalletAdd }: AddWallet
             </DialogHeader>
             <div className="py-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                <button onClick={() => handleSyncOption('auto')} className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-border p-6 text-center transition-colors hover:border-primary focus:outline-none focus:ring-2 focus:ring-ring">
-                    <Zap className="w-10 h-10 text-primary" />
+                    {isCex ? <KeyRound className="w-10 h-10 text-primary" /> : <Zap className="w-10 h-10 text-primary" />}
                     <h3 className="font-semibold">Auto Sync</h3>
-                    <p className="text-sm text-muted-foreground">Connect via API for automatic updates.</p>
+                    <p className="text-sm text-muted-foreground">Connect via {isCex ? 'API' : 'Address'} for automatic updates.</p>
                </button>
                 <button onClick={() => handleSyncOption('csv')} className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-border p-6 text-center transition-colors hover:border-primary focus:outline-none focus:ring-2 focus:ring-ring">
                     <FileUp className="w-10 h-10 text-primary" />
                     <h3 className="font-semibold">Upload CSV</h3>
-                    <p className="text-sm text-muted-foreground">Import a file from your exchange.</p>
+                    <p className="text-sm text-muted-foreground">Import a file from your {isCex ? 'exchange' : 'wallet'}.</p>
                 </button>
             </div>
              <DialogFooter>

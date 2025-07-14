@@ -1,3 +1,4 @@
+
 export type Transaction = {
   id: string;
   date: string;
@@ -9,7 +10,7 @@ export type Transaction = {
   value: number;
   exchange: 'Binance' | 'Coinbase' | 'Kraken' | 'Self-custody';
   classification: string;
-  walletId?: string;
+  walletId?: string | null;
 };
 
 export type StatCardData = {
