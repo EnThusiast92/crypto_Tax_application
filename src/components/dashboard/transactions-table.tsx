@@ -24,6 +24,7 @@ import { ChevronDown } from 'lucide-react';
 import type { Transaction } from '@/lib/types';
 import { columns } from './columns';
 import { TransactionDetail } from '@/components/transactions/transaction-detail';
+import { cn } from '@/lib/utils';
 
 export function TransactionsTable({ data }: { data: Transaction[] }) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
