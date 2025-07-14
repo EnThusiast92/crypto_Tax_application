@@ -79,7 +79,7 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
   }
 
   return (
-    <div className={cn("relative", className)}>
+    <div className={cn("relative rounded-full", className)}>
        <Image
           src={iconUrl}
           alt={`${asset} logo`}
