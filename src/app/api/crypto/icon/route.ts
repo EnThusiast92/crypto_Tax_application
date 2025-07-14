@@ -22,6 +22,14 @@ async function getCoinIdBySymbol(symbol: string): Promise<string | null> {
         }
         const coinsList: Coin[] = await response.json();
         
+        // Prioritize exact ID match for common assets to avoid conflicts (e.g. btc vs wbtc)
+        const exactMatch = coinsList.find(coin => coin.id.toLowerCase() === normalizedSymbol);
+        if (exactMatch) {
+            console.log(`[API] Found exact ID match for ${normalizedSymbol}: ${exactMatch.id}`);
+            return exactMatch.id;
+        }
+        
+        // If no exact match, find the first coin with the matching symbol.
         let foundCoin = coinsList.find(coin => coin.symbol.toLowerCase() === normalizedSymbol);
 
         // Special case for JTO, as its symbol in coingecko is 'jito'
