@@ -36,13 +36,23 @@ import type { AddTransactionDialogProps } from '@/lib/types';
 
 const transactionSchema = z.object({
   asset: z.string().min(1, 'Asset is required').toUpperCase(),
-  type: z.enum(['Buy', 'Sell', 'Staking', 'Airdrop', 'Gift']),
+  type: z.enum(['Buy', 'Sell', 'Staking', 'Airdrop', 'Gift', 'Swap']),
   quantity: z.coerce.number().positive('Quantity must be positive'),
   price: z.coerce.number().positive('Price must be positive'),
   date: z.string().min(1, 'Date is required'),
   exchange: z.enum(['Binance', 'Coinbase', 'Kraken', 'Self-custody']),
   classification: z.string().min(1, 'Classification is required'),
   fee: z.coerce.number().min(0, 'Fee cannot be negative'),
+  toAsset: z.string().toUpperCase().optional(),
+  toQuantity: z.coerce.number().optional(),
+}).refine((data) => {
+    if (data.type === 'Swap') {
+        return !!data.toAsset && data.toQuantity !== undefined && data.toQuantity > 0;
+    }
+    return true;
+}, {
+    message: "For a swap, 'To Asset' and a positive 'To Quantity' are required.",
+    path: ['toAsset'],
 });
 
 type TransactionFormValues = z.infer<typeof transactionSchema>;
@@ -67,6 +77,8 @@ export function AddTransactionDialog({
     },
   });
 
+  const transactionType = form.watch('type');
+
   const onSubmit = (data: TransactionFormValues) => {
     onAddTransaction(data);
     toast({
@@ -89,20 +101,7 @@ export function AddTransactionDialog({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="asset"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Asset</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. BTC" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
+                <FormField
                 control={form.control}
                 name="type"
                 render={({ field }) => (
@@ -120,20 +119,48 @@ export function AddTransactionDialog({
                         <SelectItem value="Staking">Staking</SelectItem>
                         <SelectItem value="Airdrop">Airdrop</SelectItem>
                         <SelectItem value="Gift">Gift</SelectItem>
+                        <SelectItem value="Swap">Swap</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+               <FormField
+                  control={form.control}
+                  name="date"
+                  render={({ field }) => (
+                      <FormItem>
+                      <FormLabel>Date</FormLabel>
+                      <FormControl>
+                          <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                      </FormItem>
+                  )}
+              />
             </div>
+             
              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                    control={form.control}
+                    name="asset"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>{transactionType === 'Swap' ? 'From Asset' : 'Asset'}</FormLabel>
+                        <FormControl>
+                        <Input placeholder="e.g. BTC" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
                 <FormField
                     control={form.control}
                     name="quantity"
                     render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Quantity</FormLabel>
+                        <FormLabel>{transactionType === 'Swap' ? 'From Quantity' : 'Quantity'}</FormLabel>
                         <FormControl>
                         <Input type="number" step="any" placeholder="e.g. 0.5" {...field} />
                         </FormControl>
@@ -141,6 +168,41 @@ export function AddTransactionDialog({
                     </FormItem>
                     )}
                 />
+            </div>
+            
+            {transactionType === 'Swap' && (
+                <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="toAsset"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>To Asset</FormLabel>
+                            <FormControl>
+                            <Input placeholder="e.g. ETH" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="toQuantity"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>To Quantity</FormLabel>
+                            <FormControl>
+                            <Input type="number" step="any" placeholder="e.g. 10" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                </div>
+            )}
+
+
+            <div className="grid grid-cols-2 gap-4">
                 <FormField
                     control={form.control}
                     name="price"
@@ -154,22 +216,7 @@ export function AddTransactionDialog({
                     </FormItem>
                     )}
                 />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                  control={form.control}
-                  name="date"
-                  render={({ field }) => (
-                      <FormItem>
-                      <FormLabel>Date</FormLabel>
-                      <FormControl>
-                          <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                      </FormItem>
-                  )}
-              />
-               <FormField
+                <FormField
                   control={form.control}
                   name="fee"
                   render={({ field }) => (
@@ -183,6 +230,7 @@ export function AddTransactionDialog({
                   )}
               />
             </div>
+
             <FormField
                 control={form.control}
                 name="exchange"

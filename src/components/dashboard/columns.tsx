@@ -1,7 +1,8 @@
+
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
-import { ArrowUpDown, MoreHorizontal } from 'lucide-react';
+import { ArrowUpDown, MoreHorizontal, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -63,12 +64,30 @@ export const columns: ColumnDef<Transaction>[] = [
   {
     accessorKey: 'asset',
     header: 'Asset',
-    cell: ({ row }) => (
+    cell: ({ row }) => {
+      const transaction = row.original;
+      if (transaction.type === 'Swap') {
+        return (
+          <div className="flex items-center gap-2 font-medium">
+            <div className="flex items-center gap-2">
+              <CryptoIcon asset={transaction.asset} />
+              <span>{transaction.quantity} {transaction.asset}</span>
+            </div>
+            <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            <div className="flex items-center gap-2">
+              <CryptoIcon asset={transaction.toAsset!} />
+              <span>{transaction.toQuantity} {transaction.toAsset}</span>
+            </div>
+          </div>
+        )
+      }
+      return (
         <div className="flex items-center gap-2">
             <CryptoIcon asset={row.getValue('asset')} />
             <span className="font-bold">{row.getValue('asset')}</span>
         </div>
-    )
+      )
+    }
   },
   {
     accessorKey: 'value',

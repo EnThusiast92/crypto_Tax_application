@@ -2,7 +2,7 @@
 export type Transaction = {
   id: string;
   date: string;
-  type: 'Buy' | 'Sell' | 'Staking' | 'Airdrop' | 'Gift';
+  type: 'Buy' | 'Sell' | 'Staking' | 'Airdrop' | 'Gift' | 'Swap';
   asset: string;
   quantity: number;
   price: number;
@@ -10,6 +10,8 @@ export type Transaction = {
   value: number;
   exchange: 'Binance' | 'Coinbase' | 'Kraken' | 'Self-custody';
   classification: string;
+  toAsset?: string;
+  toQuantity?: number;
 };
 
 export type StatCardData = {
