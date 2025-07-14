@@ -4,14 +4,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
-
-const GITHUB_ICON_BASE_URL = 'https://raw.githubusercontent.com/ErikThiart/cryptocurrency-icons/master/v1/128x128/';
-
-// A special map for icons not found in the GitHub library or for overrides.
-const specialIconMap: { [key: string]: string } = {
-  JTO: 'https://www.cryptocompare.com/media/44033842/jto.png',
-  // Add other special cases here if needed in the future
-};
+import { Skeleton } from '@/components/ui/skeleton';
 
 const GenericIcon = () => (
     <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Generic crypto icon">
@@ -25,27 +18,43 @@ interface CryptoIconProps {
 }
 
 export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
+  const [iconUrl, setIconUrl] = React.useState<string | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState(false);
 
   React.useEffect(() => {
+    if (!asset) {
+      setIsLoading(false);
+      return;
+    }
+    
+    setIsLoading(true);
     setError(false);
+    setIconUrl(null);
+
+    fetch(`/api/crypto/icon?symbol=${asset}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.iconUrl && !data.iconUrl.endsWith('default.png')) {
+          setIconUrl(data.iconUrl);
+        } else {
+          setError(true);
+        }
+      })
+      .catch(() => setError(true))
+      .finally(() => setIsLoading(false));
+      
   }, [asset]);
-
-  if (!asset) {
-    return (
-        <div className={cn("flex items-center justify-center", className)}>
-            <GenericIcon />
-        </div>
-    );
-  }
   
-  const upperCaseAsset = asset.toUpperCase();
-  const lowerCaseAsset = asset.toLowerCase();
+  const handleImageError = () => {
+    setError(true);
+  };
+  
+  if (isLoading) {
+    return <Skeleton className={cn("rounded-full", className)} />;
+  }
 
-  // Check for a special-cased icon first, otherwise use the default library URL.
-  const iconUrl = specialIconMap[upperCaseAsset] || `${GITHUB_ICON_BASE_URL}${lowerCaseAsset}.png`;
-
-  if (error) {
+  if (error || !iconUrl) {
     return (
         <div className={cn("flex items-center justify-center", className)}>
             <GenericIcon />
@@ -60,9 +69,8 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
           alt={`${asset} logo`}
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          className="object-contain"
-          onError={() => setError(true)}
-          unoptimized
+          className="object-contain rounded-full"
+          onError={handleImageError}
         />
     </div>
   );

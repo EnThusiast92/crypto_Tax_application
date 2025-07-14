@@ -36,15 +36,9 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'raw.githubusercontent.com',
+        hostname: 'assets.coingecko.com',
         port: '',
-        pathname: '/ErikThiart/cryptocurrency-icons/master/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'raw.githubusercontent.com',
-        port: '',
-        pathname: '/spothq/cryptocurrency-icons/master/**',
+        pathname: '/coins/images/**',
       }
     ],
   },
