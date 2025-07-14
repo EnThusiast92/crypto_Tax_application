@@ -1,3 +1,4 @@
+
 // /src/app/api/crypto/icon/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -7,9 +8,9 @@ interface Coin {
   name: string;
 }
 
-// A path to a generic icon in your public folder. 
+// A path to a generic icon in your public folder.
 // Note: This path is resolved by the client, not the server.
-const FALLBACK_ICON_URL = '/generic-crypto-icon.svg'; 
+const FALLBACK_ICON_URL = '/generic-crypto-icon.svg';
 
 async function getCoinIdBySymbol(symbol: string): Promise<string | null> {
     const normalizedSymbol = symbol.toLowerCase();
@@ -21,21 +22,18 @@ async function getCoinIdBySymbol(symbol: string): Promise<string | null> {
             return null;
         }
         const coinsList: Coin[] = await response.json();
-        
-        // Prioritize exact ID match for common assets to avoid conflicts (e.g. btc vs wbtc)
-        const exactMatch = coinsList.find(coin => coin.id.toLowerCase() === normalizedSymbol);
-        if (exactMatch) {
-            console.log(`[API] Found exact ID match for ${normalizedSymbol}: ${exactMatch.id}`);
-            return exactMatch.id;
-        }
-        
-        // If no exact match, find the first coin with the matching symbol.
-        let foundCoin = coinsList.find(coin => coin.symbol.toLowerCase() === normalizedSymbol);
 
-        // Special case for JTO, as its symbol in coingecko is 'jito'
-        if (!foundCoin && normalizedSymbol === 'jto') {
-            foundCoin = coinsList.find(coin => coin.id === 'jito');
+        // Special case for JTO, as its symbol in coingecko is 'jito' but its id is also 'jito'
+        if (normalizedSymbol === 'jto') {
+            const jtoCoin = coinsList.find(coin => coin.id === 'jito');
+            if (jtoCoin) {
+                 console.log(`[API] Found special case ID for jto: ${jtoCoin.id}`);
+                 return jtoCoin.id;
+            }
         }
+        
+        // Find the first coin with the matching symbol.
+        const foundCoin = coinsList.find(coin => coin.symbol.toLowerCase() === normalizedSymbol);
 
         if (foundCoin) {
             console.log(`[API] Found ID for ${normalizedSymbol}: ${foundCoin.id}`);
@@ -59,6 +57,7 @@ async function getCoinIconById(id: string): Promise<string | null> {
             return null;
         }
         const data = await response.json();
+        // Use thumb for consistency in size
         const iconUrl = data.image?.thumb || null;
         if (iconUrl) {
             console.log(`[API] Found icon for ${id}: ${iconUrl}`);
@@ -87,7 +86,7 @@ export async function GET(request: NextRequest) {
   }
 
   const iconUrl = await getCoinIconById(coinId);
-  
+
   if (!iconUrl) {
     return NextResponse.json({ iconUrl: FALLBACK_ICON_URL });
   }
