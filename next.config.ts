@@ -18,18 +18,6 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'www.cryptocompare.com',
-        port: '',
-        pathname: '/media/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'images.unsplash.com',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
         hostname: 'i.imgur.com',
         port: '',
         pathname: '/**',

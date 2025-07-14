@@ -6,11 +6,19 @@ import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 
-const GenericIcon = () => (
-    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Generic crypto icon">
-      <circle cx="50" cy="50" r="50" fill="hsl(var(--muted))" />
+const GenericIcon = ({ className }: { className?: string }) => (
+    <svg 
+      className={cn("text-muted", className)} 
+      role="img" 
+      aria-label="Generic crypto icon" 
+      viewBox="0 0 24 24" 
+      fill="currentColor" 
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
     </svg>
 );
+
 
 interface CryptoIconProps {
   asset: string;
@@ -25,6 +33,7 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
   React.useEffect(() => {
     if (!asset) {
       setIsLoading(false);
+      setError(true);
       return;
     }
     
@@ -32,10 +41,10 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
     setError(false);
     setIconUrl(null);
 
-    fetch(`/api/crypto/icon?symbol=${asset}`)
+    fetch(`/api/crypto/icon?symbol=${asset.toLowerCase()}`)
       .then(res => res.json())
       .then(data => {
-        if (data.iconUrl && !data.iconUrl.endsWith('default.png')) {
+        if (data.iconUrl && !data.iconUrl.includes('default-icon')) {
           setIconUrl(data.iconUrl);
         } else {
           setError(true);
@@ -48,6 +57,7 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
   
   const handleImageError = () => {
     setError(true);
+    setIconUrl(null);
   };
   
   if (isLoading) {
@@ -56,8 +66,8 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
 
   if (error || !iconUrl) {
     return (
-        <div className={cn("flex items-center justify-center", className)}>
-            <GenericIcon />
+        <div className={cn("flex items-center justify-center rounded-full bg-muted/50", className)}>
+            <GenericIcon className="w-2/3 h-2/3 text-muted-foreground" />
         </div>
     );
   }

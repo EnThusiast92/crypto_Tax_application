@@ -14,8 +14,8 @@ let symbolToIdMap: Map<string, string> | null = null;
 const FALLBACK_ICON_URL = '/default-icon.png'; // A path to a default icon in your public folder
 
 async function getCoinsList() {
-  if (coinsList) {
-    return coinsList;
+  if (coinsList && symbolToIdMap) {
+    return;
   }
   try {
     const response = await fetch('https://api.coingecko.com/api/v3/coins/list');
@@ -25,10 +25,10 @@ async function getCoinsList() {
     const data: Coin[] = await response.json();
     coinsList = data;
     symbolToIdMap = new Map(coinsList.map(coin => [coin.symbol.toLowerCase(), coin.id]));
-    return coinsList;
   } catch (error) {
     console.error('CoinGecko API error:', error);
-    return null;
+    coinsList = null; // Reset cache on error
+    symbolToIdMap = null;
   }
 }
 
