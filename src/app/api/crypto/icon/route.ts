@@ -32,11 +32,12 @@ async function getCoinList() {
 
 /**
  * Finds the most likely CoinGecko ID for a given symbol.
- * For example, for symbol "btc", it finds the ID "bitcoin".
+ * This is the crucial step: it matches the SYMBOL you provide (e.g., "btc")
+ * to the SYMBOL in the CoinGecko list to find the correct ID (e.g., "bitcoin").
  */
 async function getCoinIdBySymbol(symbol: string): Promise<string | null> {
   const normalizedSymbol = symbol.toLowerCase();
-  
+
   // Handle specific known exceptions where the symbol is not the primary one.
   if (normalizedSymbol === 'jto') {
     return 'jito-governance-token';
@@ -60,16 +61,9 @@ async function getCoinIdBySymbol(symbol: string): Promise<string | null> {
     return potentialMatches[0].id;
   }
 
-  // If there are multiple matches, we apply some heuristics to find the best one.
-  // 1. Prefer an exact match on the id itself (e.g., symbol 'eth' and id 'ethereum' is very common, but sometimes id is also 'eth').
-  let bestMatch = potentialMatches.find(coin => coin.id.toLowerCase() === normalizedSymbol);
-  if (bestMatch) return bestMatch.id;
-  
-  // 2. Prefer a match where the name is an exact match to the symbol.
-  bestMatch = potentialMatches.find(coin => coin.name.toLowerCase() === normalizedSymbol);
-  if (bestMatch) return bestMatch.id;
-
-  // 3. Prefer the shortest ID, as primary assets often have simpler IDs (e.g., "bitcoin" vs. "wrapped-bitcoin").
+  // If there are multiple matches, we apply a simple heuristic.
+  // Prefer the coin where the id is the simplest (shortest), as primary assets
+  // often have simpler IDs (e.g., "bitcoin" vs. "wrapped-bitcoin").
   potentialMatches.sort((a, b) => a.id.length - b.id.length);
   return potentialMatches[0].id;
 }
@@ -83,7 +77,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    // STEP 1: Get the CoinGecko ID for the given symbol.
+    // STEP 1: Get the CoinGecko ID for the given symbol by matching the symbol.
     const id = await getCoinIdBySymbol(symbol);
     
     if (!id) {
