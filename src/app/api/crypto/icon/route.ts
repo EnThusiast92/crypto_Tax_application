@@ -32,21 +32,21 @@ async function getCoinList() {
 
 /**
  * Finds the most likely CoinGecko ID for a given symbol.
- * This is the crucial step: it matches the SYMBOL you provide (e.g., "btc")
- * to the SYMBOL in the CoinGecko list to find the correct ID (e.g., "bitcoin").
+ * This is the crucial step: it matches the SYMBOL you provide (e.g., "xrp")
+ * to the SYMBOL in the CoinGecko list to find the correct ID (e.g., "ripple").
  */
 async function getCoinIdBySymbol(symbol: string): Promise<string | null> {
   const normalizedSymbol = symbol.toLowerCase();
-
-  // Handle specific known exceptions where the symbol is not the primary one.
-  if (normalizedSymbol === 'jto') {
-    return 'jito-governance-token';
-  }
-
   const list = await getCoinList();
+
   if (!list || list.length === 0) {
     console.error('Coin list is empty, cannot perform lookup.');
     return null;
+  }
+  
+  // Handle specific known exceptions where the symbol is not the primary one.
+  if (normalizedSymbol === 'jto') {
+    return 'jito-governance-token';
   }
 
   // Find all potential coins that match the symbol.
@@ -56,7 +56,7 @@ async function getCoinIdBySymbol(symbol: string): Promise<string | null> {
     console.log(`No match found for symbol: ${normalizedSymbol}`);
     return null;
   }
-
+  
   if (potentialMatches.length === 1) {
     return potentialMatches[0].id;
   }
@@ -67,6 +67,7 @@ async function getCoinIdBySymbol(symbol: string): Promise<string | null> {
   potentialMatches.sort((a, b) => a.id.length - b.id.length);
   return potentialMatches[0].id;
 }
+
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
