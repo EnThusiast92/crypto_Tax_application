@@ -34,7 +34,7 @@ export interface AddTransactionDialogProps {
 }
 
 export type WalletProvider = 'Binance' | 'Coinbase' | 'Kraken' | 'MetaMask' | 'Phantom' | 'Ledger';
-export type Blockchain = 'Bitcoin' | 'Ethereum' | 'BSC' | 'Solana' | 'Polygon';
+export type Blockchain = 'Bitcoin' | 'Ethereum' | 'BSC' | 'Solana' | 'Polygon' | 'Avalanche';
 
 export type Wallet = {
   id: string;

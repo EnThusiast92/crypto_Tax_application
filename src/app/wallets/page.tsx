@@ -23,7 +23,7 @@ export default function WalletsPage() {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    setWallets((prev) => [...prev, newWallet]);
+    setWallets((prev) => [newWallet, ...prev]);
     toast({
       title: 'Wallet Added',
       description: `The ${walletData.name} wallet has been successfully added.`,

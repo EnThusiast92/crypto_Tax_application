@@ -37,6 +37,7 @@ export function WalletCard({ wallet }: WalletCardProps) {
     BSC: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
     Polygon: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
     Bitcoin: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+    Avalanche: 'bg-red-500/20 text-red-300 border-red-500/30',
   };
 
   return (

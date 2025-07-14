@@ -32,7 +32,7 @@ interface AddWalletDialogProps {
   onWalletAdd: (walletData: Omit<Wallet, 'id' | 'transactionCount' | 'balance' | 'createdAt' | 'updatedAt'>) => void;
 }
 
-const blockchains: Blockchain[] = ["Ethereum", "Solana", "BSC", "Polygon", "Bitcoin"];
+const blockchains: Blockchain[] = ["Ethereum", "Solana", "BSC", "Polygon", "Bitcoin", "Avalanche"];
 
 export function AddWalletDialog({ isOpen, onOpenChange, onWalletAdd }: AddWalletDialogProps) {
   const router = useRouter();
@@ -187,7 +187,7 @@ export function AddWalletDialog({ isOpen, onOpenChange, onWalletAdd }: AddWallet
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md">
         {renderStepContent()}
       </DialogContent>
     </Dialog>
