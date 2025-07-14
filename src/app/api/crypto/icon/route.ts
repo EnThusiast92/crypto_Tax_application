@@ -2,10 +2,28 @@
 
 import { NextResponse } from 'next/server';
 
-// These variables will cache the data in memory for the lifetime of the server instance.
 let coinListCache: any[] = [];
 let cacheTimestamp = 0;
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+
+// A priority map for common symbols to their correct CoinGecko IDs.
+// This solves ambiguity for symbols like "BTC", "ETH", etc.
+const PRIORITY_MAP: { [symbol: string]: string } = {
+    'btc': 'bitcoin',
+    'eth': 'ethereum',
+    'xrp': 'ripple',
+    'ada': 'cardano',
+    'doge': 'dogecoin',
+    'sol': 'solana',
+    'link': 'chainlink',
+    'ltc': 'litecoin',
+    'bch': 'bitcoin-cash',
+    'usdt': 'tether',
+    'usdc': 'usd-coin',
+    'bnb': 'binancecoin',
+    'jto': 'jito-governance-token',
+};
+
 
 /**
  * Fetches the full list of coins from CoinGecko and caches it.
@@ -32,11 +50,17 @@ async function getCoinList() {
 
 /**
  * Finds the most likely CoinGecko ID for a given symbol.
- * This is the crucial step: it matches the SYMBOL you provide (e.g., "xrp")
- * to the SYMBOL in the CoinGecko list to find the correct ID (e.g., "ripple").
+ * This function now uses a priority map for common coins and then a search for others.
  */
 async function getCoinIdBySymbol(symbol: string): Promise<string | null> {
   const normalizedSymbol = symbol.toLowerCase();
+
+  // 1. Check our priority map first for common symbols.
+  if (PRIORITY_MAP[normalizedSymbol]) {
+    return PRIORITY_MAP[normalizedSymbol];
+  }
+
+  // 2. If not in the map, search the full list.
   const list = await getCoinList();
 
   if (!list || list.length === 0) {
@@ -44,11 +68,6 @@ async function getCoinIdBySymbol(symbol: string): Promise<string | null> {
     return null;
   }
   
-  // Handle specific known exceptions where the symbol is not the primary one.
-  if (normalizedSymbol === 'jto') {
-    return 'jito-governance-token';
-  }
-
   // Find all potential coins that match the symbol.
   const potentialMatches = list.filter(coin => coin.symbol.toLowerCase() === normalizedSymbol);
 
@@ -61,7 +80,7 @@ async function getCoinIdBySymbol(symbol: string): Promise<string | null> {
     return potentialMatches[0].id;
   }
 
-  // If there are multiple matches, we apply a simple heuristic.
+  // 3. If there are multiple matches, apply a simple heuristic.
   // Prefer the coin where the id is the simplest (shortest), as primary assets
   // often have simpler IDs (e.g., "bitcoin" vs. "wrapped-bitcoin").
   potentialMatches.sort((a, b) => a.id.length - b.id.length);
@@ -78,7 +97,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    // STEP 1: Get the CoinGecko ID for the given symbol by matching the symbol.
+    // STEP 1: Get the CoinGecko ID for the given symbol.
     const id = await getCoinIdBySymbol(symbol);
     
     if (!id) {
@@ -95,7 +114,7 @@ export async function GET(request: Request) {
     const coinData = await coinRes.json();
     
     // Extract the large icon URL, falling back to thumb or small if it doesn't exist.
-    const iconUrl = coinData.image?.large || coinData.image?.thumb || coinData.image?.small || null;
+    const iconUrl = coinData.image?.large || coinData.image?.small || coinData.image?.thumb || null;
     
     if(!iconUrl){
       console.log(`Icon URL not found in data for coin ID: ${id}`);
