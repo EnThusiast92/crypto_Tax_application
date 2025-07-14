@@ -46,6 +46,7 @@ export function TransactionsTable({ data }: { data: Transaction[] }) {
     onRowSelectionChange: setRowSelection,
     onExpandedChange: setExpanded,
     getExpandedRowModel: getExpandedRowModel(),
+    getSubRowModel: () => undefined, // Required for expand to work
     state: {
       sorting,
       columnFilters,
@@ -108,9 +109,20 @@ export function TransactionsTable({ data }: { data: Transaction[] }) {
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <React.Fragment key={row.id}>
-                  <TableRow 
+                  <TableRow
                     data-state={row.getIsSelected() && 'selected'}
-                    className={cn(row.getIsExpanded() && "border-b-0")}
+                    className={cn(
+                      "cursor-pointer",
+                      row.getIsExpanded() && "border-b-0"
+                    )}
+                    onClick={(e) => {
+                      const target = e.target as HTMLElement;
+                      // Don't toggle expansion if a button, checkbox, or dropdown menu item was clicked
+                      if (target.closest('button, [role="checkbox"], [role="menuitem"]')) {
+                        return;
+                      }
+                      row.toggleExpanded();
+                    }}
                   >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id} style={{ width: cell.column.getSize() }}>
