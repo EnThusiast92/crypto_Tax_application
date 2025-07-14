@@ -2,7 +2,7 @@
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
-import { ArrowUpDown, MoreHorizontal, ArrowRight } from 'lucide-react';
+import { ArrowUpDown, MoreHorizontal, ArrowRight, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -17,6 +17,7 @@ import type { Transaction } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { CryptoIcon } from '@/components/crypto/crypto-icon';
+import * as React from 'react';
 
 export const columns: ColumnDef<Transaction>[] = [
   {
@@ -39,6 +40,24 @@ export const columns: ColumnDef<Transaction>[] = [
     enableHiding: false,
   },
   {
+    id: 'expander',
+    header: () => null,
+    cell: ({ row }) => {
+      return (
+        <Button
+          variant="ghost"
+          size="icon"
+          {...{
+            onClick: row.getToggleExpandedHandler(),
+            style: { cursor: 'pointer' },
+          }}
+        >
+          {row.getIsExpanded() ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+        </Button>
+      );
+    },
+  },
+  {
     accessorKey: 'date',
     header: ({ column }) => {
       return (
@@ -55,9 +74,10 @@ export const columns: ColumnDef<Transaction>[] = [
     header: 'Type',
     cell: ({ row }) => {
       const type = row.getValue('type') as string;
-      const variant: 'default' | 'secondary' | 'destructive' | 'outline' = 
+      const variant: 'default' | 'secondary' | 'destructive' | 'outline' =
         type === 'Buy' ? 'default' :
-        type === 'Sell' ? 'destructive' : 'secondary';
+        type === 'Sell' ? 'destructive' : 
+        type === 'Swap' ? 'outline' : 'secondary';
       return <Badge variant={variant} className={cn("capitalize", type === 'Buy' && 'bg-primary/80')}>{type}</Badge>;
     },
   },
