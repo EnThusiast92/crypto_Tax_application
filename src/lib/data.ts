@@ -1,5 +1,6 @@
 
-import type { Transaction, StatCardData, ClassificationResult, User } from './types';
+
+import type { Transaction, StatCardData, ClassificationResult, User, Wallet } from './types';
 import { ArrowUpRight, ArrowDownLeft, Banknote, Landmark } from 'lucide-react';
 
 export const statCards: StatCardData[] = [
@@ -88,4 +89,67 @@ export const users: User[] = [
         avatarUrl: 'https://i.pravatar.cc/150?u=vitalik@ethereum.org',
         createdAt: new Date().toISOString(),
     }
+];
+
+export const wallets: Wallet[] = [
+  {
+    id: 'wallet-1',
+    userId: 'user-client-1',
+    name: 'Binance Main',
+    type: 'CEX',
+    provider: 'Binance',
+    address: null,
+    blockchain: 'BSC',
+    apiKey: '...',
+    apiSecret: '...',
+    transactionCount: 152,
+    balance: 25480.50,
+    createdAt: '2023-01-15T10:00:00Z',
+    updatedAt: '2024-05-20T11:30:00Z',
+  },
+  {
+    id: 'wallet-2',
+    userId: 'user-client-1',
+    name: 'Metamask Hot',
+    type: 'Wallet',
+    provider: 'MetaMask',
+    address: '0x123...abc',
+    blockchain: 'Ethereum',
+    apiKey: null,
+    apiSecret: null,
+    transactionCount: 48,
+    balance: 12350.00,
+    createdAt: '2023-02-20T10:00:00Z',
+    updatedAt: '2024-05-18T15:00:00Z',
+  },
+  {
+    id: 'wallet-3',
+    userId: 'user-client-1',
+    name: 'Phantom Main',
+    type: 'Wallet',
+    provider: 'Phantom',
+    address: 'So1...xyz',
+    blockchain: 'Solana',
+    apiKey: null,
+    apiSecret: null,
+    transactionCount: 89,
+    balance: 8990.75,
+    createdAt: '2023-05-10T10:00:00Z',
+    updatedAt: '2024-05-21T09:00:00Z',
+  },
+    {
+    id: 'wallet-4',
+    userId: 'user-client-1',
+    name: 'Coinbase Pro',
+    type: 'CEX',
+    provider: 'Coinbase',
+    address: null,
+    blockchain: 'Ethereum',
+    apiKey: '...',
+    apiSecret: '...',
+    transactionCount: 210,
+    balance: 18765.25,
+    createdAt: '2022-11-05T10:00:00Z',
+    updatedAt: '2024-05-19T18:45:00Z',
+  },
 ];

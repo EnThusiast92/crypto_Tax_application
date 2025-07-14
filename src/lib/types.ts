@@ -1,4 +1,5 @@
 
+
 export type Transaction = {
   id: string;
   date: string;
@@ -32,6 +33,26 @@ export interface AddTransactionDialogProps {
   onOpenChange: (isOpen: boolean) => void;
   onAddTransaction: (data: Omit<Transaction, 'id' | 'value'>) => void;
 }
+
+export type WalletProvider = 'Binance' | 'Coinbase' | 'Kraken' | 'MetaMask' | 'Phantom';
+export type Blockchain = 'Bitcoin' | 'Ethereum' | 'BSC' | 'Solana' | 'Polygon';
+
+export type Wallet = {
+  id: string;
+  userId: string;
+  name: string;
+  type: "CEX" | "Wallet";
+  provider: WalletProvider;
+  address: string | null;
+  blockchain: Blockchain;
+  apiKey: string | null;
+  apiSecret: string | null;
+  transactionCount: number;
+  balance: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
 
 // RBAC and Auth Types
 export type Role = 'Developer' | 'Staff' | 'Client' | 'TaxConsultant';
