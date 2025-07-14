@@ -31,6 +31,7 @@ async function getCoinList() {
 async function getCoinIdBySymbol(symbol: string): Promise<string | null> {
   const normalizedSymbol = symbol.toLowerCase();
   
+  // Hardcoded exception for JTO as its symbol in CoinGecko is 'jito'
   if (normalizedSymbol === 'jto') {
       return 'jito-governance-token';
   }
@@ -53,15 +54,15 @@ async function getCoinIdBySymbol(symbol: string): Promise<string | null> {
   }
 
   // If multiple matches, try to find the best one.
-  // 1. Prefer an exact match on id
+  // 1. Prefer an exact match on id (e.g., symbol 'btc' -> id 'bitcoin' is common)
   let bestMatch = potentialMatches.find(coin => coin.id.toLowerCase() === normalizedSymbol);
   if (bestMatch) return bestMatch.id;
   
-  // 2. Prefer a match on name
+  // 2. Prefer a match where the name is very similar to the symbol
   bestMatch = potentialMatches.find(coin => coin.name.toLowerCase() === normalizedSymbol);
   if (bestMatch) return bestMatch.id;
 
-  // 3. Fallback to the first result if heuristics fail
+  // 3. Fallback to the first result if other heuristics fail
   return potentialMatches[0].id;
 }
 

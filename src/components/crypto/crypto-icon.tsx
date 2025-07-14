@@ -29,6 +29,7 @@ interface CryptoIconProps {
 export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
   const [iconUrl, setIconUrl] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState(false);
 
   React.useEffect(() => {
     if (!asset) {
@@ -38,6 +39,7 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
     
     let isCancelled = false;
     setIsLoading(true);
+    setError(false);
 
     fetch(`/api/crypto/icon?symbol=${asset.toLowerCase()}`)
       .then(res => {
@@ -49,12 +51,12 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
           if (data.iconUrl && data.iconUrl.startsWith('http')) {
             setIconUrl(data.iconUrl);
           } else {
-            setIconUrl(null); 
+            setError(true);
           }
         }
       })
       .catch(() => {
-          if (!isCancelled) setIconUrl(null);
+          if (!isCancelled) setError(true);
       })
       .finally(() => {
           if (!isCancelled) setIsLoading(false);
@@ -69,7 +71,7 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
     return <Skeleton className={cn("rounded-full", className)} />;
   }
 
-  if (!iconUrl) {
+  if (error || !iconUrl) {
     return <GenericIcon className={className} />;
   }
 
@@ -81,7 +83,7 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           className="object-contain rounded-full"
-          onError={() => setIconUrl(null)} 
+          onError={() => setError(true)} 
         />
     </div>
   );
