@@ -40,24 +40,20 @@ async function getCoinIdBySymbol(symbol: string): Promise<string | null> {
             return null;
         }
 
-        // Heuristic 1: Find the coin where the ID is the same as the symbol (e.g., symbol: 'btc', id: 'bitcoin'). This is often the main one.
-        // Or if the symbol is the name (e.g. solana)
-        let foundCoin = potentialMatches.find(c => c.id.toLowerCase() === normalizedSymbol || c.name.toLowerCase() === normalizedSymbol);
-
-        // Heuristic 2: If no direct match on ID, prefer the one with the simplest ID (often the base coin).
-        if (!foundCoin) {
-             potentialMatches.sort((a, b) => a.id.length - b.id.length);
-             foundCoin = potentialMatches[0];
+        if (potentialMatches.length === 1) {
+            console.log(`[API] Found unique match for ${normalizedSymbol}: ${potentialMatches[0].id}`);
+            return potentialMatches[0].id;
         }
 
-        if (foundCoin) {
-            console.log(`[API] Found best match for ${normalizedSymbol}: ${foundCoin.id}`);
-            return foundCoin.id;
-        } else {
-            // This case should not be reached if potentialMatches.length > 0, but as a safeguard:
-            console.log(`[API] Could not find a suitable match for symbol: ${normalizedSymbol}`);
-            return null;
-        }
+        // Heuristic: When multiple coins share a symbol, the main one often has the simplest/shortest ID.
+        // e.g., for 'eth', we want 'ethereum', not 'ethereum-pow' or other variants.
+        // Sort by the length of the ID string, ascending.
+        potentialMatches.sort((a, b) => a.id.length - b.id.length);
+        const bestMatch = potentialMatches[0];
+
+        console.log(`[API] Found best match for ${normalizedSymbol} (out of ${potentialMatches.length}): ${bestMatch.id}`);
+        return bestMatch.id;
+
     } catch (error) {
         console.error('[API] Error in getCoinIdBySymbol:', error);
         return null;
@@ -73,8 +69,8 @@ async function getCoinIconById(id: string): Promise<string | null> {
             return null;
         }
         const data = await response.json();
-        // Use thumb for consistency in size
-        const iconUrl = data.image?.thumb || null;
+        // Use large for better quality, fallback to thumb
+        const iconUrl = data.image?.large || data.image?.thumb || null;
         if (iconUrl) {
             console.log(`[API] Found icon for ${id}: ${iconUrl}`);
         } else {
