@@ -72,7 +72,7 @@ async function getCoinIdBySymbol(symbol: string): Promise<string | null> {
   const potentialMatches = list.filter(coin => coin.symbol.toLowerCase() === normalizedSymbol);
 
   if (potentialMatches.length === 0) {
-    console.log(`No match found for symbol: ${normalizedSymbol}`);
+    // console.log(`No match found for symbol: ${normalizedSymbol}`);
     return null;
   }
   
@@ -101,7 +101,7 @@ export async function GET(request: Request) {
     const id = await getCoinIdBySymbol(symbol);
     
     if (!id) {
-        console.log(`Could not resolve a CoinGecko ID for symbol: ${symbol}`);
+        // console.log(`Could not resolve a CoinGecko ID for symbol: ${symbol}`);
         return NextResponse.json({ iconUrl: null, error: 'Symbol not found' }, { status: 404 });
     }
 
@@ -117,7 +117,7 @@ export async function GET(request: Request) {
     const iconUrl = coinData.image?.large || coinData.image?.small || coinData.image?.thumb || null;
     
     if(!iconUrl){
-      console.log(`Icon URL not found in data for coin ID: ${id}`);
+      // console.log(`Icon URL not found in data for coin ID: ${id}`);
     }
 
     return NextResponse.json({ iconUrl });

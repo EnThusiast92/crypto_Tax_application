@@ -39,16 +39,19 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
     }
     
     let isCancelled = false;
-    setIsLoading(true);
-    setError(false);
-    setIconUrl(null);
+    
+    const fetchIcon = async () => {
+      // Reset state for new asset
+      setIsLoading(true);
+      setError(false);
+      setIconUrl(null);
 
-    fetch(`/api/crypto/icon?symbol=${asset.toLowerCase()}`)
-      .then(res => {
-          if (!res.ok) throw new Error('API response not OK');
-          return res.json();
-      })
-      .then(data => {
+      try {
+        const res = await fetch(`/api/crypto/icon?symbol=${asset.toLowerCase()}`);
+        if (!res.ok) {
+          throw new Error('API response not OK');
+        }
+        const data = await res.json();
         if (!isCancelled) {
           if (data.iconUrl && data.iconUrl.startsWith('http')) {
             setIconUrl(data.iconUrl);
@@ -56,13 +59,18 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
             setError(true);
           }
         }
-      })
-      .catch(() => {
-          if (!isCancelled) setError(true);
-      })
-      .finally(() => {
-          if (!isCancelled) setIsLoading(false);
-      });
+      } catch (err) {
+        if (!isCancelled) {
+          setError(true);
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchIcon();
       
     return () => {
         isCancelled = true;
