@@ -1,3 +1,4 @@
+
 export type Transaction = {
   id: string;
   date: string;
@@ -31,3 +32,30 @@ export interface AddTransactionDialogProps {
   onOpenChange: (isOpen: boolean) => void;
   onAddTransaction: (data: Omit<Transaction, 'id' | 'value'>) => void;
 }
+
+// RBAC and Auth Types
+export type Role = 'Developer' | 'Staff' | 'Client' | 'TaxConsultant';
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  passwordHash: string; // This would not be sent to the client in a real app
+  avatarUrl?: string;
+  createdAt: string;
+}
+
+export type RegisterFormValues = {
+  name: string;
+  email: string;
+  password: string;
+  role: 'Client' | 'TaxConsultant';
+};
+
+export type AuthContextType = {
+  user: User | null;
+  login: (email: string, password: string) => Promise<User>;
+  logout: () => void;
+  register: (data: RegisterFormValues) => Promise<User>;
+};

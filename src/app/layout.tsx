@@ -5,6 +5,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import AppShell from '@/components/app-shell';
 import { TransactionsProvider } from '@/context/transactions-context';
+import { AuthProvider } from '@/context/auth-context';
 import { usePathname } from 'next/navigation';
 
 export default function RootLayout({
@@ -13,7 +14,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
-  const isLandingPage = pathname === '/';
+  const noShellPages = ['/', '/login', '/register'];
+  const isShellRequired = !noShellPages.includes(pathname);
 
   // Metadata can't be in a client component, so we conditionally render a Head component
   // for the title, or we could use a server layout to read the path.
@@ -29,15 +31,17 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased">
-        <TransactionsProvider>
-          {isLandingPage ? (
-            children
-          ) : (
-            <AppShell>
-              {children}
-            </AppShell>
-          )}
-        </TransactionsProvider>
+        <AuthProvider>
+          <TransactionsProvider>
+            {isShellRequired ? (
+              <AppShell>
+                {children}
+              </AppShell>
+            ) : (
+              children
+            )}
+          </TransactionsProvider>
+        </AuthProvider>
         <Toaster />
       </body>
     </html>

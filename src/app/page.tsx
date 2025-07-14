@@ -30,11 +30,14 @@ export default function LandingPage() {
             <Link href="#" className="text-sm font-medium hover:text-primary transition-colors">About</Link>
             <Link href="#" className="text-sm font-medium hover:text-primary transition-colors">Contact</Link>
           </nav>
-          <div className="ml-auto lg:hidden">
-            <Button variant="ghost" size="icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
-            </Button>
-          </div>
+           <div className="flex items-center gap-4">
+              <Button asChild variant="ghost">
+                <Link href="/login">Log In</Link>
+              </Button>
+              <Button asChild>
+                <Link href="/register">Sign Up</Link>
+              </Button>
+            </div>
         </header>
 
         <main className="flex-1 flex items-center">
@@ -64,7 +67,7 @@ export default function LandingPage() {
                 <div className="flex flex-col sm:flex-row items-start gap-4">
                   <Button asChild size="lg">
                     <Link href="/dashboard">
-                      Get Started
+                      Get Started Free
                     </Link>
                   </Button>
                 </div>

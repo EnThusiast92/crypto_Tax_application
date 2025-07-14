@@ -1,4 +1,5 @@
-import type { Transaction, StatCardData, ClassificationResult } from './types';
+
+import type { Transaction, StatCardData, ClassificationResult, User } from './types';
 import { ArrowUpRight, ArrowDownLeft, Banknote, Landmark } from 'lucide-react';
 
 export const statCards: StatCardData[] = [
@@ -48,4 +49,43 @@ export const transactions: Transaction[] = [
 export const misclassifiedTransactions: Transaction[] = [
   transactions[6], // Gift Received -> Income
   { id: 'TXN011', date: '2024-03-15', type: 'Buy', asset: 'USDC', quantity: 1000, price: 1, fee: 1, value: 1000, exchange: 'Coinbase', classification: 'Transfer' },
+];
+
+export const users: User[] = [
+    {
+        id: 'user-dev',
+        name: 'Admin',
+        email: 'admin@cryptotaxpro.com',
+        role: 'Developer',
+        passwordHash: 'hashed_admin_password',
+        avatarUrl: 'https://i.pravatar.cc/150?u=admin@cryptotaxpro.com',
+        createdAt: new Date().toISOString(),
+    },
+    {
+        id: 'user-client-1',
+        name: 'Satoshi Nakamoto',
+        email: 'satoshi@gmx.com',
+        role: 'Client',
+        passwordHash: 'hashed_client_password',
+        avatarUrl: 'https://i.pravatar.cc/150?u=satoshi@gmx.com',
+        createdAt: new Date().toISOString(),
+    },
+    {
+        id: 'user-consultant-1',
+        name: 'Charles Hoskinson',
+        email: 'charles@iohk.io',
+        role: 'TaxConsultant',
+        passwordHash: 'hashed_consultant_password',
+        avatarUrl: 'https://i.pravatar.cc/150?u=charles@iohk.io',
+        createdAt: new Date().toISOString(),
+    },
+    {
+        id: 'user-staff-1',
+        name: 'Vitalik Buterin',
+        email: 'vitalik@ethereum.org',
+        role: 'Staff',
+        passwordHash: 'hashed_staff_password',
+        avatarUrl: 'https://i.pravatar.cc/150?u=vitalik@ethereum.org',
+        createdAt: new Date().toISOString(),
+    }
 ];

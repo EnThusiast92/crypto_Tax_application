@@ -3,9 +3,18 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Bell,
   LifeBuoy,
@@ -17,8 +26,11 @@ import {
   Sparkles,
   Settings,
   List,
+  LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/auth-context';
+import { useToast } from '@/hooks/use-toast';
 
 const links = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -35,7 +47,7 @@ function SidebarNav() {
   return (
     <nav className="flex flex-col gap-2">
       {links.map((link) => {
-        const isActive = (pathname === '/' && link.href === '/') || (link.href !== '/' && pathname.startsWith(link.href));
+        const isActive = pathname.startsWith(link.href);
         return (
           <Button
             key={link.name}
@@ -58,17 +70,16 @@ function SidebarNav() {
 }
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
-  const [isClient, setIsClient] = React.useState(false);
+  const { user, logout } = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
 
-  React.useEffect(() => {
-    setIsClient(true);
-  }, []);
+  const handleLogout = () => {
+    logout();
+    toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
+    router.push('/login');
+  };
 
-  if (!isClient) {
-    // Return a placeholder or null on the server to avoid hydration mismatch
-    return null;
-  }
-  
   return (
     <div className="flex min-h-screen w-full bg-muted/40">
       <aside className="hidden md:flex h-screen w-64 flex-col border-r bg-background sticky top-0">
@@ -132,6 +143,31 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <Bell className="h-5 w-5" />
               <span className="sr-only">Notifications</span>
             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-full">
+                  <Avatar>
+                    <AvatarImage src={user?.avatarUrl} alt={user?.name} />
+                    <AvatarFallback>{user?.name.charAt(0).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>
+                  <p>{user?.name}</p>
+                  <p className="text-xs text-muted-foreground font-normal">{user?.email}</p>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>Profile</DropdownMenuItem>
+                <DropdownMenuItem>Billing</DropdownMenuItem>
+                <DropdownMenuItem>Settings</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
         <main className="flex-1 p-6">
