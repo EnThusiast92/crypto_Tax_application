@@ -38,6 +38,12 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'raw.githubusercontent.com',
         port: '',
+        pathname: '/ErikThiart/cryptocurrency-icons/master/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'raw.githubusercontent.com',
+        port: '',
         pathname: '/spothq/cryptocurrency-icons/master/**',
       }
     ],
