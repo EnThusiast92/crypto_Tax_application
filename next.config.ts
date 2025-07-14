@@ -26,7 +26,7 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'assets.coingecko.com',
         port: '',
-        pathname: '/coins/images/**',
+        pathname: '/**',
       }
     ],
   },

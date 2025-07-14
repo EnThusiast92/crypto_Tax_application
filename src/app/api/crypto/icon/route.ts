@@ -74,19 +74,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ iconUrl: FALLBACK_ICON_URL }, { status: 500, statusText: "Failed to initialize CoinGecko symbol mapping." });
   }
   
-  // Special case for JTO which might not be in the list correctly
   const normalizedSymbol = symbol.toLowerCase();
   const coinId = symbolToIdMap.get(normalizedSymbol);
 
   if (!coinId) {
-    // console.log(`Symbol '${normalizedSymbol}' not found in CoinGecko map.`);
     return NextResponse.json({ iconUrl: FALLBACK_ICON_URL });
   }
 
   const iconUrl = await getCoinIcon(coinId);
   
   if (!iconUrl) {
-    // console.log(`Icon not found for coinId '${coinId}'.`);
     return NextResponse.json({ iconUrl: FALLBACK_ICON_URL });
   }
 
