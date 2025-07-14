@@ -10,7 +10,6 @@ export type Transaction = {
   value: number;
   exchange: 'Binance' | 'Coinbase' | 'Kraken' | 'Self-custody';
   classification: string;
-  walletId?: string | null;
 };
 
 export type StatCardData = {
@@ -33,25 +32,6 @@ export interface AddTransactionDialogProps {
   onOpenChange: (isOpen: boolean) => void;
   onAddTransaction: (data: Omit<Transaction, 'id' | 'value'>) => void;
 }
-
-export type WalletProvider = 'Binance' | 'Coinbase' | 'Kraken' | 'MetaMask' | 'Phantom' | 'Ledger';
-export type Blockchain = 'Bitcoin' | 'Ethereum' | 'BSC' | 'Solana' | 'Polygon' | 'Avalanche';
-
-export type Wallet = {
-  id: string;
-  userId: string;
-  name: string;
-  type: "CEX" | "Wallet";
-  provider: WalletProvider;
-  address: string | null;
-  blockchain: Blockchain;
-  apiKey: string | null;
-  apiSecret: string | null;
-  transactionCount: number;
-  balance: number;
-  createdAt: string;
-  updatedAt: string;
-};
 
 
 // RBAC and Auth Types

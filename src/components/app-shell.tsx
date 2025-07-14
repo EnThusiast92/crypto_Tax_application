@@ -27,7 +27,6 @@ import {
   Settings,
   List,
   LogOut,
-  Wallet,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
@@ -35,7 +34,6 @@ import { useToast } from '@/hooks/use-toast';
 
 const links = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Wallets', href: '/wallets', icon: Wallet },
   { name: 'Transactions', href: '/transactions', icon: List },
   { name: 'Import', href: '/import', icon: Upload },
   { name: 'Reports', href: '/reports', icon: FileText },
