@@ -34,12 +34,14 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
   React.useEffect(() => {
     if (!asset) {
       setIsLoading(false);
+      setError(true);
       return;
     }
     
     let isCancelled = false;
     setIsLoading(true);
     setError(false);
+    setIconUrl(null);
 
     fetch(`/api/crypto/icon?symbol=${asset.toLowerCase()}`)
       .then(res => {
