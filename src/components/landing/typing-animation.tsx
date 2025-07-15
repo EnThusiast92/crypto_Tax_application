@@ -19,7 +19,7 @@ export function TypingAnimation({
   deletingSpeed = 50,
   delay = 2000,
 }: TypingAnimationProps) {
-  const [text, setText] = useState('');
+  const [text, setText] = useState(texts[0] || '');
   const [isDeleting, setIsDeleting] = useState(false);
   const [loopNum, setLoopNum] = useState(0);
 
@@ -37,7 +37,8 @@ export function TypingAnimation({
       setTimeout(() => setIsDeleting(true), delay);
     } else if (isDeleting && text === '') {
       setIsDeleting(false);
-      setLoopNum(loopNum + 1);
+      setLoopNum(currentLoop => (currentLoop + 1));
+      setText(fullText.substring(0, 1));
     }
   }, [isDeleting, text, loopNum, texts, delay]);
 
