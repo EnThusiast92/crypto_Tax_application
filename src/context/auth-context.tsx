@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import type { User, AuthContextType, RegisterFormValues } from '@/lib/types';
+import type { User, AuthContextType, RegisterFormValues, Role } from '@/lib/types';
 import { users as mockUsers } from '@/lib/data';
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
@@ -53,6 +53,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('An account with this email already exists.');
     }
 
+    const role: Role = data.isTaxConsultant ? 'TaxConsultant' : 'Client';
+
     const newUser: User = {
       id: `user-${Date.now()}`,
       name: data.name,
@@ -60,6 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       passwordHash: 'mock_hashed_password', // In a real app, you'd never store this on the client
       avatarUrl: `https://i.pravatar.cc/150?u=${data.email}`,
       createdAt: new Date().toISOString(),
+      role,
     };
 
     setUsers(prevUsers => [...prevUsers, newUser]);

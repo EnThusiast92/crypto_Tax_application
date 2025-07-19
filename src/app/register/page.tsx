@@ -15,11 +15,13 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import type { RegisterFormValues } from '@/lib/types';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const registerSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Invalid email address.' }),
   password: z.string().min(8, { message: 'Password must be at least 8 characters.' }),
+  isTaxConsultant: z.boolean().optional(),
 });
 
 type FormValues = z.infer<typeof registerSchema>;
@@ -34,6 +36,9 @@ export default function RegisterPage() {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(registerSchema),
+    defaultValues: {
+      isTaxConsultant: false,
+    }
   });
 
   const onSubmit = async (data: FormValues) => {
@@ -44,7 +49,12 @@ export default function RegisterPage() {
           title: 'Registration Successful',
           description: "We've created your account for you.",
         });
-        router.push('/dashboard');
+        // Redirect based on role
+        if(newUser.role === 'TaxConsultant'){
+             router.push('/consultant-dashboard');
+        } else {
+             router.push('/dashboard');
+        }
       }
     } catch (error) {
       toast({
@@ -94,6 +104,15 @@ export default function RegisterPage() {
                 disabled={isSubmitting}
               />
               {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+            </div>
+            <div className="flex items-center space-x-2">
+                <Checkbox id="isTaxConsultant" {...register('isTaxConsultant')} />
+                <Label
+                    htmlFor="isTaxConsultant"
+                    className="text-sm font-normal text-muted-foreground"
+                >
+                   I am a Tax Consultant
+                </Label>
             </div>
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? 'Creating Account...' : 'Create an account'}

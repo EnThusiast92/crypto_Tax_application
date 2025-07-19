@@ -42,7 +42,23 @@ export default function LoginPage() {
           title: 'Login Successful',
           description: `Welcome back, ${user.name}!`,
         });
-        router.push('/dashboard');
+        
+        // Role-based redirection
+        switch (user.role) {
+            case 'Developer':
+                router.push('/admin/dashboard');
+                break;
+            case 'TaxConsultant':
+                 router.push('/consultant/dashboard');
+                break;
+            case 'Staff':
+                 router.push('/staff/dashboard');
+                break;
+            case 'Client':
+            default:
+                router.push('/dashboard');
+                break;
+        }
       }
     } catch (error) {
       toast({

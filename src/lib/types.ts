@@ -1,4 +1,6 @@
 
+export type Role = 'Developer' | 'Staff' | 'Client' | 'TaxConsultant';
+
 export type Transaction = {
   id: string;
   date: string;
@@ -44,12 +46,14 @@ export interface User {
   passwordHash: string; // This would not be sent to the client in a real app
   avatarUrl?: string;
   createdAt: string;
+  role: Role;
 }
 
 export type RegisterFormValues = {
   name: string;
   email: string;
   password: string;
+  isTaxConsultant?: boolean;
 };
 
 export type AuthContextType = {

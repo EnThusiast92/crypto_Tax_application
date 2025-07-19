@@ -60,6 +60,7 @@ export const users: User[] = [
         passwordHash: 'hashed_admin_password',
         avatarUrl: 'https://i.pravatar.cc/150?u=admin@cryptotaxpro.com',
         createdAt: new Date().toISOString(),
+        role: 'Developer',
     },
     {
         id: 'user-client-1',
@@ -68,6 +69,7 @@ export const users: User[] = [
         passwordHash: 'hashed_client_password',
         avatarUrl: 'https://i.pravatar.cc/150?u=satoshi@gmx.com',
         createdAt: new Date().toISOString(),
+        role: 'Client'
     },
     {
         id: 'user-consultant-1',
@@ -76,6 +78,7 @@ export const users: User[] = [
         passwordHash: 'hashed_consultant_password',
         avatarUrl: 'https://i.pravatar.cc/150?u=charles@iohk.io',
         createdAt: new Date().toISOString(),
+        role: 'TaxConsultant'
     },
     {
         id: 'user-staff-1',
@@ -84,5 +87,6 @@ export const users: User[] = [
         passwordHash: 'hashed_staff_password',
         avatarUrl: 'https://i.pravatar.cc/150?u=vitalik@ethereum.org',
         createdAt: new Date().toISOString(),
+        role: 'Staff'
     }
 ];
