@@ -34,16 +34,21 @@ import {
 import { ChevronDown } from 'lucide-react';
 import type { User } from '@/lib/types';
 import { columns } from './columns';
+import { useAuth } from '@/context/auth-context';
 
-export function UsersTable({ data }: { data: User[] }) {
+export function UsersTable() {
+  const { users } = useAuth();
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
+  
+  // Memoize columns to prevent re-creation on every render, which is important for cell components with hooks
+  const memoizedColumns = React.useMemo(() => columns, []);
 
   const table = useReactTable({
-    data,
-    columns,
+    data: users,
+    columns: memoizedColumns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),

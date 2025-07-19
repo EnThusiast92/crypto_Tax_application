@@ -5,6 +5,7 @@ import * as React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import type { User, AuthContextType, RegisterFormValues, Role } from '@/lib/types';
 import { users as mockUsers } from '@/lib/data';
+import { useToast } from '@/hooks/use-toast';
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
 
@@ -13,6 +14,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [users, setUsers] = React.useState<User[]>(mockUsers);
   const router = useRouter();
   const pathname = usePathname();
+  const { toast } = useToast();
 
   React.useEffect(() => {
     const storedUser = localStorage.getItem('currentUser');
@@ -36,8 +38,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Redirect non-developers from admin pages
             router.push('/dashboard'); 
         }
-        // Add other role-based redirects here if needed
-        // e.g., if (pathname.startsWith('/consultant') && currentUser.role !== 'TaxConsultant')
     }
 
   }, [pathname, router]);
@@ -87,8 +87,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('currentUser');
     router.push('/login');
   };
+  
+  const updateUserRole = (userId: string, newRole: Role) => {
+    setUsers(prevUsers =>
+      prevUsers.map(u => (u.id === userId ? { ...u, role: newRole } : u))
+    );
+    toast({
+        title: "Role Updated",
+        description: `User role has been successfully changed to ${newRole}.`
+    });
+  };
 
-  const value = { user, users, login, logout, register };
+  const deleteUser = (userId: string) => {
+    // Prevent deleting yourself
+    if (user?.id === userId) {
+        toast({
+            title: "Action Forbidden",
+            description: "You cannot delete your own account from the admin dashboard.",
+            variant: "destructive",
+        });
+        return;
+    }
+    setUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
+     toast({
+        title: "User Deleted",
+        description: `The user has been successfully deleted.`
+    });
+  };
+
+  const value = { user, users, login, logout, register, updateUserRole, deleteUser };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

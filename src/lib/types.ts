@@ -62,4 +62,6 @@ export type AuthContextType = {
   login: (email: string, password: string) => Promise<User>;
   logout: () => void;
   register: (data: RegisterFormValues) => Promise<User>;
+  updateUserRole: (userId: string, newRole: Role) => void;
+  deleteUser: (userId: string) => void;
 };

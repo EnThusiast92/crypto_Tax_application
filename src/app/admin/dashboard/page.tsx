@@ -5,15 +5,10 @@ import * as React from 'react';
 import { useAuth } from '@/context/auth-context';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { UsersTable } from '@/components/admin/users-table';
-import { users as mockUsers } from '@/lib/data'; // We'll use this for now
 
 export default function AdminDashboardPage() {
   const { user } = useAuth();
   
-  // In a real app, you'd fetch this from your backend.
-  // For now, we'll just use the mock data directly.
-  const allUsers = mockUsers;
-
   if (user?.role !== 'Developer') {
     return (
         <div className="flex items-center justify-center h-full">
@@ -39,7 +34,7 @@ export default function AdminDashboardPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-            <UsersTable data={allUsers} />
+            <UsersTable />
         </CardContent>
       </Card>
     </div>
