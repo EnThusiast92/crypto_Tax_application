@@ -37,13 +37,10 @@ export interface AddTransactionDialogProps {
 
 
 // RBAC and Auth Types
-export type Role = 'Developer' | 'Staff' | 'Client' | 'TaxConsultant';
-
 export interface User {
   id: string;
   name: string;
   email: string;
-  role: Role;
   passwordHash: string; // This would not be sent to the client in a real app
   avatarUrl?: string;
   createdAt: string;
@@ -53,7 +50,6 @@ export type RegisterFormValues = {
   name: string;
   email: string;
   password: string;
-  role: 'Client' | 'TaxConsultant';
 };
 
 export type AuthContextType = {

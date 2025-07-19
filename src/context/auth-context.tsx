@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import type { User, Role, AuthContextType, RegisterFormValues } from '@/lib/types';
+import type { User, AuthContextType, RegisterFormValues } from '@/lib/types';
 import { users as mockUsers } from '@/lib/data';
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
@@ -58,7 +58,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       name: data.name,
       email: data.email,
       passwordHash: 'mock_hashed_password', // In a real app, you'd never store this on the client
-      role: data.role || 'Client',
       avatarUrl: `https://i.pravatar.cc/150?u=${data.email}`,
       createdAt: new Date().toISOString(),
     };
