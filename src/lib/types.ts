@@ -1,4 +1,5 @@
 
+
 export type Role = 'Developer' | 'Staff' | 'Client' | 'TaxConsultant';
 
 export type Transaction = {
@@ -70,4 +71,19 @@ export type AuthContextType = {
   updateUserRole: (userId: string, newRole: Role) => void;
   deleteUser: (userId: string) => void;
   updateUser: (userId: string, data: EditUserFormValues) => void;
+};
+
+
+// Admin Dashboard Types
+export type PaymentPlan = {
+    id: string;
+    name: 'Free' | 'Pro' | 'Enterprise';
+    price: number;
+    features: string[];
+};
+
+export type AppSettings = {
+    logoUrl: string;
+    taxRules: string;
+    paymentPlans: PaymentPlan[];
 };

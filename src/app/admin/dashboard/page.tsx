@@ -5,6 +5,7 @@ import * as React from 'react';
 import { useAuth } from '@/context/auth-context';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { UsersTable } from '@/components/admin/users-table';
+import { ApplicationSettings } from '@/components/admin/application-settings';
 
 export default function AdminDashboardPage() {
   const { user } = useAuth();
@@ -26,17 +27,25 @@ export default function AdminDashboardPage() {
         </p>
       </header>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>User Management</CardTitle>
-          <CardDescription>
-            View and manage all users in the system.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-            <UsersTable />
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        <div className="space-y-8">
+            <Card>
+                <CardHeader>
+                <CardTitle>User Management</CardTitle>
+                <CardDescription>
+                    View and manage all users in the system.
+                </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <UsersTable />
+                </CardContent>
+            </Card>
+        </div>
+        <div className="space-y-8">
+            <ApplicationSettings />
+        </div>
+
+      </div>
     </div>
   );
 }
