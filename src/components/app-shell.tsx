@@ -31,13 +31,14 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
+import { useSettings } from '@/context/settings-context';
 import { useToast } from '@/hooks/use-toast';
 
 const baseLinks = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Transactions', href: '/transactions', icon: List },
-  { name: 'Import', href: '/import', icon: Upload },
-  { name: 'Reports', href: '/reports', icon: FileText },
+  { name: 'Import', href: '/import', icon: Upload, featureFlag: 'csvImport' },
+  { name: 'Reports', href: '/reports', icon: FileText, featureFlag: 'taxReport' },
   { name: 'Classifier', href: '/classifier', icon: Sparkles },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
@@ -47,8 +48,10 @@ const adminLink = { name: 'Admin', href: '/admin/dashboard', icon: Shield };
 function SidebarNav() {
   const pathname = usePathname();
   const { user } = useAuth();
+  const { settings } = useSettings();
+
+  let links = baseLinks.filter(link => !link.featureFlag || settings.toggles[link.featureFlag as keyof typeof settings.toggles]);
   
-  const links = [...baseLinks];
   if (user?.role === 'Developer') {
     links.push(adminLink);
   }

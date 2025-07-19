@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import AppShell from '@/components/app-shell';
 import { TransactionsProvider } from '@/context/transactions-context';
 import { AuthProvider } from '@/context/auth-context';
+import { SettingsProvider } from '@/context/settings-context';
 import { usePathname } from 'next/navigation';
 
 export default function RootLayout({
@@ -32,15 +33,17 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <AuthProvider>
-          <TransactionsProvider>
-            {isShellRequired ? (
-              <AppShell>
-                {children}
-              </AppShell>
-            ) : (
-              children
-            )}
-          </TransactionsProvider>
+          <SettingsProvider>
+            <TransactionsProvider>
+              {isShellRequired ? (
+                <AppShell>
+                  {children}
+                </AppShell>
+              ) : (
+                children
+              )}
+            </TransactionsProvider>
+          </SettingsProvider>
         </AuthProvider>
         <Toaster />
       </body>

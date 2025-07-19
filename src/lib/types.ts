@@ -69,21 +69,37 @@ export type AuthContextType = {
   logout: () => void;
   register: (data: RegisterFormValues) => Promise<User>;
   updateUserRole: (userId: string, newRole: Role) => void;
-  deleteUser: (userId: string) => void;
+  deleteUser: (userId:string) => void;
   updateUser: (userId: string, data: EditUserFormValues) => void;
 };
 
 
 // Admin Dashboard Types
-export type PaymentPlan = {
-    id: string;
-    name: 'Free' | 'Pro' | 'Enterprise';
-    price: number;
-    features: string[];
+export type FeatureToggles = {
+    csvImport: boolean;
+    taxReport: boolean;
+    apiSync: boolean;
+};
+
+export type StaffPermissions = {
+    canManageUsers: boolean;
+    canViewAllTx: boolean;
+};
+
+export type SiteConfig = {
+    logoUrl: string;
+    taxRules: string;
 };
 
 export type AppSettings = {
-    logoUrl: string;
-    taxRules: string;
-    paymentPlans: PaymentPlan[];
+    toggles: FeatureToggles;
+    permissions: StaffPermissions;
+    config: SiteConfig;
+};
+
+export type SettingsContextType = {
+  settings: AppSettings;
+  updateFeatureToggle: (key: keyof FeatureToggles, value: boolean) => void;
+  updateSiteConfig: (key: keyof SiteConfig, value: string) => void;
+  updateStaffPermission: (key: keyof StaffPermissions, value: boolean) => void;
 };
