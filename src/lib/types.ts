@@ -58,6 +58,7 @@ export type RegisterFormValues = {
 
 export type AuthContextType = {
   user: User | null;
+  users: User[];
   login: (email: string, password: string) => Promise<User>;
   logout: () => void;
   register: (data: RegisterFormValues) => Promise<User>;

@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import type { User, AuthContextType, RegisterFormValues, Role } from '@/lib/types';
 import { users as mockUsers } from '@/lib/data';
 
@@ -12,29 +12,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = React.useState<User | null>(null);
   const [users, setUsers] = React.useState<User[]>(mockUsers);
   const router = useRouter();
+  const pathname = usePathname();
 
   React.useEffect(() => {
-    // In a real app, you'd verify a token from localStorage or a cookie
-    // For this mock, we'll check if a user is in localStorage.
     const storedUser = localStorage.getItem('currentUser');
+    let currentUser: User | null = null;
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    } else {
-        // If no user is logged in, and we are not on public pages, redirect to login
-        if (typeof window !== 'undefined' && !['/login', '/register', '/'].includes(window.location.pathname)) {
-            router.push('/login');
-        }
+      currentUser = JSON.parse(storedUser);
+      setUser(currentUser);
     }
-  }, [router]);
+
+    const publicPages = ['/login', '/register', '/'];
+    const isPublicPage = publicPages.includes(pathname);
+    
+    if (!currentUser && !isPublicPage) {
+        router.push('/login');
+        return;
+    }
+    
+    // Role-based route protection
+    if (currentUser) {
+        if (pathname.startsWith('/admin') && currentUser.role !== 'Developer') {
+            // Redirect non-developers from admin pages
+            router.push('/dashboard'); 
+        }
+        // Add other role-based redirects here if needed
+        // e.g., if (pathname.startsWith('/consultant') && currentUser.role !== 'TaxConsultant')
+    }
+
+  }, [pathname, router]);
 
   const login = async (email: string, password: string): Promise<User> => {
-    // In a real app, this would be a POST request to your API
-    // and you'd use bcrypt.compare(password, user.passwordHash)
     console.log(`Attempting to log in with email: ${email}`);
     const foundUser = users.find((u) => u.email === email);
 
     if (foundUser) {
-      // Mock password check
       if (password === 'password123' || (foundUser.email === 'admin@cryptotaxpro.com' && password === 'admin123')) {
         console.log('Login successful for:', foundUser.name);
         setUser(foundUser);
@@ -47,8 +59,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const register = async (data: RegisterFormValues): Promise<User> => {
-    // In a real app, this would be a POST request to your API
-    // which would hash the password and create the user in the DB.
     if (users.some((u) => u.email === data.email)) {
       throw new Error('An account with this email already exists.');
     }
@@ -59,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       id: `user-${Date.now()}`,
       name: data.name,
       email: data.email,
-      passwordHash: 'mock_hashed_password', // In a real app, you'd never store this on the client
+      passwordHash: 'mock_hashed_password',
       avatarUrl: `https://i.pravatar.cc/150?u=${data.email}`,
       createdAt: new Date().toISOString(),
       role,
@@ -78,7 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push('/login');
   };
 
-  const value = { user, login, logout, register };
+  const value = { user, users, login, logout, register };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
