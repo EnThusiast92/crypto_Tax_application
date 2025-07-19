@@ -27,12 +27,13 @@ import {
   Settings,
   List,
   LogOut,
+  Shield,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 
-const links = [
+const baseLinks = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Transactions', href: '/transactions', icon: List },
   { name: 'Import', href: '/import', icon: Upload },
@@ -41,8 +42,16 @@ const links = [
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
+const adminLink = { name: 'Admin', href: '/admin/dashboard', icon: Shield };
+
 function SidebarNav() {
   const pathname = usePathname();
+  const { user } = useAuth();
+  
+  const links = [...baseLinks];
+  if (user?.role === 'Developer') {
+    links.push(adminLink);
+  }
 
   return (
     <nav className="flex flex-col gap-2">

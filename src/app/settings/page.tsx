@@ -61,6 +61,10 @@ export default function SettingsPage() {
                             <Input id="email" type="email" defaultValue={user.email} />
                         </div>
                     </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="role">Role</Label>
+                        <Input id="role" defaultValue={user.role} readOnly className="cursor-not-allowed bg-muted/50"/>
+                    </div>
                 </CardContent>
                  <CardFooter className="border-t px-6 py-4">
                     <Button>Save Changes</Button>
