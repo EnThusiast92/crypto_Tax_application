@@ -35,8 +35,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Role-based route protection
     if (currentUser) {
         if (pathname.startsWith('/admin') && currentUser.role !== 'Developer') {
-            // Redirect non-developers from admin pages
             router.push('/dashboard'); 
+        }
+        if (pathname.startsWith('/staff') && currentUser.role !== 'Developer' && currentUser.role !== 'Staff') {
+            router.push('/dashboard');
         }
     }
 
