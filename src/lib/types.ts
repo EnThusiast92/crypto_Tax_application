@@ -56,6 +56,11 @@ export type RegisterFormValues = {
   isTaxConsultant?: boolean;
 };
 
+export type EditUserFormValues = {
+  name: string;
+  email: string;
+};
+
 export type AuthContextType = {
   user: User | null;
   users: User[];
@@ -64,4 +69,5 @@ export type AuthContextType = {
   register: (data: RegisterFormValues) => Promise<User>;
   updateUserRole: (userId: string, newRole: Role) => void;
   deleteUser: (userId: string) => void;
+  updateUser: (userId: string, data: EditUserFormValues) => void;
 };

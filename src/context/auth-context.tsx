@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import type { User, AuthContextType, RegisterFormValues, Role } from '@/lib/types';
+import type { User, AuthContextType, RegisterFormValues, Role, EditUserFormValues } from '@/lib/types';
 import { users as mockUsers } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 
@@ -114,8 +114,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         description: `The user has been successfully deleted.`
     });
   };
+  
+  const updateUser = (userId: string, data: EditUserFormValues) => {
+    setUsers(prevUsers =>
+      prevUsers.map(u => (u.id === userId ? { ...u, name: data.name, email: data.email } : u))
+    );
+    // If the updated user is the current user, update the user state as well
+    if(user?.id === userId) {
+        const updatedUser = { ...user, ...data };
+        setUser(updatedUser);
+        localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+    }
+    toast({
+      title: "User Updated",
+      description: "User details have been successfully updated.",
+    });
+  };
 
-  const value = { user, users, login, logout, register, updateUserRole, deleteUser };
+
+  const value = { user, users, login, logout, register, updateUserRole, deleteUser, updateUser };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

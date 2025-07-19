@@ -23,6 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/context/auth-context';
 import { DeleteUserDialog } from './delete-user-dialog';
+import { EditUserDialog } from './edit-user-dialog';
 
 export const columns: ColumnDef<User>[] = [
   {
@@ -90,8 +91,9 @@ export const columns: ColumnDef<User>[] = [
     id: 'actions',
     cell: function ActionsCell({ row }) {
       const user = row.original;
-      const { updateUserRole, deleteUser } = useAuth();
+      const { updateUserRole, deleteUser, updateUser } = useAuth();
       const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+      const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
       const roles: Role[] = ['Client', 'Staff', 'TaxConsultant', 'Developer'];
 
       return (
@@ -105,7 +107,7 @@ export const columns: ColumnDef<User>[] = [
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem disabled>Edit User</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setIsEditDialogOpen(true)}>Edit User</DropdownMenuItem>
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>Change Role</DropdownMenuSubTrigger>
                 <DropdownMenuPortal>
@@ -133,6 +135,12 @@ export const columns: ColumnDef<User>[] = [
             onOpenChange={setIsDeleteDialogOpen}
             onConfirm={() => deleteUser(user.id)}
             userName={user.name}
+          />
+          <EditUserDialog
+            isOpen={isEditDialogOpen}
+            onOpenChange={setIsEditDialogOpen}
+            user={user}
+            onUpdateUser={updateUser}
           />
         </>
       );
