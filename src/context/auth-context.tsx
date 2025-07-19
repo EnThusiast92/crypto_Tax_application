@@ -99,11 +99,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteUser = (userId: string) => {
-    // Prevent deleting yourself
+    // Prevent deleting yourself - This is also handled by disabling the button in the UI.
     if (user?.id === userId) {
         toast({
             title: "Action Forbidden",
-            description: "You cannot delete your own account from the admin dashboard.",
+            description: "You cannot delete your own account.",
             variant: "destructive",
         });
         return;

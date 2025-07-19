@@ -91,10 +91,12 @@ export const columns: ColumnDef<User>[] = [
     id: 'actions',
     cell: function ActionsCell({ row }) {
       const user = row.original;
-      const { updateUserRole, deleteUser, updateUser } = useAuth();
+      const { user: currentUser, updateUserRole, deleteUser, updateUser } = useAuth();
       const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
       const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
       const roles: Role[] = ['Client', 'Staff', 'TaxConsultant', 'Developer'];
+
+      const isCurrentUser = currentUser?.id === user.id;
 
       return (
         <>
@@ -109,7 +111,7 @@ export const columns: ColumnDef<User>[] = [
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuItem onSelect={() => setIsEditDialogOpen(true)}>Edit User</DropdownMenuItem>
               <DropdownMenuSub>
-                <DropdownMenuSubTrigger>Change Role</DropdownMenuSubTrigger>
+                <DropdownMenuSubTrigger disabled={isCurrentUser}>Change Role</DropdownMenuSubTrigger>
                 <DropdownMenuPortal>
                     <DropdownMenuSubContent>
                         {roles.map(role => (
@@ -125,6 +127,7 @@ export const columns: ColumnDef<User>[] = [
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive focus:bg-destructive/10"
                 onSelect={() => setIsDeleteDialogOpen(true)}
+                disabled={isCurrentUser}
               >
                 Delete User
               </DropdownMenuItem>
