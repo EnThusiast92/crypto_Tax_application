@@ -11,7 +11,7 @@ import { Upload, X, UserPlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export default function SettingsPage() {
-    const { user } = useAuth();
+    const { user, users } = useAuth();
 
     if (!user) {
         return (
@@ -24,10 +24,8 @@ export default function SettingsPage() {
         )
     }
     
-    // Mock data for linked consultants
-    const linkedConsultants = [
-        { id: 'consultant-1', name: 'Charles Hoskinson', email: 'charles@iohk.io' },
-    ];
+    // Mock finding the linked consultant
+    const linkedConsultant = users.find(u => u.id === user.linkedConsultantId);
 
     return (
         <div className="space-y-8 animate-in fade-in-0 duration-500">
@@ -96,25 +94,23 @@ export default function SettingsPage() {
                         </div>
                         <div className="space-y-3">
                             <Label>Linked Consultants</Label>
-                             {linkedConsultants.length > 0 ? (
-                                linkedConsultants.map(c => (
-                                    <div key={c.id} className="flex items-center justify-between rounded-lg border p-3">
-                                        <div className="flex items-center gap-3">
-                                            <Avatar className="h-9 w-9">
-                                                <AvatarImage src={`https://i.pravatar.cc/150?u=${c.email}`} alt={c.name} />
-                                                <AvatarFallback>{c.name.charAt(0)}</AvatarFallback>
-                                            </Avatar>
-                                            <div>
-                                                <p className="font-medium">{c.name}</p>
-                                                <p className="text-sm text-muted-foreground">{c.email}</p>
-                                            </div>
+                             {linkedConsultant ? (
+                                <div key={linkedConsultant.id} className="flex items-center justify-between rounded-lg border p-3">
+                                    <div className="flex items-center gap-3">
+                                        <Avatar className="h-9 w-9">
+                                            <AvatarImage src={linkedConsultant.avatarUrl} alt={linkedConsultant.name} />
+                                            <AvatarFallback>{linkedConsultant.name.charAt(0)}</AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                            <p className="font-medium">{linkedConsultant.name}</p>
+                                            <p className="text-sm text-muted-foreground">{linkedConsultant.email}</p>
                                         </div>
-                                        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive">
-                                            <X className="h-4 w-4 mr-2" />
-                                            Remove Access
-                                        </Button>
                                     </div>
-                                ))
+                                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive">
+                                        <X className="h-4 w-4 mr-2" />
+                                        Remove Access
+                                    </Button>
+                                </div>
                             ) : (
                                 <p className="text-sm text-muted-foreground text-center py-4">You have not invited any tax consultants yet.</p>
                             )}

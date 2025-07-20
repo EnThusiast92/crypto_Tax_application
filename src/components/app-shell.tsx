@@ -29,6 +29,7 @@ import {
   LogOut,
   Shield,
   UserCog,
+  Briefcase,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
@@ -46,6 +47,8 @@ const baseLinks = [
 
 const adminLink = { name: 'Admin', href: '/admin/dashboard', icon: Shield };
 const staffLink = { name: 'Staff Dashboard', href: '/staff/dashboard', icon: UserCog };
+const consultantLink = { name: 'Consultant DB', href: '/consultant/dashboard', icon: Briefcase };
+
 
 function SidebarNav() {
   const pathname = usePathname();
@@ -58,7 +61,14 @@ function SidebarNav() {
     links.push(adminLink);
   } else if (user?.role === 'Staff') {
     links.push(staffLink);
+  } else if (user?.role === 'TaxConsultant') {
+    // For consultants, we might want a different set of base links
+    links = [
+        consultantLink,
+        { name: 'Settings', href: '/settings', icon: Settings }
+    ];
   }
+
 
   return (
     <nav className="flex flex-col gap-2">

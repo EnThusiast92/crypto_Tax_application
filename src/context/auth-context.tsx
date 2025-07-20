@@ -40,6 +40,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (pathname.startsWith('/staff') && currentUser.role !== 'Developer' && currentUser.role !== 'Staff') {
             router.push('/dashboard');
         }
+        if (pathname.startsWith('/consultant') && currentUser.role !== 'TaxConsultant') {
+            router.push('/dashboard');
+        }
     }
 
   }, [pathname, router]);
@@ -49,6 +52,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const foundUser = users.find((u) => u.email === email);
 
     if (foundUser) {
+      // In a real app, you'd compare a hashed password.
+      // For this mock, any password is fine for regular users, but admin has a specific one.
       if (password === 'password123' || (foundUser.email === 'admin@cryptotaxpro.com' && password === 'admin123')) {
         console.log('Login successful for:', foundUser.name);
         setUser(foundUser);
@@ -71,7 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       id: `user-${Date.now()}`,
       name: data.name,
       email: data.email,
-      passwordHash: 'mock_hashed_password',
+      passwordHash: 'mock_hashed_password', // In a real app, hash the password
       avatarUrl: `https://i.pravatar.cc/150?u=${data.email}`,
       createdAt: new Date().toISOString(),
       role,
@@ -101,7 +106,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteUser = (userId: string) => {
-    // Prevent deleting yourself - This is also handled by disabling the button in the UI.
     if (user?.id === userId) {
         toast({
             title: "Action Forbidden",
@@ -121,7 +125,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUsers(prevUsers =>
       prevUsers.map(u => (u.id === userId ? { ...u, name: data.name, email: data.email } : u))
     );
-    // If the updated user is the current user, update the user state as well
     if(user?.id === userId) {
         const updatedUser = { ...user, ...data };
         setUser(updatedUser);

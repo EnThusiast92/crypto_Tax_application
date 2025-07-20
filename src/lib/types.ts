@@ -1,5 +1,6 @@
 
 
+
 export type Role = 'Developer' | 'Staff' | 'Client' | 'TaxConsultant';
 
 export type Transaction = {
@@ -48,6 +49,8 @@ export interface User {
   avatarUrl?: string;
   createdAt: string;
   role: Role;
+  linkedClientIds?: string[]; // For consultants
+  linkedConsultantId?: string; // For clients
 }
 
 export type RegisterFormValues = {

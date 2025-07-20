@@ -21,7 +21,7 @@ const registerSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Invalid email address.' }),
   password: z.string().min(8, { message: 'Password must be at least 8 characters.' }),
-  isTaxConsultant: z.boolean().optional(),
+  isTaxConsultant: z.boolean().default(false),
 });
 
 type FormValues = z.infer<typeof registerSchema>;
@@ -51,7 +51,7 @@ export default function RegisterPage() {
         });
         // Redirect based on role
         if(newUser.role === 'TaxConsultant'){
-             router.push('/consultant-dashboard');
+             router.push('/consultant/dashboard');
         } else {
              router.push('/dashboard');
         }

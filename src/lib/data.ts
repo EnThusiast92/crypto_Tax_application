@@ -69,7 +69,18 @@ export const users: User[] = [
         passwordHash: 'hashed_client_password',
         avatarUrl: 'https://i.pravatar.cc/150?u=satoshi@gmx.com',
         createdAt: new Date().toISOString(),
-        role: 'Client'
+        role: 'Client',
+        linkedConsultantId: 'user-consultant-1',
+    },
+     {
+        id: 'user-client-2',
+        name: 'Gavin Wood',
+        email: 'gavin@eth.org',
+        passwordHash: 'hashed_client_password_2',
+        avatarUrl: 'https://i.pravatar.cc/150?u=gavin@eth.org',
+        createdAt: new Date().toISOString(),
+        role: 'Client',
+        linkedConsultantId: 'user-consultant-1',
     },
     {
         id: 'user-consultant-1',
@@ -78,7 +89,8 @@ export const users: User[] = [
         passwordHash: 'hashed_consultant_password',
         avatarUrl: 'https://i.pravatar.cc/150?u=charles@iohk.io',
         createdAt: new Date().toISOString(),
-        role: 'TaxConsultant'
+        role: 'TaxConsultant',
+        linkedClientIds: ['user-client-1', 'user-client-2'],
     },
     {
         id: 'user-staff-1',
