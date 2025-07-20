@@ -161,34 +161,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     toast({ title: "User Updated", description: "User details have been successfully updated." });
   };
   
-  const removeConsultantAccess = (clientId: string) => {
-    let consultantId: string | undefined;
+ const removeConsultantAccess = (clientId: string) => {
+    const client = users.find(u => u.id === clientId);
+    const consultantId = client?.linkedConsultantId;
 
+    if (!client || !consultantId) {
+      console.error("Cannot remove access: client or consultant link not found.");
+      return;
+    }
+    
+    let updatedCurrentUser: User | undefined;
+
+    // Create a new array with the updated users
     const newUsers = users.map(u => {
-      // Find the client and get their linked consultant's ID
+      // For the client, remove the link
       if (u.id === clientId) {
-        consultantId = u.linkedConsultantId;
-        const { linkedConsultantId, ...restOfUser } = u; // Remove the link
-        return restOfUser;
+        const { linkedConsultantId, ...restOfClient } = u;
+        updatedCurrentUser = restOfClient; // This will be the new state for the logged-in user
+        return restOfClient;
       }
-      return u;
-    }).map(u => {
-      // Find the consultant and remove the client's ID from their list
+      // For the consultant, remove the client from their list
       if (u.id === consultantId) {
-        return { ...u, linkedClientIds: u.linkedClientIds?.filter(id => id !== clientId) };
+        return { 
+            ...u, 
+            linkedClientIds: u.linkedClientIds?.filter(id => id !== clientId) 
+        };
       }
       return u;
     });
-    
-    // Update the main users list first
+
+    // Set the state for the main users list
     setUsers(newUsers);
 
-    // If the currently logged-in user is the client who took the action, update their local state
-    if (user?.id === clientId) {
-        const updatedCurrentUser = newUsers.find(u => u.id === clientId);
-        if (updatedCurrentUser) {
-            setUser(updatedCurrentUser);
-        }
+    // Set the state for the currently logged-in user
+    if (updatedCurrentUser) {
+      setUser(updatedCurrentUser);
     }
     
     toast({ title: "Consultant Unlinked", description: "Access has been successfully removed." });
@@ -201,7 +208,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!consultant) throw new Error("No tax consultant found with this email.");
     if (user.linkedConsultantId === consultant.id) throw new Error("You are already linked with this consultant.");
 
-    // Check for existing pending invites to the same consultant
     if (invitations.some(inv => inv.fromClientId === user.id && inv.toConsultantEmail === consultantEmail && inv.status === 'pending')) {
         throw new Error("You already have a pending invitation for this consultant.");
     }
@@ -224,57 +230,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const invitation = invitations.find(inv => inv.id === invitationId);
     if (!invitation || !user || user.role !== 'TaxConsultant') return;
 
-    // 1. Update invitation status
-    setInvitations(prev => prev.map(inv => inv.id === invitationId ? { ...inv, status: 'accepted' } : inv).filter(inv => inv.id !== invitationId));
+    setInvitations(prev => prev.filter(inv => inv.id !== invitationId));
     
-    // 2. Atomically update the users array for both client and consultant
     let updatedConsultant: User | undefined;
-    const newUsers = users.map(u => {
-      // Link client to consultant
-      if (u.id === invitation.fromClientId) {
-        return { 
+
+    setUsers(prevUsers => {
+      const newUsers = prevUsers.map(u => {
+        if (u.id === invitation.fromClientId) {
+          return { 
             ...u, 
             linkedConsultantId: user.id, 
-            sentInvites: u.sentInvites?.filter(si => si.consultantEmail !== invitation.toConsultantEmail) // Remove invite from client's list
-        };
+            sentInvites: u.sentInvites?.filter(si => si.consultantEmail !== invitation.toConsultantEmail)
+          };
+        }
+        if (u.id === user.id) {
+          updatedConsultant = { ...u, linkedClientIds: [...(u.linkedClientIds || []), invitation.fromClientId] };
+          return updatedConsultant;
+        }
+        return u;
+      });
+      
+      if (updatedConsultant) {
+          setUser(updatedConsultant);
       }
-      // Link consultant to client
-      if (u.id === user.id) {
-        updatedConsultant = { ...u, linkedClientIds: [...(u.linkedClientIds || []), invitation.fromClientId] };
-        return updatedConsultant;
-      }
-      return u;
+      return newUsers;
     });
-
-    // 3. Set the new state
-    setUsers(newUsers);
-
-    // 4. Update the current user's state if they are the consultant
-    if (updatedConsultant) {
-        setUser(updatedConsultant);
-    }
   };
   
   const rejectInvitation = (invitationId: string) => {
     const invitation = invitations.find(inv => inv.id === invitationId);
     if (!invitation || !user) return;
     
-    // 1. Remove invitation from the central list
     setInvitations(prev => prev.filter(inv => inv.id !== invitationId));
 
-    // 2. Remove the sent invite from the client's user object
-    const newUsers = users.map(u => {
-        if (u.id === invitation.fromClientId) {
-            const clientUser = { ...u, sentInvites: u.sentInvites?.filter(si => si.consultantEmail !== invitation.toConsultantEmail) };
-            // If the current user is this client, update their local state too
-            if (user.id === invitation.fromClientId) {
-                setUser(clientUser);
+    setUsers(prevUsers => {
+        const newUsers = prevUsers.map(u => {
+            if (u.id === invitation.fromClientId) {
+                const clientUser = { ...u, sentInvites: u.sentInvites?.filter(si => si.consultantEmail !== invitation.toConsultantEmail) };
+                if (user.id === invitation.fromClientId) {
+                    setUser(clientUser);
+                }
+                return clientUser;
             }
-            return clientUser;
-        }
-        return u;
+            return u;
+        });
+        return newUsers;
     });
-    setUsers(newUsers);
   };
 
   const value = { user, users, invitations, login, logout, register, updateUserRole, deleteUser, updateUser, removeConsultantAccess, sendInvitation, acceptInvitation, rejectInvitation };
