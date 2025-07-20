@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Upload } from "lucide-react";
+import { Upload, X, UserPlus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 export default function SettingsPage() {
     const { user } = useAuth();
@@ -22,6 +23,11 @@ export default function SettingsPage() {
             </div>
         )
     }
+    
+    // Mock data for linked consultants
+    const linkedConsultants = [
+        { id: 'consultant-1', name: 'Charles Hoskinson', email: 'charles@iohk.io' },
+    ];
 
     return (
         <div className="space-y-8 animate-in fade-in-0 duration-500">
@@ -70,6 +76,52 @@ export default function SettingsPage() {
                     <Button>Save Changes</Button>
                 </CardFooter>
             </Card>
+            
+            {user.role === 'Client' && (
+                <Card className="max-w-4xl">
+                    <CardHeader>
+                        <CardTitle>Manage Tax Consultant Access</CardTitle>
+                        <CardDescription>Invite your tax consultant to view your transaction data and reports.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div>
+                            <Label htmlFor="consultant-email">Consultant's Email</Label>
+                            <div className="flex gap-2 mt-2">
+                                <Input id="consultant-email" type="email" placeholder="consultant@email.com" />
+                                <Button variant="secondary" className="gap-2">
+                                    <UserPlus />
+                                    Invite Consultant
+                                </Button>
+                            </div>
+                        </div>
+                        <div className="space-y-3">
+                            <Label>Linked Consultants</Label>
+                             {linkedConsultants.length > 0 ? (
+                                linkedConsultants.map(c => (
+                                    <div key={c.id} className="flex items-center justify-between rounded-lg border p-3">
+                                        <div className="flex items-center gap-3">
+                                            <Avatar className="h-9 w-9">
+                                                <AvatarImage src={`https://i.pravatar.cc/150?u=${c.email}`} alt={c.name} />
+                                                <AvatarFallback>{c.name.charAt(0)}</AvatarFallback>
+                                            </Avatar>
+                                            <div>
+                                                <p className="font-medium">{c.name}</p>
+                                                <p className="text-sm text-muted-foreground">{c.email}</p>
+                                            </div>
+                                        </div>
+                                        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive">
+                                            <X className="h-4 w-4 mr-2" />
+                                            Remove Access
+                                        </Button>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-sm text-muted-foreground text-center py-4">You have not invited any tax consultants yet.</p>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
 
             <Card className="max-w-4xl border-destructive/50">
                  <CardHeader>
