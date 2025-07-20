@@ -60,7 +60,7 @@ See <a href="LICENSE">LICENSE</a> for more details.</p>
 
 <h2>📬 Contact</h2>
 <p>Have questions, suggestions, or feedback?<br>
-Reach out at <strong>sandybridge9292@gmail.com.com</strong> or open an issue on 
+Reach out at <strong>sandybridge9292@gmail.com</strong> or open an issue on 
 <a href="https://github.com/EnThusiast92/crypto_tax_app/issues">GitHub Issues</a>.
 </p>
 
