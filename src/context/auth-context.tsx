@@ -3,8 +3,8 @@
 
 import * as React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import type { User, AuthContextType, RegisterFormValues, Role, EditUserFormValues } from '@/lib/types';
-import { users as mockUsers } from '@/lib/data';
+import type { User, AuthContextType, RegisterFormValues, Role, EditUserFormValues, Invitation } from '@/lib/types';
+import { users as mockUsers, invitations as mockInvitations } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
@@ -12,17 +12,25 @@ const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = React.useState<User | null>(null);
   const [users, setUsers] = React.useState<User[]>(mockUsers);
+  const [invitations, setInvitations] = React.useState<Invitation[]>(mockInvitations);
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
 
   React.useEffect(() => {
+    // Load state from localStorage on mount
     const storedUser = localStorage.getItem('currentUser');
+    const storedUsers = localStorage.getItem('users');
+    const storedInvitations = localStorage.getItem('invitations');
+
     let currentUser: User | null = null;
     if (storedUser) {
       currentUser = JSON.parse(storedUser);
       setUser(currentUser);
     }
+    if (storedUsers) setUsers(JSON.parse(storedUsers));
+    if (storedInvitations) setInvitations(JSON.parse(storedInvitations));
+
 
     const publicPages = ['/login', '/register', '/'];
     const isPublicPage = publicPages.includes(pathname);
@@ -46,22 +54,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
   }, [pathname, router]);
+  
+  // Persist state to localStorage whenever it changes
+  React.useEffect(() => {
+    if (user) {
+        localStorage.setItem('currentUser', JSON.stringify(user));
+    } else {
+        localStorage.removeItem('currentUser');
+    }
+  }, [user]);
+
+  React.useEffect(() => {
+      localStorage.setItem('users', JSON.stringify(users));
+  }, [users]);
+
+  React.useEffect(() => {
+      localStorage.setItem('invitations', JSON.stringify(invitations));
+  }, [invitations]);
+
 
   const login = async (email: string, password: string): Promise<User> => {
-    console.log(`Attempting to log in with email: ${email}`);
     const foundUser = users.find((u) => u.email === email);
 
     if (foundUser) {
-      // In a real app, you'd compare a hashed password.
-      // For this mock, any password is fine for regular users, but admin has a specific one.
       if (password === 'password123' || (foundUser.email === 'admin@cryptotaxpro.com' && password === 'admin123')) {
-        console.log('Login successful for:', foundUser.name);
         setUser(foundUser);
-        localStorage.setItem('currentUser', JSON.stringify(foundUser));
         return foundUser;
       }
     }
-    console.log('Login failed: Invalid email or password');
     throw new Error('Invalid email or password.');
   };
 
@@ -69,29 +89,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (users.some((u) => u.email === data.email)) {
       throw new Error('An account with this email already exists.');
     }
-
     const role: Role = data.isTaxConsultant ? 'TaxConsultant' : 'Client';
-
     const newUser: User = {
       id: `user-${Date.now()}`,
       name: data.name,
       email: data.email,
-      passwordHash: 'mock_hashed_password', // In a real app, hash the password
+      passwordHash: 'mock_hashed_password',
       avatarUrl: `https://i.pravatar.cc/150?u=${data.email}`,
       createdAt: new Date().toISOString(),
       role,
     };
-
     setUsers(prevUsers => [...prevUsers, newUser]);
     setUser(newUser);
-    localStorage.setItem('currentUser', JSON.stringify(newUser));
-
     return newUser;
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('currentUser');
+    localStorage.clear(); // Clear all app state on logout
     router.push('/login');
   };
   
@@ -107,78 +122,123 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const deleteUser = (userId: string) => {
     if (user?.id === userId) {
-        toast({
-            title: "Action Forbidden",
-            description: "You cannot delete your own account.",
-            variant: "destructive",
-        });
+        toast({ title: "Action Forbidden", description: "You cannot delete your own account.", variant: "destructive" });
         return;
     }
     setUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
-     toast({
-        title: "User Deleted",
-        description: `The user has been successfully deleted.`
-    });
+     toast({ title: "User Deleted", description: `The user has been successfully deleted.` });
   };
   
   const updateUser = (userId: string, data: EditUserFormValues) => {
+    let updatedUser: User | undefined;
     setUsers(prevUsers =>
-      prevUsers.map(u => (u.id === userId ? { ...u, name: data.name, email: data.email } : u))
+      prevUsers.map(u => {
+        if (u.id === userId) {
+            updatedUser = { ...u, ...data };
+            return updatedUser;
+        }
+        return u;
+      })
     );
-    if(user?.id === userId) {
-        const updatedUser = { ...user, ...data };
+    if(user?.id === userId && updatedUser) {
         setUser(updatedUser);
-        localStorage.setItem('currentUser', JSON.stringify(updatedUser));
     }
-    toast({
-      title: "User Updated",
-      description: "User details have been successfully updated.",
-    });
+    toast({ title: "User Updated", description: "User details have been successfully updated." });
   };
-
+  
   const removeConsultantAccess = (clientId: string) => {
     let consultantId: string | undefined;
+    let client: User | undefined;
 
-    // Update the client
-    const updatedUsers = users.map(u => {
-      if (u.id === clientId) {
-        consultantId = u.linkedConsultantId;
-        const { linkedConsultantId, ...restOfUser } = u;
-        return restOfUser;
+    const newUsers = users.map(u => {
+        if (u.id === clientId) {
+            client = u;
+            consultantId = u.linkedConsultantId;
+            const { linkedConsultantId, ...restOfUser } = u;
+            return restOfUser;
+        }
+        return u;
+    }).map(u => {
+        if (u.id === consultantId) {
+            return { ...u, linkedClientIds: u.linkedClientIds?.filter(id => id !== clientId) };
+        }
+        return u;
+    });
+
+    setUsers(newUsers);
+
+    if (user?.id === clientId && client) {
+        const { linkedConsultantId, ...restOfUser } = client;
+        setUser(restOfUser);
+    }
+    
+    toast({ title: "Consultant Unlinked", description: "Access has been successfully removed." });
+  };
+  
+  const sendInvitation = (consultantEmail: string) => {
+    if (!user || user.role !== 'Client') throw new Error("Only clients can send invitations.");
+    
+    const consultant = users.find(u => u.email === consultantEmail && u.role === 'TaxConsultant');
+    if (!consultant) throw new Error("No tax consultant found with this email.");
+    if (consultant.id === user.linkedConsultantId) throw new Error("You are already linked with this consultant.");
+
+    const newInvitation: Invitation = {
+      id: `inv-${Date.now()}`,
+      fromClientId: user.id,
+      toConsultantEmail: consultantEmail,
+      status: 'pending',
+    };
+    
+    setInvitations(prev => [...prev, newInvitation]);
+    
+    const updatedUser = { ...user, sentInvites: [...(user.sentInvites || []), { consultantEmail, status: 'pending' }] };
+    setUser(updatedUser);
+    setUsers(prev => prev.map(u => u.id === user.id ? updatedUser : u));
+  };
+  
+  const acceptInvitation = (invitationId: string) => {
+    const invitation = invitations.find(inv => inv.id === invitationId);
+    if (!invitation || !user || user.role !== 'TaxConsultant') return;
+
+    // 1. Update invitation status
+    setInvitations(prev => prev.map(inv => inv.id === invitationId ? { ...inv, status: 'accepted' } : inv));
+    
+    // 2. Link client to consultant
+    let updatedClient: User | undefined;
+    const newUsers = users.map(u => {
+      if (u.id === invitation.fromClientId) {
+        updatedClient = { ...u, linkedConsultantId: user.id, sentInvites: u.sentInvites?.map(si => si.consultantEmail === invitation.toConsultantEmail ? {...si, status: 'accepted'} : si) };
+        return updatedClient;
+      }
+      // 3. Link consultant to client
+      if (u.id === user.id) {
+        const updatedConsultant = { ...u, linkedClientIds: [...(u.linkedClientIds || []), invitation.fromClientId] };
+        setUser(updatedConsultant); // Update current user state if they are the consultant
+        return updatedConsultant;
       }
       return u;
     });
 
-    if (consultantId) {
-      // Update the consultant
-      const finalUsers = updatedUsers.map(u => {
-        if (u.id === consultantId) {
-          return {
-            ...u,
-            linkedClientIds: u.linkedClientIds?.filter(id => id !== clientId)
-          };
+    setUsers(newUsers);
+  };
+  
+  const rejectInvitation = (invitationId: string) => {
+    const invitation = invitations.find(inv => inv.id === invitationId);
+    if (!invitation || !user) return;
+    
+    // 1. Remove invitation
+    setInvitations(prev => prev.filter(inv => inv.id !== invitationId));
+
+    // 2. Update client's sent invites
+    setUsers(prev => prev.map(u => {
+        if (u.id === invitation.fromClientId) {
+            return { ...u, sentInvites: u.sentInvites?.filter(si => si.consultantEmail !== invitation.toConsultantEmail) }
         }
         return u;
-      });
-      setUsers(finalUsers);
-
-      // Update the current user state if they are the client
-      if (user?.id === clientId) {
-        const { linkedConsultantId, ...restOfUser } = user;
-        const updatedCurrentUser = restOfUser;
-        setUser(updatedCurrentUser);
-        localStorage.setItem('currentUser', JSON.stringify(updatedCurrentUser));
-      }
-    }
-    
-    toast({
-      title: "Consultant Unlinked",
-      description: "Access has been successfully removed.",
-    });
+    }));
   };
 
-
-  const value = { user, users, login, logout, register, updateUserRole, deleteUser, updateUser, removeConsultantAccess };
+  const value = { user, users, invitations, login, logout, register, updateUserRole, deleteUser, updateUser, removeConsultantAccess, sendInvitation, acceptInvitation, rejectInvitation };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

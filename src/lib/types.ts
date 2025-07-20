@@ -1,6 +1,5 @@
 
 
-
 export type Role = 'Developer' | 'Staff' | 'Client' | 'TaxConsultant';
 
 export type Transaction = {
@@ -39,6 +38,12 @@ export interface AddTransactionDialogProps {
   onAddTransaction: (data: Omit<Transaction, 'id' | 'value'>) => void;
 }
 
+export type Invitation = {
+  id: string;
+  fromClientId: string;
+  toConsultantEmail: string;
+  status: 'pending' | 'accepted' | 'rejected';
+}
 
 // RBAC and Auth Types
 export interface User {
@@ -51,6 +56,7 @@ export interface User {
   role: Role;
   linkedClientIds?: string[]; // For consultants
   linkedConsultantId?: string; // For clients
+  sentInvites?: { consultantEmail: string, status: 'pending' | 'accepted' }[];
 }
 
 export type RegisterFormValues = {
@@ -68,6 +74,7 @@ export type EditUserFormValues = {
 export type AuthContextType = {
   user: User | null;
   users: User[];
+  invitations: Invitation[];
   login: (email: string, password: string) => Promise<User>;
   logout: () => void;
   register: (data: RegisterFormValues) => Promise<User>;
@@ -75,6 +82,9 @@ export type AuthContextType = {
   deleteUser: (userId:string) => void;
   updateUser: (userId: string, data: EditUserFormValues) => void;
   removeConsultantAccess: (clientId: string) => void;
+  sendInvitation: (consultantEmail: string) => void;
+  acceptInvitation: (invitationId: string) => void;
+  rejectInvitation: (invitationId: string) => void;
 };
 
 

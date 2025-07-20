@@ -1,6 +1,5 @@
 
-
-import type { Transaction, StatCardData, ClassificationResult, User } from './types';
+import type { Transaction, StatCardData, User, Invitation } from './types';
 import { ArrowUpRight, ArrowDownLeft, Banknote, Landmark } from 'lucide-react';
 
 export const statCards: StatCardData[] = [
@@ -80,7 +79,7 @@ export const users: User[] = [
         avatarUrl: 'https://i.pravatar.cc/150?u=gavin@eth.org',
         createdAt: new Date().toISOString(),
         role: 'Client',
-        linkedConsultantId: 'user-consultant-1',
+        sentInvites: [{ consultantEmail: 'hayden@uniswap.org', status: 'pending' }],
     },
     {
         id: 'user-consultant-1',
@@ -90,7 +89,16 @@ export const users: User[] = [
         avatarUrl: 'https://i.pravatar.cc/150?u=charles@iohk.io',
         createdAt: new Date().toISOString(),
         role: 'TaxConsultant',
-        linkedClientIds: ['user-client-1', 'user-client-2'],
+        linkedClientIds: ['user-client-1'],
+    },
+     {
+        id: 'user-consultant-2',
+        name: 'Hayden Adams',
+        email: 'hayden@uniswap.org',
+        passwordHash: 'hashed_consultant_password_2',
+        avatarUrl: 'https://i.pravatar.cc/150?u=hayden@uniswap.org',
+        createdAt: new Date().toISOString(),
+        role: 'TaxConsultant',
     },
     {
         id: 'user-staff-1',
@@ -100,5 +108,14 @@ export const users: User[] = [
         avatarUrl: 'https://i.pravatar.cc/150?u=vitalik@ethereum.org',
         createdAt: new Date().toISOString(),
         role: 'Staff'
+    }
+];
+
+export const invitations: Invitation[] = [
+    {
+        id: 'inv-1',
+        fromClientId: 'user-client-2',
+        toConsultantEmail: 'hayden@uniswap.org',
+        status: 'pending'
     }
 ];

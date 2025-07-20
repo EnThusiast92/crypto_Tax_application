@@ -7,11 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Upload, X, UserPlus } from "lucide-react";
+import { Upload, X, UserPlus, Send, Clock, CheckCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import * as React from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function SettingsPage() {
-    const { user, users, removeConsultantAccess } = useAuth();
+    const { user, users, removeConsultantAccess, sendInvitation } = useAuth();
+    const [consultantEmail, setConsultantEmail] = React.useState('');
+    const { toast } = useToast();
 
     if (!user) {
         return (
@@ -24,13 +28,36 @@ export default function SettingsPage() {
         )
     }
     
-    // Mock finding the linked consultant
+    // Find the linked consultant and any sent invites
     const linkedConsultant = users.find(u => u.id === user.linkedConsultantId);
+    const sentInvite = user.sentInvites?.[0]; // Assuming one invite at a time for simplicity
+    const consultantForInvite = sentInvite ? users.find(u => u.email === sentInvite.consultantEmail) : null;
     
     const handleRemoveAccess = () => {
         if (user && user.linkedConsultantId) {
             removeConsultantAccess(user.id);
         }
+    };
+    
+    const handleSendInvite = () => {
+        if (!consultantEmail) {
+            toast({ title: "Error", description: "Please enter a consultant's email.", variant: "destructive" });
+            return;
+        }
+        try {
+            sendInvitation(consultantEmail);
+            toast({ title: "Success", description: `Invitation sent to ${consultantEmail}.` });
+            setConsultantEmail('');
+        } catch (error) {
+            toast({ title: "Error", description: (error as Error).message, variant: "destructive" });
+        }
+    }
+
+    const InviteStatusIcon = ({ status }: { status: 'pending' | 'accepted' }) => {
+        if (status === 'pending') {
+            return <Clock className="h-4 w-4 text-yellow-500" />;
+        }
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
     };
 
     return (
@@ -88,16 +115,24 @@ export default function SettingsPage() {
                         <CardDescription>Invite your tax consultant to view your transaction data and reports.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                        <div>
-                            <Label htmlFor="consultant-email">Consultant's Email</Label>
-                            <div className="flex gap-2 mt-2">
-                                <Input id="consultant-email" type="email" placeholder="consultant@email.com" />
-                                <Button variant="secondary" className="gap-2">
-                                    <UserPlus />
-                                    Invite Consultant
-                                </Button>
+                        {!linkedConsultant && !sentInvite && (
+                            <div>
+                                <Label htmlFor="consultant-email">Consultant's Email</Label>
+                                <div className="flex gap-2 mt-2">
+                                    <Input 
+                                        id="consultant-email" 
+                                        type="email" 
+                                        placeholder="consultant@email.com" 
+                                        value={consultantEmail}
+                                        onChange={(e) => setConsultantEmail(e.target.value)}
+                                    />
+                                    <Button variant="secondary" className="gap-2" onClick={handleSendInvite}>
+                                        <Send className="h-4 w-4" />
+                                        Send Invite
+                                    </Button>
+                                </div>
                             </div>
-                        </div>
+                        )}
                         <div className="space-y-3">
                             <Label>Linked Consultants</Label>
                              {linkedConsultant ? (
@@ -116,6 +151,23 @@ export default function SettingsPage() {
                                         <X className="h-4 w-4 mr-2" />
                                         Remove Access
                                     </Button>
+                                </div>
+                            ) : sentInvite && consultantForInvite ? (
+                                <div className="flex items-center justify-between rounded-lg border p-3">
+                                    <div className="flex items-center gap-3">
+                                        <Avatar className="h-9 w-9">
+                                            <AvatarImage src={consultantForInvite.avatarUrl} alt={consultantForInvite.name} />
+                                            <AvatarFallback>{consultantForInvite.name.charAt(0)}</AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                            <p className="font-medium">{consultantForInvite.name}</p>
+                                            <p className="text-sm text-muted-foreground">{consultantForInvite.email}</p>
+                                        </div>
+                                    </div>
+                                    <Badge variant="outline" className="capitalize gap-2">
+                                        <InviteStatusIcon status={sentInvite.status} />
+                                        {sentInvite.status}
+                                    </Badge>
                                 </div>
                             ) : (
                                 <p className="text-sm text-muted-foreground text-center py-4">You have not invited any tax consultants yet.</p>
