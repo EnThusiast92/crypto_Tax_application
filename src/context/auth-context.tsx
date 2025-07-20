@@ -18,72 +18,69 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
 
   React.useEffect(() => {
-    // Load state from localStorage on mount
     try {
-        const storedUser = localStorage.getItem('currentUser');
-        const storedUsers = localStorage.getItem('users');
-        const storedInvitations = localStorage.getItem('invitations');
+      const storedUser = localStorage.getItem('currentUser');
+      const storedUsers = localStorage.getItem('users');
+      const storedInvitations = localStorage.getItem('invitations');
 
-        let currentUser: User | null = null;
-        if (storedUser) {
-          currentUser = JSON.parse(storedUser);
-          setUser(currentUser);
-        }
-        if (storedUsers) {
-            setUsers(JSON.parse(storedUsers));
-        } else {
-            setUsers(mockUsers);
-        }
-        if (storedInvitations) {
-            setInvitations(JSON.parse(storedInvitations));
-        } else {
-            setInvitations(mockInvitations);
-        }
-
-        const publicPages = ['/login', '/register', '/'];
-        const isPublicPage = publicPages.includes(pathname);
-        
-        if (!currentUser && !isPublicPage) {
-            router.push('/login');
-            return;
-        }
-        
-        if (currentUser) {
-            if (pathname.startsWith('/admin') && currentUser.role !== 'Developer') {
-                router.push('/dashboard'); 
-            }
-            if (pathname.startsWith('/staff') && currentUser.role !== 'Developer' && currentUser.role !== 'Staff') {
-                router.push('/dashboard');
-            }
-            if (pathname.startsWith('/consultant') && currentUser.role !== 'TaxConsultant') {
-                router.push('/dashboard');
-            }
-        }
-    } catch (error) {
-        console.error("Failed to parse auth data from localStorage", error);
-        setUser(null);
+      let currentUser: User | null = null;
+      if (storedUser) {
+        currentUser = JSON.parse(storedUser);
+        setUser(currentUser);
+      }
+      if (storedUsers) {
+        setUsers(JSON.parse(storedUsers));
+      } else {
         setUsers(mockUsers);
+      }
+      if (storedInvitations) {
+        setInvitations(JSON.parse(storedInvitations));
+      } else {
         setInvitations(mockInvitations);
+      }
+
+      const publicPages = ['/login', '/register', '/'];
+      const isPublicPage = publicPages.includes(pathname);
+      
+      if (!currentUser && !isPublicPage) {
+        router.push('/login');
+        return;
+      }
+      
+      if (currentUser) {
+        if (pathname.startsWith('/admin') && currentUser.role !== 'Developer') {
+          router.push('/dashboard'); 
+        }
+        if (pathname.startsWith('/staff') && currentUser.role !== 'Developer' && currentUser.role !== 'Staff') {
+          router.push('/dashboard');
+        }
+        if (pathname.startsWith('/consultant') && currentUser.role !== 'TaxConsultant') {
+          router.push('/dashboard');
+        }
+      }
+    } catch (error) {
+      console.error("Failed to parse auth data from localStorage", error);
+      setUser(null);
+      setUsers(mockUsers);
+      setInvitations(mockInvitations);
     }
   }, [pathname, router]);
   
-  // Persist state to localStorage whenever it changes
   React.useEffect(() => {
     if (user) {
-        localStorage.setItem('currentUser', JSON.stringify(user));
+      localStorage.setItem('currentUser', JSON.stringify(user));
     } else {
-        localStorage.removeItem('currentUser');
+      localStorage.removeItem('currentUser');
     }
   }, [user]);
 
   React.useEffect(() => {
-      localStorage.setItem('users', JSON.stringify(users));
+    localStorage.setItem('users', JSON.stringify(users));
   }, [users]);
 
   React.useEffect(() => {
-      localStorage.setItem('invitations', JSON.stringify(invitations));
+    localStorage.setItem('invitations', JSON.stringify(invitations));
   }, [invitations]);
-
 
   const login = async (email: string, password: string): Promise<User> => {
     const foundUser = users.find((u) => u.email === email);
@@ -127,33 +124,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       prevUsers.map(u => (u.id === userId ? { ...u, role: newRole } : u))
     );
     toast({
-        title: "Role Updated",
-        description: `User role has been successfully changed to ${newRole}.`
+      title: "Role Updated",
+      description: `User role has been successfully changed to ${newRole}.`
     });
   };
 
   const deleteUser = (userId: string) => {
     if (user?.id === userId) {
-        toast({ title: "Action Forbidden", description: "You cannot delete your own account.", variant: "destructive" });
-        return;
+      toast({ title: "Action Forbidden", description: "You cannot delete your own account.", variant: "destructive" });
+      return;
     }
     setUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
-     toast({ title: "User Deleted", description: `The user has been successfully deleted.` });
+    toast({ title: "User Deleted", description: `The user has been successfully deleted.` });
   };
   
   const updateUser = (userId: string, data: EditUserFormValues) => {
     let updatedUser: User | undefined;
     const newUsers = users.map(u => {
       if (u.id === userId) {
-          updatedUser = { ...u, ...data };
-          return updatedUser;
+        updatedUser = { ...u, ...data };
+        return updatedUser;
       }
       return u;
     });
     setUsers(newUsers);
 
     if(user?.id === userId && updatedUser) {
-        setUser(updatedUser);
+      setUser(updatedUser);
     }
     toast({ title: "User Updated", description: "User details have been successfully updated." });
   };
@@ -163,25 +160,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     const clientIndex = newUsers.findIndex((u: User) => u.id === clientId);
     if (clientIndex === -1) return;
-    
-    const consultantId = newUsers[clientIndex].linkedConsultantId;
+
+    const client = newUsers[clientIndex];
+    const consultantId = client.linkedConsultantId;
     if (!consultantId) return;
 
     const consultantIndex = newUsers.findIndex((u: User) => u.id === consultantId);
 
-    // Remove link from client
-    delete newUsers[clientIndex].linkedConsultantId;
+    delete client.linkedConsultantId;
 
-    // Remove link from consultant
     if (consultantIndex !== -1) {
-        newUsers[consultantIndex].linkedClientIds = (newUsers[consultantIndex].linkedClientIds || []).filter(
-            (id: string) => id !== clientId
-        );
+      const consultant = newUsers[consultantIndex];
+      consultant.linkedClientIds = (consultant.linkedClientIds || []).filter(
+        (id: string) => id !== clientId
+      );
     }
     
-    // Commit the changes
     setUsers(newUsers);
-    setUser(newUsers[clientIndex]);
+    
+    // Also update the currently logged-in user object if it's the client
+    if (user?.id === clientId) {
+      const updatedCurrentUser = { ...user };
+      delete updatedCurrentUser.linkedConsultantId;
+      setUser(updatedCurrentUser);
+    }
+
     toast({ title: "Consultant Unlinked", description: "Access has been successfully removed." });
   };
   
@@ -193,7 +196,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (user.linkedConsultantId === consultant.id) throw new Error("You are already linked with this consultant.");
 
     if (invitations.some(inv => inv.fromClientId === user.id && inv.toConsultantEmail === consultantEmail && inv.status === 'pending')) {
-        throw new Error("You already have a pending invitation for this consultant.");
+      throw new Error("You already have a pending invitation for this consultant.");
     }
 
     const newInvitation: Invitation = {
@@ -207,9 +210,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const newUsers = JSON.parse(JSON.stringify(users));
     const userIndex = newUsers.findIndex((u: User) => u.id === user.id);
     if (userIndex !== -1) {
-      newUsers[userIndex].sentInvites = [...(newUsers[userIndex].sentInvites || []), { consultantEmail, status: 'pending' }];
+      const clientUser = newUsers[userIndex];
+      clientUser.sentInvites = [...(clientUser.sentInvites || []), { consultantEmail, status: 'pending' }];
       setUsers(newUsers);
-      setUser(newUsers[userIndex]);
+      setUser(clientUser);
     }
   };
   
@@ -217,27 +221,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const invitation = invitations.find(inv => inv.id === invitationId);
     if (!invitation || !user || user.role !== 'TaxConsultant') return;
 
-    // Create deep copies to modify safely
     const newUsers = JSON.parse(JSON.stringify(users));
     
-    // Find users in the new array
     const clientIndex = newUsers.findIndex((u: User) => u.id === invitation.fromClientId);
     const consultantIndex = newUsers.findIndex((u: User) => u.id === user.id);
 
     if (clientIndex === -1 || consultantIndex === -1) return;
 
-    // Update client
-    newUsers[clientIndex].linkedConsultantId = user.id;
-    newUsers[clientIndex].sentInvites = (newUsers[clientIndex].sentInvites || []).filter(
-        (si: any) => si.consultantEmail !== invitation.toConsultantEmail
+    const client = newUsers[clientIndex];
+    const consultant = newUsers[consultantIndex];
+
+    client.linkedConsultantId = user.id;
+    client.sentInvites = (client.sentInvites || []).filter(
+      (si: any) => si.consultantEmail !== invitation.toConsultantEmail
     );
 
-    // Update consultant
-    newUsers[consultantIndex].linkedClientIds = [...(newUsers[consultantIndex].linkedClientIds || []), invitation.fromClientId];
+    consultant.linkedClientIds = [...(consultant.linkedClientIds || []), invitation.fromClientId];
 
-    // Commit state updates
     setUsers(newUsers);
-    setUser(newUsers[consultantIndex]);
+    setUser(consultant);
     setInvitations(prev => prev.filter(inv => inv.id !== invitationId));
   };
   
@@ -245,22 +247,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const invitation = invitations.find(inv => inv.id === invitationId);
     if (!invitation || !user) return;
     
-    // Create deep copy to modify safely
     const newUsers = JSON.parse(JSON.stringify(users));
-
     const clientIndex = newUsers.findIndex((u: User) => u.id === invitation.fromClientId);
     
     if (clientIndex !== -1) {
-        // Remove sent invite from client
-        newUsers[clientIndex].sentInvites = (newUsers[clientIndex].sentInvites || []).filter(
-            (si: any) => si.consultantEmail !== invitation.toConsultantEmail
-        );
-        // Commit state updates
-        setUsers(newUsers);
-        // If the current user is the client, update their state
-        if (user.id === invitation.fromClientId) {
-            setUser(newUsers[clientIndex]);
-        }
+      const client = newUsers[clientIndex];
+      client.sentInvites = (client.sentInvites || []).filter(
+        (si: any) => si.consultantEmail !== invitation.toConsultantEmail
+      );
+      
+      setUsers(newUsers);
+      
+      if (user.id === invitation.fromClientId) {
+        setUser(client);
+      }
     }
     
     setInvitations(prev => prev.filter(inv => inv.id !== invitationId));
