@@ -97,6 +97,7 @@ export const columns: ColumnDef<User>[] = [
       const roles: Role[] = ['Client', 'Staff', 'TaxConsultant', 'Developer'];
 
       const isCurrentUser = currentUser?.id === user.id;
+      const isStaffEditingDeveloper = currentUser?.role === 'Staff' && user.role === 'Developer';
 
       return (
         <>
@@ -111,7 +112,7 @@ export const columns: ColumnDef<User>[] = [
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuItem onSelect={() => setIsEditDialogOpen(true)}>Edit User</DropdownMenuItem>
               <DropdownMenuSub>
-                <DropdownMenuSubTrigger disabled={isCurrentUser}>Change Role</DropdownMenuSubTrigger>
+                <DropdownMenuSubTrigger disabled={isCurrentUser || isStaffEditingDeveloper}>Change Role</DropdownMenuSubTrigger>
                 <DropdownMenuPortal>
                     <DropdownMenuSubContent>
                         {roles.map(role => (
@@ -127,7 +128,7 @@ export const columns: ColumnDef<User>[] = [
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive focus:bg-destructive/10"
                 onSelect={() => setIsDeleteDialogOpen(true)}
-                disabled={isCurrentUser}
+                disabled={isCurrentUser || isStaffEditingDeveloper}
               >
                 Delete User
               </DropdownMenuItem>
