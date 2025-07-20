@@ -136,8 +136,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const removeConsultantAccess = (clientId: string) => {
+    let consultantId: string | undefined;
 
-  const value = { user, users, login, logout, register, updateUserRole, deleteUser, updateUser };
+    // Update the client
+    const updatedUsers = users.map(u => {
+      if (u.id === clientId) {
+        consultantId = u.linkedConsultantId;
+        const { linkedConsultantId, ...restOfUser } = u;
+        return restOfUser;
+      }
+      return u;
+    });
+
+    if (consultantId) {
+      // Update the consultant
+      const finalUsers = updatedUsers.map(u => {
+        if (u.id === consultantId) {
+          return {
+            ...u,
+            linkedClientIds: u.linkedClientIds?.filter(id => id !== clientId)
+          };
+        }
+        return u;
+      });
+      setUsers(finalUsers);
+
+      // Update the current user state if they are the client
+      if (user?.id === clientId) {
+        const { linkedConsultantId, ...restOfUser } = user;
+        const updatedCurrentUser = restOfUser;
+        setUser(updatedCurrentUser);
+        localStorage.setItem('currentUser', JSON.stringify(updatedCurrentUser));
+      }
+    }
+    
+    toast({
+      title: "Consultant Unlinked",
+      description: "Access has been successfully removed.",
+    });
+  };
+
+
+  const value = { user, users, login, logout, register, updateUserRole, deleteUser, updateUser, removeConsultantAccess };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

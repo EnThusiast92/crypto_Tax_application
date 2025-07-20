@@ -11,7 +11,7 @@ import { Upload, X, UserPlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export default function SettingsPage() {
-    const { user, users } = useAuth();
+    const { user, users, removeConsultantAccess } = useAuth();
 
     if (!user) {
         return (
@@ -26,6 +26,12 @@ export default function SettingsPage() {
     
     // Mock finding the linked consultant
     const linkedConsultant = users.find(u => u.id === user.linkedConsultantId);
+    
+    const handleRemoveAccess = () => {
+        if (user && user.linkedConsultantId) {
+            removeConsultantAccess(user.id);
+        }
+    };
 
     return (
         <div className="space-y-8 animate-in fade-in-0 duration-500">
@@ -106,7 +112,7 @@ export default function SettingsPage() {
                                             <p className="text-sm text-muted-foreground">{linkedConsultant.email}</p>
                                         </div>
                                     </div>
-                                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive">
+                                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive" onClick={handleRemoveAccess}>
                                         <X className="h-4 w-4 mr-2" />
                                         Remove Access
                                     </Button>

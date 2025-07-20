@@ -74,6 +74,7 @@ export type AuthContextType = {
   updateUserRole: (userId: string, newRole: Role) => void;
   deleteUser: (userId:string) => void;
   updateUser: (userId: string, data: EditUserFormValues) => void;
+  removeConsultantAccess: (clientId: string) => void;
 };
 
 
