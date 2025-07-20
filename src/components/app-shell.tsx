@@ -28,6 +28,7 @@ import {
   List,
   LogOut,
   Shield,
+  UserCog,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
@@ -44,6 +45,7 @@ const baseLinks = [
 ];
 
 const adminLink = { name: 'Admin', href: '/admin/dashboard', icon: Shield };
+const staffLink = { name: 'Staff Dashboard', href: '/staff/dashboard', icon: UserCog };
 
 function SidebarNav() {
   const pathname = usePathname();
@@ -54,6 +56,8 @@ function SidebarNav() {
   
   if (user?.role === 'Developer') {
     links.push(adminLink);
+  } else if (user?.role === 'Staff') {
+    links.push(staffLink);
   }
 
   return (
