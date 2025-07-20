@@ -134,7 +134,7 @@ export default function SettingsPage() {
                             </div>
                         )}
                         <div className="space-y-3">
-                            <Label>Linked Consultants</Label>
+                            <Label>Access & Invitations</Label>
                              {linkedConsultant ? (
                                 <div key={linkedConsultant.id} className="flex items-center justify-between rounded-lg border p-3">
                                     <div className="flex items-center gap-3">

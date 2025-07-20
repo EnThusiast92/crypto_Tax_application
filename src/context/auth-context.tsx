@@ -169,7 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (user?.id === clientId && client) {
         const { linkedConsultantId, ...restOfUser } = client;
-        setUser(restOfUser);
+        setUser(restOfUser as User);
     }
     
     toast({ title: "Consultant Unlinked", description: "Access has been successfully removed." });
