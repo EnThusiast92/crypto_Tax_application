@@ -74,6 +74,8 @@ export function AddTransactionDialog({
       exchange: 'Coinbase',
       classification: 'Capital Purchase',
       fee: 0,
+      toAsset: '',
+      toQuantity: 0,
     },
   });
 
