@@ -5,14 +5,14 @@ import * as React from 'react';
 import type { Transaction } from '@/lib/types';
 import { useAuth } from './auth-context';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, addDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, addDoc, serverTimestamp, query, orderBy, writeBatch, doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 type TransactionsContextType = {
   transactions: Transaction[];
   loading: boolean;
-  addTransaction: (newTransactionData: Omit<Transaction, 'id' | 'value'>) => void;
-  addTransactions: (newTransactionsData: Omit<Transaction, 'id' | 'value'>[]) => void;
+  addTransaction: (newTransactionData: Omit<Transaction, 'id' | 'value'>) => Promise<void>;
+  addTransactions: (newTransactionsData: Omit<Transaction, 'id' | 'value'>[]) => Promise<void>;
 };
 
 const TransactionsContext = React.createContext<TransactionsContextType | undefined>(undefined);
@@ -20,11 +20,11 @@ const TransactionsContext = React.createContext<TransactionsContextType | undefi
 export function TransactionsProvider({ children }: { children: React.ReactNode }) {
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const { user } = useAuth();
+  const { user, isFirebaseReady } = useAuth();
   const { toast } = useToast();
 
   React.useEffect(() => {
-    if (!user) {
+    if (!user || !isFirebaseReady) {
       setTransactions([]);
       setLoading(false);
       return;
@@ -47,7 +47,7 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
     };
 
     fetchTransactions();
-  }, [user, toast]);
+  }, [user, isFirebaseReady, toast]);
 
   const addTransaction = async (newTransactionData: Omit<Transaction, 'id' | 'value'>) => {
     if (!user) return;
@@ -59,6 +59,7 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
         createdAt: serverTimestamp(), // For ordering
       };
       const docRef = await addDoc(transactionsCol, newTransaction);
+      // Firestore listeners should handle the update, but we can optimistically update state too
       setTransactions(prev => [{ id: docRef.id, ...newTransaction } as Transaction, ...prev]);
     } catch (error) {
        console.error("Error adding transaction:", error);
@@ -66,10 +67,35 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
     }
   };
 
-  const addTransactions = (newTransactionsData: Omit<Transaction, 'id' | 'value'>[]) => {
-    // This function can be expanded to use batch writes for performance
-    newTransactionsData.forEach(tx => addTransaction(tx));
+  const addTransactions = async (newTransactionsData: Omit<Transaction, 'id' | 'value'>[]) => {
+    if (!user) return;
+    try {
+        const transactionsCol = collection(db, `users/${user.id}/transactions`);
+        const batch = writeBatch(db);
+        const transactionsToAdd: Transaction[] = [];
+
+        newTransactionsData.forEach(txData => {
+            const docRef = doc(transactionsCol);
+            const newTransaction = {
+                ...txData,
+                value: txData.quantity * txData.price,
+                createdAt: serverTimestamp()
+            };
+            batch.set(docRef, newTransaction);
+            transactionsToAdd.push({ id: docRef.id, ...newTransaction } as Transaction);
+        });
+
+        await batch.commit();
+
+        // Optimistically update state
+        setTransactions(prev => [...transactionsToAdd, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+        
+    } catch (error) {
+        console.error("Error adding transactions in batch:", error);
+        toast({ title: 'Error', description: 'Could not save the transactions.', variant: 'destructive' });
+    }
   };
+
 
   return (
     <TransactionsContext.Provider value={{ transactions, loading, addTransaction, addTransactions }}>

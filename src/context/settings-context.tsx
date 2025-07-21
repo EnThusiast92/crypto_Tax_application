@@ -4,8 +4,8 @@
 import * as React from 'react';
 import type { AppSettings, SettingsContextType, FeatureToggles, SiteConfig, StaffPermissions } from '@/lib/types';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { useToast } from '@/hooks/use-toast';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { useAuth } from './auth-context';
 
 const SettingsContext = React.createContext<SettingsContextType | undefined>(undefined);
 
@@ -27,27 +27,29 @@ const defaultSettings: AppSettings = {
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = React.useState<AppSettings>(defaultSettings);
-  const { toast } = useToast();
+  const { isFirebaseReady } = useAuth();
 
   React.useEffect(() => {
-    const fetchSettings = async () => {
-      const settingsRef = doc(db, 'app', 'settings');
-      const docSnap = await getDoc(settingsRef);
-      if (docSnap.exists()) {
-        setSettings(docSnap.data() as AppSettings);
-      } else {
-        // If no settings exist in Firestore, initialize with defaults
-        await setDoc(settingsRef, defaultSettings);
-      }
-    };
-    fetchSettings();
-  }, []);
+    if (!isFirebaseReady) return;
+
+    const settingsRef = doc(db, 'app', 'settings');
+    
+    const unsubscribe = onSnapshot(settingsRef, (docSnap) => {
+        if (docSnap.exists()) {
+            setSettings(docSnap.data() as AppSettings);
+        } else {
+            // If no settings exist in Firestore, initialize with defaults
+            setDoc(settingsRef, defaultSettings).catch(err => console.error("Failed to initialize settings", err));
+        }
+    });
+
+    return () => unsubscribe();
+  }, [isFirebaseReady]);
 
   const updateSettings = async (newSettings: AppSettings) => {
     const settingsRef = doc(db, 'app', 'settings');
-    await setDoc(settingsRef, newSettings);
-    setSettings(newSettings);
-    // Note: Saving toast removed for brevity in individual updates
+    await setDoc(settingsRef, newSettings, { merge: true });
+    // Firestore listener will update the state
   };
 
   const updateFeatureToggle = (key: keyof FeatureToggles, value: boolean) => {

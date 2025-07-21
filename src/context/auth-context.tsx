@@ -78,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [isFirebaseReady]);
 
   React.useEffect(() => {
-    if (loading) return;
+    if (loading || !isFirebaseReady) return;
 
     const publicPages = ['/login', '/register', '/'];
     const isPublicPage = publicPages.includes(pathname);
@@ -97,7 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
         }
     }
-  }, [user, loading, pathname, router]);
+  }, [user, loading, isFirebaseReady, pathname, router]);
 
 
   const login = async (email: string, password: string): Promise<User> => {
@@ -121,10 +121,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       id: firebaseUser.uid,
       name: data.name,
       email: data.email,
-      passwordHash: 'hidden',
+      role,
       avatarUrl: `https://i.pravatar.cc/150?u=${data.email}`,
       createdAt: new Date().toISOString(),
-      role,
     };
     
     await setDoc(doc(db, "users", firebaseUser.uid), newUser);
