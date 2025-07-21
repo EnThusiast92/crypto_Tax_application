@@ -75,6 +75,7 @@ export type AuthContextType = {
   user: User | null;
   users: User[];
   invitations: Invitation[];
+  loading: boolean;
   login: (email: string, password: string) => Promise<User>;
   logout: () => void;
   register: (data: RegisterFormValues) => Promise<User>;

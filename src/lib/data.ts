@@ -1,6 +1,8 @@
 
 import type { Transaction, StatCardData, User, Invitation } from './types';
 import { ArrowUpRight, ArrowDownLeft, Banknote, Landmark } from 'lucide-react';
+import { db } from './firebase';
+import { collection, writeBatch, doc } from 'firebase/firestore';
 
 export const statCards: StatCardData[] = [
   {
@@ -119,3 +121,37 @@ export const invitations: Invitation[] = [
         status: 'pending'
     }
 ];
+
+// NOTE: This function is for seeding the database with initial mock data.
+// It should only be run once. You can call it from a temporary component or a script.
+export async function seedDatabase() {
+    try {
+        const batch = writeBatch(db);
+
+        // Seed users
+        const usersCol = collection(db, 'users');
+        users.forEach(user => {
+            const userRef = doc(usersCol, user.id);
+            batch.set(userRef, user);
+        });
+
+        // Seed invitations
+        const invitationsCol = collection(db, 'invitations');
+        invitations.forEach(invitation => {
+            const invitationRef = doc(invitationsCol, invitation.id);
+            batch.set(invitationRef, invitation);
+        });
+        
+        // Seed transactions for a specific user (e.g., satoshi)
+        const client1TransactionsCol = collection(db, `users/user-client-1/transactions`);
+        transactions.forEach(tx => {
+            const txRef = doc(client1TransactionsCol, tx.id);
+            batch.set(txRef, tx);
+        });
+        
+        await batch.commit();
+        console.log("Database seeded successfully!");
+    } catch (error) {
+        console.error("Error seeding database: ", error);
+    }
+}
