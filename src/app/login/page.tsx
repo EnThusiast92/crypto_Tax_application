@@ -39,21 +39,30 @@ export default function LoginPage() {
   
   const handleSeed = async () => {
     setIsSeeding(true);
+    console.log('🚀 Starting seed process...');
+
     try {
-      await seedDatabase();
-      toast({
-        title: 'Database Seeded',
-        description: 'Your database has been populated with sample data.',
-      });
-    } catch (error) {
-      console.error('Seeding failed:', error);
-      toast({
-        title: 'Seeding Failed',
-        description: error instanceof Error ? error.message : 'An unknown error occurred.',
+        const result = await Promise.race([
+        seedDatabase(),
+        new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Seeding timed out')), 15000)
+        ),
+        ]);
+
+        toast({
+        title: 'Seed Complete',
+        description: 'Database has been seeded.',
+        });
+    } catch (err) {
+        console.error('❌ Seeding failed:', err);
+        toast({
+        title: 'Seed Failed',
+        description: (err as Error).message || 'An error occurred during seeding.',
         variant: 'destructive',
-      });
+        });
     } finally {
-      setIsSeeding(false);
+        setIsSeeding(false);
+        console.log('🔁 Seeding UI reset');
     }
   };
 

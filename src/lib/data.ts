@@ -2,7 +2,7 @@
 import type { Transaction, StatCardData, User, Invitation } from './types';
 import { ArrowUpRight, ArrowDownLeft, Banknote, Landmark } from 'lucide-react';
 import { db } from './firebase';
-import { collection, writeBatch, doc, Timestamp } from 'firebase/firestore';
+import { collection, writeBatch, doc, Timestamp, setDoc } from 'firebase/firestore';
 
 export const statCards: StatCardData[] = [
   {
@@ -128,50 +128,17 @@ export const invitations: Invitation[] = [
     }
 ];
 
+
 // NOTE: This function is for seeding the database with initial mock data.
 // It should only be run once. You can call it from a temporary component or a script.
 export async function seedDatabase() {
-  try {
-    console.log('🟡 Seeding started...');
-    await new Promise(res => setTimeout(res, 300)); // small wait for Firebase to settle
-    
-    // Step 1: Seed users and invitations
-    const batch1 = writeBatch(db);
-    const usersCol = collection(db, 'users');
-    const invitationsCol = collection(db, 'invitations');
+    console.log('🧪 TEST SEED');
 
-    users.forEach(user => {
-      const userRef = doc(usersCol, user.id);
-      
-      // Create a new object for Firestore without the 'id' field
-      const { id, ...userData } = user;
-      
-      batch1.set(userRef, userData);
+    const testRef = doc(db, 'test', 'demo');
+    await setDoc(testRef, {
+      message: 'Hello world!',
+      createdAt: Timestamp.now()
     });
-
-    invitations.forEach(inv => {
-      const invitationRef = doc(invitationsCol, inv.id);
-      batch1.set(invitationRef, inv);
-    });
-
-    await batch1.commit();
-    console.log('✅ Users and invitations seeded');
-
-    // Step 2: Seed transactions for satoshi
-    const txCol = collection(db, `users/user-satoshi/transactions`);
-    const batch2 = writeBatch(db);
-
-    transactions.forEach(tx => {
-      const txRef = doc(txCol); // auto-id
-      batch2.set(txRef, tx);
-    });
-
-    await batch2.commit();
-    console.log('✅ Transactions seeded');
-
-    console.log('🎉 All data seeded successfully!');
-  } catch (error) {
-    console.error('❌ Seeding error:', error);
-    throw error;
-  }
+  
+    console.log('✅ Test seed complete');
 }
