@@ -31,7 +31,10 @@ const formatDate = (date: string | Timestamp) => {
   if (typeof date === 'string') {
     return new Date(date).toLocaleDateString();
   }
-  return date.toDate().toLocaleDateString();
+  if (date && typeof date.toDate === 'function') {
+    return date.toDate().toLocaleDateString();
+  }
+  return 'Invalid Date';
 };
 
 

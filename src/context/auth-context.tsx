@@ -124,8 +124,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const role: Role = data.isTaxConsultant ? 'TaxConsultant' : 'Client';
     
-    // Create a new user object conforming to the User type.
-    // Use Firestore Timestamp for createdAt.
     const newUser: Omit<User, 'id'> = {
       name: data.name,
       email: data.email,
