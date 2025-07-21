@@ -1,3 +1,4 @@
+
 // src/lib/firebase.ts
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore, enableNetwork } from "firebase/firestore";
@@ -18,6 +19,8 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 
 // Ensures Firestore tries to connect online, useful for development and seeding.
-enableNetwork(db).catch(console.error);
+enableNetwork(db)
+  .then(() => console.log('✅ Firestore online'))
+  .catch((err) => console.error('❌ Firestore enableNetwork failed', err));
 
 export { app, db, auth };
