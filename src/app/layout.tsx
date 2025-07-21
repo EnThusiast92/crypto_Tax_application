@@ -5,19 +5,51 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import AppShell from '@/components/app-shell';
 import { TransactionsProvider } from '@/context/transactions-context';
-import { AuthProvider } from '@/context/auth-context';
+import { AuthProvider, useAuth } from '@/context/auth-context';
 import { SettingsProvider } from '@/context/settings-context';
 import { usePathname } from 'next/navigation';
+import { Skeleton } from '@/components/ui/skeleton';
+
+function AppLayout({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  const pathname = usePathname();
+  
+  if (loading) {
+    return (
+        <div className="flex h-screen w-full items-center justify-center">
+            <div className="flex flex-col items-center gap-4">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-primary animate-pulse">
+                  <path d="M12 2L2 7V17L12 22L22 17V7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M2 7L12 12L22 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M12 12V22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <p className="text-muted-foreground">Connecting to TaxWise...</p>
+            </div>
+        </div>
+    );
+  }
+
+  const noShellPages = ['/login', '/register', '/'];
+  const isShellRequired = !noShellPages.includes(pathname);
+
+  return (
+    <>
+      {isShellRequired && user ? (
+        <AppShell>{children}</AppShell>
+      ) : (
+        children
+      )}
+      <Toaster />
+    </>
+  )
+}
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const pathname = usePathname();
-  const noShellPages = ['/', '/login', '/register'];
-  const isShellRequired = !noShellPages.includes(pathname);
-
+  
   return (
     <html lang="en" className="dark">
       <head>
@@ -31,14 +63,7 @@ export default function RootLayout({
         <AuthProvider>
           <SettingsProvider>
             <TransactionsProvider>
-              {isShellRequired ? (
-                <AppShell>
-                  {children}
-                </AppShell>
-              ) : (
-                children
-              )}
-              <Toaster />
+              <AppLayout>{children}</AppLayout>
             </TransactionsProvider>
           </SettingsProvider>
         </AuthProvider>

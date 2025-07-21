@@ -25,7 +25,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const { toast } = useToast();
   const [isSeeding, setIsSeeding] = React.useState(false);
 
@@ -36,7 +36,7 @@ export default function LoginPage() {
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
   });
-
+  
   const handleSeed = async () => {
     setIsSeeding(true);
     try {
@@ -58,36 +58,12 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginFormValues) => {
     try {
-      const user = await login(data.email, data.password);
-      if (user) {
+      const loggedInUser = await login(data.email, data.password);
+      if (loggedInUser) {
         toast({
           title: 'Login Successful',
-          description: `Welcome back, ${user.name}!`,
+          description: `Welcome back, ${loggedInUser.name}!`,
         });
-        
-        // Role-based redirection
-        switch (user.role) {
-            case 'Developer':
-                router.push('/admin/dashboard');
-                break;
-            case 'TaxConsultant':
-                 router.push('/consultant/dashboard');
-                break;
-            case 'Staff':
-                 router.push('/staff/dashboard');
-                break;
-            case 'Client':
-            default:
-                router.push('/dashboard');
-                break;
-        }
-      } else {
-        // This case might not be reached if login throws an error, but it's good practice.
-         toast({
-            title: 'Login Failed',
-            description: 'Please check your credentials and try again.',
-            variant: 'destructive',
-          });
       }
     } catch (error) {
       toast({

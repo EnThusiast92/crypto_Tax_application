@@ -56,7 +56,6 @@ export interface User {
   role: Role;
   linkedClientIds?: string[]; // For consultants
   linkedConsultantId?: string; // For clients
-  sentInvites?: { consultantEmail: string, status: 'pending' | 'accepted' }[];
 }
 
 export type RegisterFormValues = {

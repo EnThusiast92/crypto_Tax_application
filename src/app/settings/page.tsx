@@ -7,13 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Upload, X, UserPlus, Send, Clock, CheckCircle } from "lucide-react";
+import { Upload, X, Send, Clock, CheckCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import * as React from "react";
 import { useToast } from "@/hooks/use-toast";
+import type { Invitation } from "@/lib/types";
 
 export default function SettingsPage() {
-    const { user, users, removeConsultantAccess, sendInvitation } = useAuth();
+    const { user, users, invitations, removeConsultantAccess, sendInvitation } = useAuth();
     const [consultantEmail, setConsultantEmail] = React.useState('');
     const { toast } = useToast();
 
@@ -30,34 +31,34 @@ export default function SettingsPage() {
     
     // Find the linked consultant and any sent invites
     const linkedConsultant = users.find(u => u.id === user.linkedConsultantId);
-    const sentInvite = user.sentInvites?.[0]; // Assuming one invite at a time for simplicity
-    const consultantForInvite = sentInvite ? users.find(u => u.email === sentInvite.consultantEmail) : null;
+    const sentInvite = invitations.find(inv => inv.fromClientId === user.id && inv.status === 'pending');
+    const consultantForInvite = sentInvite ? users.find(u => u.email === sentInvite.toConsultantEmail) : null;
     
     const handleRemoveAccess = () => {
-        if (user && user.linkedConsultantId) {
+        if (user && user.id) {
             removeConsultantAccess(user.id);
         }
     };
     
-    const handleSendInvite = () => {
+    const handleSendInvite = async () => {
         if (!consultantEmail) {
             toast({ title: "Error", description: "Please enter a consultant's email.", variant: "destructive" });
             return;
         }
         try {
-            sendInvitation(consultantEmail);
-            toast({ title: "Success", description: `Invitation sent to ${consultantEmail}.` });
+            await sendInvitation(consultantEmail);
             setConsultantEmail('');
         } catch (error) {
             toast({ title: "Error", description: (error as Error).message, variant: "destructive" });
         }
     }
 
-    const InviteStatusIcon = ({ status }: { status: 'pending' | 'accepted' }) => {
-        if (status === 'pending') {
-            return <Clock className="h-4 w-4 text-yellow-500" />;
+    const InviteStatusIcon = ({ status }: { status: 'pending' | 'accepted' | 'rejected' }) => {
+        switch(status) {
+            case 'pending': return <Clock className="h-4 w-4 text-yellow-500" />;
+            case 'accepted': return <CheckCircle className="h-4 w-4 text-green-500" />;
+            default: return null;
         }
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
     };
 
     return (
@@ -95,7 +96,7 @@ export default function SettingsPage() {
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="email">Email</Label>
-                            <Input id="email" type="email" defaultValue={user.email} />
+                            <Input id="email" type="email" defaultValue={user.email} readOnly/>
                         </div>
                     </div>
                      <div className="space-y-2">
