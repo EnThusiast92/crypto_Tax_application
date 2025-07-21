@@ -18,10 +18,6 @@ export default function RootLayout({
   const noShellPages = ['/', '/login', '/register'];
   const isShellRequired = !noShellPages.includes(pathname);
 
-  // Metadata can't be in a client component, so we conditionally render a Head component
-  // for the title, or we could use a server layout to read the path.
-  // For simplicity here, we'll just have a single layout.
-
   return (
     <html lang="en" className="dark">
       <head>
@@ -42,10 +38,10 @@ export default function RootLayout({
               ) : (
                 children
               )}
+              <Toaster />
             </TransactionsProvider>
           </SettingsProvider>
         </AuthProvider>
-        <Toaster />
       </body>
     </html>
   );

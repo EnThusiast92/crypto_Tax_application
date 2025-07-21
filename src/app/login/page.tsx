@@ -59,6 +59,13 @@ export default function LoginPage() {
                 router.push('/dashboard');
                 break;
         }
+      } else {
+        // This case might not be reached if login throws an error, but it's good practice.
+         toast({
+            title: 'Login Failed',
+            description: 'Please check your credentials and try again.',
+            variant: 'destructive',
+          });
       }
     } catch (error) {
       toast({

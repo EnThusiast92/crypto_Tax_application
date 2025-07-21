@@ -55,6 +55,12 @@ export default function RegisterPage() {
         } else {
              router.push('/dashboard');
         }
+      } else {
+         toast({
+            title: 'Registration Failed',
+            description: 'An unknown error occurred.',
+            variant: 'destructive',
+          });
       }
     } catch (error) {
       toast({
