@@ -12,7 +12,7 @@ import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { seedDatabase } from '@/lib/data';
 
@@ -37,24 +37,27 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
   
-  const handleSeed = async () => {
+  const handleSeed = () => {
     setIsSeeding(true);
-    try {
-        await seedDatabase();
+    seedDatabase()
+      .then(() => {
         toast({
-            title: 'Database Seeded',
-            description: 'Your database has been populated with sample data.',
+          title: 'Database Seeded',
+          description: 'Your database has been populated with sample data.',
         });
-    } catch (error) {
+      })
+      .catch((error) => {
+        console.error('Seeding failed:', error);
         toast({
-            title: 'Seeding Failed',
-            description: (error as Error).message,
-            variant: 'destructive',
+          title: 'Seeding Failed',
+          description: error instanceof Error ? error.message : 'An unknown error occurred.',
+          variant: 'destructive',
         });
-    } finally {
+      })
+      .finally(() => {
         setIsSeeding(false);
-    }
-  }
+      });
+  };
 
   const onSubmit = async (data: LoginFormValues) => {
     try {
