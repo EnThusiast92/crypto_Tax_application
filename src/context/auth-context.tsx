@@ -31,11 +31,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (storedUsers) {
         setUsers(JSON.parse(storedUsers));
       } else {
+        localStorage.setItem('users', JSON.stringify(mockUsers));
         setUsers(mockUsers);
       }
       if (storedInvitations) {
         setInvitations(JSON.parse(storedInvitations));
       } else {
+        localStorage.setItem('invitations', JSON.stringify(mockInvitations));
         setInvitations(mockInvitations);
       }
 
@@ -115,7 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     setUser(null);
-    localStorage.clear();
+    // No need to clear localStorage here, as the useEffect for user will handle it
     router.push('/login');
   };
   
@@ -155,9 +157,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     toast({ title: "User Updated", description: "User details have been successfully updated." });
   };
   
-  const removeConsultantAccess = (clientId: string) => {
+ const removeConsultantAccess = (clientId: string) => {
     const newUsers = JSON.parse(JSON.stringify(users));
-    
+
     const clientIndex = newUsers.findIndex((u: User) => u.id === clientId);
     if (clientIndex === -1) return;
 
@@ -167,26 +169,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const consultantIndex = newUsers.findIndex((u: User) => u.id === consultantId);
 
+    // Remove the link from the client
     delete client.linkedConsultantId;
 
+    // Remove the link from the consultant
     if (consultantIndex !== -1) {
-      const consultant = newUsers[consultantIndex];
-      consultant.linkedClientIds = (consultant.linkedClientIds || []).filter(
-        (id: string) => id !== clientId
-      );
+        const consultant = newUsers[consultantIndex];
+        if (consultant.linkedClientIds) {
+            consultant.linkedClientIds = consultant.linkedClientIds.filter(
+                (id: string) => id !== clientId
+            );
+        }
     }
-    
+
+    // Commit the updated users list to state
     setUsers(newUsers);
-    
-    // Also update the currently logged-in user object if it's the client
+
+    // Update the currently logged-in user's state
     if (user?.id === clientId) {
-      const updatedCurrentUser = { ...user };
-      delete updatedCurrentUser.linkedConsultantId;
-      setUser(updatedCurrentUser);
+        setUser(newUsers[clientIndex]);
     }
 
     toast({ title: "Consultant Unlinked", description: "Access has been successfully removed." });
-  };
+};
+
   
   const sendInvitation = (consultantEmail: string) => {
     if (!user || user.role !== 'Client') throw new Error("Only clients can send invitations.");
@@ -207,63 +213,86 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     setInvitations(prev => [...prev, newInvitation]);
     
-    const newUsers = JSON.parse(JSON.stringify(users));
-    const userIndex = newUsers.findIndex((u: User) => u.id === user.id);
-    if (userIndex !== -1) {
-      const clientUser = newUsers[userIndex];
-      clientUser.sentInvites = [...(clientUser.sentInvites || []), { consultantEmail, status: 'pending' }];
-      setUsers(newUsers);
-      setUser(clientUser);
-    }
+    // Also update the user object in the main users list
+    const newUsers = users.map(u => {
+      if (u.id === user.id) {
+        return {
+          ...u,
+          sentInvites: [...(u.sentInvites || []), { consultantEmail, status: 'pending' }]
+        };
+      }
+      return u;
+    });
+    setUsers(newUsers);
+    
+    // And update the currently logged-in user state
+    setUser(prev => prev ? {
+      ...prev,
+      sentInvites: [...(prev.sentInvites || []), { consultantEmail, status: 'pending' }]
+    } : null);
   };
   
   const acceptInvitation = (invitationId: string) => {
-    const invitation = invitations.find(inv => inv.id === invitationId);
-    if (!invitation || !user || user.role !== 'TaxConsultant') return;
-
     const newUsers = JSON.parse(JSON.stringify(users));
+    const newInvitations = JSON.parse(JSON.stringify(invitations));
+    
+    const invitationIndex = newInvitations.findIndex((inv: Invitation) => inv.id === invitationId);
+    if (invitationIndex === -1 || !user || user.role !== 'TaxConsultant') return;
+    
+    const invitation = newInvitations[invitationIndex];
     
     const clientIndex = newUsers.findIndex((u: User) => u.id === invitation.fromClientId);
     const consultantIndex = newUsers.findIndex((u: User) => u.id === user.id);
 
     if (clientIndex === -1 || consultantIndex === -1) return;
 
-    const client = newUsers[clientIndex];
-    const consultant = newUsers[consultantIndex];
-
-    client.linkedConsultantId = user.id;
-    client.sentInvites = (client.sentInvites || []).filter(
+    // Update client
+    newUsers[clientIndex].linkedConsultantId = user.id;
+    newUsers[clientIndex].sentInvites = (newUsers[clientIndex].sentInvites || []).filter(
       (si: any) => si.consultantEmail !== invitation.toConsultantEmail
     );
 
-    consultant.linkedClientIds = [...(consultant.linkedClientIds || []), invitation.fromClientId];
+    // Update consultant
+    newUsers[consultantIndex].linkedClientIds = [...(newUsers[consultantIndex].linkedClientIds || []), invitation.fromClientId];
 
+    // Remove invitation
+    newInvitations.splice(invitationIndex, 1);
+
+    // Commit all state changes
     setUsers(newUsers);
-    setUser(consultant);
-    setInvitations(prev => prev.filter(inv => inv.id !== invitationId));
+    setInvitations(newInvitations);
+    setUser(newUsers[consultantIndex]);
+    
+    toast({ title: "Invitation Accepted", description: "Client has been added to your list." });
   };
   
   const rejectInvitation = (invitationId: string) => {
-    const invitation = invitations.find(inv => inv.id === invitationId);
-    if (!invitation || !user) return;
-    
     const newUsers = JSON.parse(JSON.stringify(users));
+    const newInvitations = JSON.parse(JSON.stringify(invitations));
+    
+    const invitationIndex = newInvitations.findIndex((inv: Invitation) => inv.id === invitationId);
+    if (invitationIndex === -1 || !user) return;
+    
+    const invitation = newInvitations[invitationIndex];
+    
     const clientIndex = newUsers.findIndex((u: User) => u.id === invitation.fromClientId);
     
     if (clientIndex !== -1) {
-      const client = newUsers[clientIndex];
-      client.sentInvites = (client.sentInvites || []).filter(
+      newUsers[clientIndex].sentInvites = (newUsers[clientIndex].sentInvites || []).filter(
         (si: any) => si.consultantEmail !== invitation.toConsultantEmail
       );
-      
-      setUsers(newUsers);
-      
-      if (user.id === invitation.fromClientId) {
-        setUser(client);
-      }
     }
     
-    setInvitations(prev => prev.filter(inv => inv.id !== invitationId));
+    newInvitations.splice(invitationIndex, 1);
+
+    setUsers(newUsers);
+    setInvitations(newInvitations);
+    
+    if (user.id === invitation.fromClientId) {
+      setUser(newUsers[clientIndex]);
+    }
+    
+     toast({ title: 'Invitation Rejected', description: 'The invitation has been removed.' });
   };
 
   const value = { user, users, invitations, login, logout, register, updateUserRole, deleteUser, updateUser, removeConsultantAccess, sendInvitation, acceptInvitation, rejectInvitation };
