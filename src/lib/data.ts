@@ -55,56 +55,72 @@ export const misclassifiedTransactions: Transaction[] = [
 
 export const users: Omit<User, 'id'>[] = [
     {
+        id: 'user-admin',
         name: 'Admin',
         email: 'admin@cryptotaxpro.com',
         avatarUrl: 'https://i.pravatar.cc/150?u=admin@cryptotaxpro.com',
         createdAt: new Date().toISOString(),
         role: 'Developer',
+        linkedClientIds: [],
+        linkedConsultantId: '',
     },
     {
+        id: 'user-satoshi',
         name: 'Satoshi Nakamoto',
         email: 'satoshi@gmx.com',
         avatarUrl: 'https://i.pravatar.cc/150?u=satoshi@gmx.com',
         createdAt: new Date().toISOString(),
         role: 'Client',
-        linkedConsultantId: 'user-consultant-1',
+        linkedConsultantId: 'user-charles',
+        linkedClientIds: [],
     },
      {
+        id: 'user-gavin',
         name: 'Gavin Wood',
         email: 'gavin@eth.org',
         avatarUrl: 'https://i.pravatar.cc/150?u=gavin@eth.org',
         createdAt: new Date().toISOString(),
         role: 'Client',
+        linkedConsultantId: '',
+        linkedClientIds: [],
     },
     {
+        id: 'user-charles',
         name: 'Charles Hoskinson',
         email: 'charles@iohk.io',
         avatarUrl: 'https://i.pravatar.cc/150?u=charles@iohk.io',
         createdAt: new Date().toISOString(),
         role: 'TaxConsultant',
-        linkedClientIds: ['user-client-1'],
+        linkedClientIds: ['user-satoshi'],
+        linkedConsultantId: '',
     },
      {
+        id: 'user-hayden',
         name: 'Hayden Adams',
         email: 'hayden@uniswap.org',
         avatarUrl: 'https://i.pravatar.cc/150?u=hayden@uniswap.org',
         createdAt: new Date().toISOString(),
         role: 'TaxConsultant',
+        linkedClientIds: [],
+        linkedConsultantId: '',
     },
     {
+        id: 'user-vitalik',
         name: 'Vitalik Buterin',
         email: 'vitalik@ethereum.org',
         avatarUrl: 'https://i.pravatar.cc/150?u=vitalik@ethereum.org',
         createdAt: new Date().toISOString(),
-        role: 'Staff'
+        role: 'Staff',
+        linkedClientIds: [],
+        linkedConsultantId: '',
     }
-].map(u => ({...u, id: `user-${u.name.split(' ')[0].toLowerCase()}`}));
+];
 
 
 export const invitations: Invitation[] = [
     {
         id: 'inv-1',
-        fromClientId: 'user-client-2',
+        fromClientId: 'user-gavin',
         toConsultantEmail: 'hayden@uniswap.org',
         status: 'pending'
     }
@@ -124,7 +140,16 @@ export async function seedDatabase() {
 
     users.forEach(user => {
       const userRef = doc(usersCol, user.id);
-      batch1.set(userRef, user);
+      
+      // Sanitize the user object to remove undefined keys
+      const userData = { ...user };
+      Object.keys(userData).forEach(key => {
+        if (userData[key as keyof typeof userData] === undefined) {
+          delete userData[key as keyof typeof userData];
+        }
+      });
+      
+      batch1.set(userRef, userData);
     });
 
     invitations.forEach(inv => {
@@ -136,7 +161,7 @@ export async function seedDatabase() {
     console.log('✅ Users and invitations seeded');
 
     // Step 2: Seed transactions for satoshi
-    const txCol = collection(db, `users/user-client-1/transactions`);
+    const txCol = collection(db, `users/user-satoshi/transactions`);
     const batch2 = writeBatch(db);
 
     transactions.forEach(tx => {
