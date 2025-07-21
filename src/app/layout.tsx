@@ -8,12 +8,11 @@ import { TransactionsProvider } from '@/context/transactions-context';
 import { AuthProvider, useAuth } from '@/context/auth-context';
 import { SettingsProvider } from '@/context/settings-context';
 import { usePathname } from 'next/navigation';
-import { Skeleton } from '@/components/ui/skeleton';
 
-function AppLayout({ children }: { children: React.ReactNode }) {
+function AppContent({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const pathname = usePathname();
-  
+
   if (loading) {
     return (
         <div className="flex h-screen w-full items-center justify-center">
@@ -30,18 +29,18 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   const noShellPages = ['/login', '/register', '/'];
-  const isShellRequired = !noShellPages.includes(pathname);
+  const isShellRequired = user && !noShellPages.includes(pathname);
 
   return (
     <>
-      {isShellRequired && user ? (
+      {isShellRequired ? (
         <AppShell>{children}</AppShell>
       ) : (
         children
       )}
       <Toaster />
     </>
-  )
+  );
 }
 
 export default function RootLayout({
@@ -63,7 +62,7 @@ export default function RootLayout({
         <AuthProvider>
           <SettingsProvider>
             <TransactionsProvider>
-              <AppLayout>{children}</AppLayout>
+              <AppContent>{children}</AppContent>
             </TransactionsProvider>
           </SettingsProvider>
         </AuthProvider>
