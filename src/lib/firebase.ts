@@ -1,7 +1,7 @@
 
 // src/lib/firebase.ts
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, enableNetwork } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
@@ -17,5 +17,8 @@ const firebaseConfig = {
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
 const auth = getAuth(app);
+
+// Ensures Firestore tries to connect online, useful for development and seeding.
+enableNetwork(db).catch(console.error);
 
 export { app, db, auth };

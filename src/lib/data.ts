@@ -120,6 +120,7 @@ export const invitations: Invitation[] = [
 export async function seedDatabase() {
   try {
     console.log('🟡 Seeding started...');
+    await new Promise(res => setTimeout(res, 300)); // small wait for Firebase to settle
     
     // Step 1: Seed users and invitations
     const batch1 = writeBatch(db);
