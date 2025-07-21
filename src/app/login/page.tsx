@@ -25,7 +25,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, user } = useAuth();
+  const { login, isFirebaseReady } = useAuth();
   const { toast } = useToast();
   const [isSeeding, setIsSeeding] = React.useState(false);
 
@@ -134,8 +134,8 @@ export default function LoginPage() {
                     </span>
                 </div>
             </div>
-            <Button variant="secondary" className="w-full" onClick={handleSeed} disabled={isSeeding}>
-                {isSeeding ? 'Seeding...' : 'Seed Database'}
+            <Button variant="secondary" className="w-full" onClick={handleSeed} disabled={isSeeding || !isFirebaseReady}>
+                {isSeeding ? 'Seeding...' : !isFirebaseReady ? 'Connecting...' : 'Seed Database'}
             </Button>
             <p className="text-xs text-muted-foreground text-center px-4">
                 Click this once to populate your new Firebase database with sample users and transactions.

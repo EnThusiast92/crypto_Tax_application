@@ -75,6 +75,7 @@ export type AuthContextType = {
   users: User[];
   invitations: Invitation[];
   loading: boolean;
+  isFirebaseReady: boolean;
   login: (email: string, password: string) => Promise<User>;
   logout: () => void;
   register: (data: RegisterFormValues) => Promise<User>;
