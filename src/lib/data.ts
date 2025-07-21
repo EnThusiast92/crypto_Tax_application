@@ -1,5 +1,5 @@
 
-import type { Transaction, StatCardData, User, Invitation } from './types';
+import type { Transaction, User, Invitation } from './types';
 import { ArrowUpRight, ArrowDownLeft, Banknote, Landmark } from 'lucide-react';
 import { db } from './firebase';
 import { collection, writeBatch, doc, Timestamp, setDoc } from 'firebase/firestore';
@@ -55,9 +55,8 @@ export const misclassifiedTransactions: Transaction[] = [
 
 const now = Timestamp.now();
 
-export const users: User[] = [
+export const users: Omit<User, 'id'>[] = [
     {
-        id: 'user-admin',
         name: 'Admin',
         email: 'admin@cryptotaxpro.com',
         avatarUrl: 'https://i.pravatar.cc/150?u=admin@cryptotaxpro.com',
@@ -67,7 +66,6 @@ export const users: User[] = [
         linkedConsultantId: '',
     },
     {
-        id: 'user-satoshi',
         name: 'Satoshi Nakamoto',
         email: 'satoshi@gmx.com',
         avatarUrl: 'https://i.pravatar.cc/150?u=satoshi@gmx.com',
@@ -77,7 +75,6 @@ export const users: User[] = [
         linkedClientIds: [],
     },
      {
-        id: 'user-gavin',
         name: 'Gavin Wood',
         email: 'gavin@eth.org',
         avatarUrl: 'https://i.pravatar.cc/150?u=gavin@eth.org',
@@ -87,7 +84,6 @@ export const users: User[] = [
         linkedClientIds: [],
     },
     {
-        id: 'user-charles',
         name: 'Charles Hoskinson',
         email: 'charles@iohk.io',
         avatarUrl: 'https://i.pravatar.cc/150?u=charles@iohk.io',
@@ -97,7 +93,6 @@ export const users: User[] = [
         linkedConsultantId: '',
     },
      {
-        id: 'user-hayden',
         name: 'Hayden Adams',
         email: 'hayden@uniswap.org',
         avatarUrl: 'https://i.pravatar.cc/150?u=hayden@uniswap.org',
@@ -107,7 +102,6 @@ export const users: User[] = [
         linkedConsultantId: '',
     },
     {
-        id: 'user-vitalik',
         name: 'Vitalik Buterin',
         email: 'vitalik@ethereum.org',
         avatarUrl: 'https://i.pravatar.cc/150?u=vitalik@ethereum.org',
@@ -117,7 +111,6 @@ export const users: User[] = [
         linkedConsultantId: '',
     }
 ];
-
 
 export const invitations: Invitation[] = [
     {
@@ -129,16 +122,68 @@ export const invitations: Invitation[] = [
 ];
 
 
-// NOTE: This function is for seeding the database with initial mock data.
-// It should only be run once. You can call it from a temporary component or a script.
 export async function seedDatabase() {
-    console.log('🧪 TEST SEED');
+  try {
+    console.log('🟡 Seeding started...');
+    
+    // Use a map to get the auto-generated IDs
+    const userIds: Record<string, string> = {};
+    users.forEach((user, index) => {
+        // Create a predictable ID based on the email for linking purposes
+        const userId = `user-${user.email.split('@')[0]}`;
+        userIds[index] = userId;
+    })
 
-    const testRef = doc(db, 'test', 'demo');
-    await setDoc(testRef, {
-      message: 'Hello world!',
-      createdAt: Timestamp.now()
+    // Step 1: Seed users and invitations
+    const batch1 = writeBatch(db);
+    const usersCol = collection(db, 'users');
+    const invitationsCol = collection(db, 'invitations');
+
+    users.forEach((user, index) => {
+      const userId = userIds[index];
+      const userRef = doc(usersCol, userId);
+      
+      const userData: any = {...user};
+      // Make sure linkings are correct using the generated IDs
+      if(user.email === 'satoshi@gmx.com') {
+          const consultantIndex = users.findIndex(u => u.email === 'charles@iohk.io');
+          userData.linkedConsultantId = userIds[consultantIndex];
+      }
+      if(user.email === 'charles@iohk.io') {
+          const clientIndex = users.findIndex(u => u.email === 'satoshi@gmx.com');
+          userData.linkedClientIds = [userIds[clientIndex]];
+      }
+
+      batch1.set(userRef, userData);
     });
-  
-    console.log('✅ Test seed complete');
+
+    invitations.forEach(inv => {
+      const fromClientIndex = users.findIndex(u => u.email === 'gavin@eth.org');
+      const fromClientId = userIds[fromClientIndex];
+      const invitationRef = doc(invitationsCol, inv.id);
+      batch1.set(invitationRef, {...inv, fromClientId });
+    });
+
+    await batch1.commit();
+    console.log('✅ Users and invitations seeded');
+
+    // Step 2: Seed transactions for satoshi
+    const satoshiIndex = users.findIndex(u => u.email === 'satoshi@gmx.com');
+    const satoshiId = userIds[satoshiIndex];
+    const txCol = collection(db, `users/${satoshiId}/transactions`);
+    const batch2 = writeBatch(db);
+
+    transactions.forEach(tx => {
+      const txRef = doc(txCol); // auto-id
+      batch2.set(txRef, tx);
+    });
+
+    await batch2.commit();
+    console.log('✅ Transactions seeded');
+
+    console.log('🎉 All data seeded successfully!');
+  } catch (error) {
+    console.error('❌ Seeding error:', error);
+    throw error;
+  }
 }
