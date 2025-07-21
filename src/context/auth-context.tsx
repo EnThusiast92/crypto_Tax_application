@@ -20,6 +20,7 @@ import {
   arrayRemove,
   getDoc,
   onSnapshot,
+  Timestamp,
 } from 'firebase/firestore';
 import { 
     createUserWithEmailAndPassword, 
@@ -44,17 +45,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const userRef = doc(db, 'users', firebaseUser.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          setUser({ id: userSnap.id, ...userSnap.data() } as User);
-        } else {
-           setUser(null);
-        }
+        // Using onSnapshot to listen for real-time updates to the user document
+        const unsubUser = onSnapshot(userRef, (userSnap) => {
+          if (userSnap.exists()) {
+            setUser({ id: userSnap.id, ...userSnap.data() } as User);
+          } else {
+            setUser(null);
+          }
+           setLoading(false);
+           setIsFirebaseReady(true);
+        });
+        return () => unsubUser();
       } else {
         setUser(null);
+        setLoading(false);
+        setIsFirebaseReady(true);
       }
-      setLoading(false);
-      setIsFirebaseReady(true); // Firebase is ready after the first auth check
     });
 
     return () => unsubscribe();
@@ -117,18 +123,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { user: firebaseUser } = userCredential;
 
     const role: Role = data.isTaxConsultant ? 'TaxConsultant' : 'Client';
-    const newUser: User = {
-      id: firebaseUser.uid,
+    
+    // Create a new user object conforming to the User type.
+    // Use Firestore Timestamp for createdAt.
+    const newUser: Omit<User, 'id'> = {
       name: data.name,
       email: data.email,
       role,
       avatarUrl: `https://i.pravatar.cc/150?u=${data.email}`,
-      createdAt: new Date().toISOString(),
+      createdAt: Timestamp.now(),
+      linkedClientIds: [],
+      linkedConsultantId: '',
     };
     
     await setDoc(doc(db, "users", firebaseUser.uid), newUser);
-    setUser(newUser);
-    return newUser;
+    const userWithId: User = { ...newUser, id: firebaseUser.uid };
+    setUser(userWithId);
+    return userWithId;
   };
 
   const logout = async () => {
@@ -229,7 +240,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         
         if (user.id === clientId) {
-          setUser(prev => prev ? { ...prev, linkedConsultantId: undefined } : null);
+          setUser(prev => prev ? { ...prev, linkedConsultantId: '' } : null);
         }
 
         toast({ title: "Consultant Unlinked", description: "Access has been removed." });

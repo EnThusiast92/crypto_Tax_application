@@ -2,7 +2,7 @@
 import type { Transaction, StatCardData, User, Invitation } from './types';
 import { ArrowUpRight, ArrowDownLeft, Banknote, Landmark } from 'lucide-react';
 import { db } from './firebase';
-import { collection, writeBatch, doc } from 'firebase/firestore';
+import { collection, writeBatch, doc, Timestamp } from 'firebase/firestore';
 
 export const statCards: StatCardData[] = [
   {
@@ -53,13 +53,15 @@ export const misclassifiedTransactions: Transaction[] = [
   { id: 'TXN011', date: '2024-03-15', type: 'Buy', asset: 'USDC', quantity: 1000, price: 1, fee: 1, value: 1000, exchange: 'Coinbase', classification: 'Transfer' },
 ];
 
-export const users: Omit<User, 'id'>[] = [
+const now = Timestamp.now();
+
+export const users: User[] = [
     {
         id: 'user-admin',
         name: 'Admin',
         email: 'admin@cryptotaxpro.com',
         avatarUrl: 'https://i.pravatar.cc/150?u=admin@cryptotaxpro.com',
-        createdAt: new Date().toISOString(),
+        createdAt: now,
         role: 'Developer',
         linkedClientIds: [],
         linkedConsultantId: '',
@@ -69,7 +71,7 @@ export const users: Omit<User, 'id'>[] = [
         name: 'Satoshi Nakamoto',
         email: 'satoshi@gmx.com',
         avatarUrl: 'https://i.pravatar.cc/150?u=satoshi@gmx.com',
-        createdAt: new Date().toISOString(),
+        createdAt: now,
         role: 'Client',
         linkedConsultantId: 'user-charles',
         linkedClientIds: [],
@@ -79,7 +81,7 @@ export const users: Omit<User, 'id'>[] = [
         name: 'Gavin Wood',
         email: 'gavin@eth.org',
         avatarUrl: 'https://i.pravatar.cc/150?u=gavin@eth.org',
-        createdAt: new Date().toISOString(),
+        createdAt: now,
         role: 'Client',
         linkedConsultantId: '',
         linkedClientIds: [],
@@ -89,7 +91,7 @@ export const users: Omit<User, 'id'>[] = [
         name: 'Charles Hoskinson',
         email: 'charles@iohk.io',
         avatarUrl: 'https://i.pravatar.cc/150?u=charles@iohk.io',
-        createdAt: new Date().toISOString(),
+        createdAt: now,
         role: 'TaxConsultant',
         linkedClientIds: ['user-satoshi'],
         linkedConsultantId: '',
@@ -99,7 +101,7 @@ export const users: Omit<User, 'id'>[] = [
         name: 'Hayden Adams',
         email: 'hayden@uniswap.org',
         avatarUrl: 'https://i.pravatar.cc/150?u=hayden@uniswap.org',
-        createdAt: new Date().toISOString(),
+        createdAt: now,
         role: 'TaxConsultant',
         linkedClientIds: [],
         linkedConsultantId: '',
@@ -109,7 +111,7 @@ export const users: Omit<User, 'id'>[] = [
         name: 'Vitalik Buterin',
         email: 'vitalik@ethereum.org',
         avatarUrl: 'https://i.pravatar.cc/150?u=vitalik@ethereum.org',
-        createdAt: new Date().toISOString(),
+        createdAt: now,
         role: 'Staff',
         linkedClientIds: [],
         linkedConsultantId: '',
@@ -141,13 +143,8 @@ export async function seedDatabase() {
     users.forEach(user => {
       const userRef = doc(usersCol, user.id);
       
-      // Sanitize the user object to remove undefined keys
-      const userData = { ...user };
-      Object.keys(userData).forEach(key => {
-        if (userData[key as keyof typeof userData] === undefined) {
-          delete userData[key as keyof typeof userData];
-        }
-      });
+      // Create a new object for Firestore without the 'id' field
+      const { id, ...userData } = user;
       
       batch1.set(userRef, userData);
     });

@@ -1,5 +1,7 @@
 
 
+import type { Timestamp } from 'firebase/firestore';
+
 export type Role = 'Developer' | 'Staff' | 'Client' | 'TaxConsultant';
 
 export type Transaction = {
@@ -51,10 +53,10 @@ export interface User {
   name: string;
   email: string;
   avatarUrl?: string;
-  createdAt: string;
+  createdAt: Timestamp | string; // Allow string for local object, but Timestamp for Firestore
   role: Role;
-  linkedClientIds?: string[]; // For consultants
-  linkedConsultantId?: string; // For clients
+  linkedClientIds: string[]; // For consultants
+  linkedConsultantId: string; // For clients
 }
 
 export type RegisterFormValues = {
