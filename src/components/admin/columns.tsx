@@ -24,6 +24,20 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/context/auth-context';
 import { DeleteUserDialog } from './delete-user-dialog';
 import { EditUserDialog } from './edit-user-dialog';
+import type { Timestamp } from 'firebase/firestore';
+
+// Helper function to convert Firestore Timestamp to a readable date string
+const formatDate = (date: string | Timestamp | undefined) => {
+  if (!date) return 'N/A';
+  if (typeof date === 'string') {
+    return new Date(date).toLocaleDateString();
+  }
+  if (date && typeof (date as Timestamp).toDate === 'function') {
+    return (date as Timestamp).toDate().toLocaleDateString();
+  }
+  return 'Invalid Date';
+};
+
 
 export const columns: ColumnDef<User>[] = [
   {
@@ -85,7 +99,7 @@ export const columns: ColumnDef<User>[] = [
         </Button>
       );
     },
-    cell: ({ row }) => new Date(row.getValue('createdAt')).toLocaleDateString(),
+    cell: ({ row }) => formatDate(row.getValue('createdAt')),
   },
   {
     id: 'actions',
