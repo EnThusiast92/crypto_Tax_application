@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { seedDatabase } from '@/lib/data';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -26,6 +27,8 @@ export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
   const { toast } = useToast();
+  const [isSeeding, setIsSeeding] = React.useState(false);
+
   const {
     register,
     handleSubmit,
@@ -33,6 +36,25 @@ export default function LoginPage() {
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
   });
+
+  const handleSeed = async () => {
+    setIsSeeding(true);
+    try {
+        await seedDatabase();
+        toast({
+            title: 'Database Seeded',
+            description: 'Your database has been populated with sample data.',
+        });
+    } catch (error) {
+        toast({
+            title: 'Seeding Failed',
+            description: (error as Error).message,
+            variant: 'destructive',
+        });
+    } finally {
+        setIsSeeding(false);
+    }
+  }
 
   const onSubmit = async (data: LoginFormValues) => {
     try {
@@ -125,6 +147,24 @@ export default function LoginPage() {
             </Link>
           </div>
         </CardContent>
+        <CardFooter className="flex flex-col gap-4">
+            <div className="relative w-full">
+                <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                    First-time setup
+                    </span>
+                </div>
+            </div>
+            <Button variant="secondary" className="w-full" onClick={handleSeed} disabled={isSeeding}>
+                {isSeeding ? 'Seeding...' : 'Seed Database'}
+            </Button>
+            <p className="text-xs text-muted-foreground text-center px-4">
+                Click this once to populate your new Firebase database with sample users and transactions.
+            </p>
+        </CardFooter>
       </Card>
     </div>
   );
