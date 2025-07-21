@@ -53,9 +53,8 @@ export const misclassifiedTransactions: Transaction[] = [
   { id: 'TXN011', date: '2024-03-15', type: 'Buy', asset: 'USDC', quantity: 1000, price: 1, fee: 1, value: 1000, exchange: 'Coinbase', classification: 'Transfer' },
 ];
 
-export const users: Omit<User, 'passwordHash'>[] = [
+export const users: Omit<User, 'id'>[] = [
     {
-        id: 'user-dev',
         name: 'Admin',
         email: 'admin@cryptotaxpro.com',
         avatarUrl: 'https://i.pravatar.cc/150?u=admin@cryptotaxpro.com',
@@ -63,7 +62,6 @@ export const users: Omit<User, 'passwordHash'>[] = [
         role: 'Developer',
     },
     {
-        id: 'user-client-1',
         name: 'Satoshi Nakamoto',
         email: 'satoshi@gmx.com',
         avatarUrl: 'https://i.pravatar.cc/150?u=satoshi@gmx.com',
@@ -72,7 +70,6 @@ export const users: Omit<User, 'passwordHash'>[] = [
         linkedConsultantId: 'user-consultant-1',
     },
      {
-        id: 'user-client-2',
         name: 'Gavin Wood',
         email: 'gavin@eth.org',
         avatarUrl: 'https://i.pravatar.cc/150?u=gavin@eth.org',
@@ -80,7 +77,6 @@ export const users: Omit<User, 'passwordHash'>[] = [
         role: 'Client',
     },
     {
-        id: 'user-consultant-1',
         name: 'Charles Hoskinson',
         email: 'charles@iohk.io',
         avatarUrl: 'https://i.pravatar.cc/150?u=charles@iohk.io',
@@ -89,7 +85,6 @@ export const users: Omit<User, 'passwordHash'>[] = [
         linkedClientIds: ['user-client-1'],
     },
      {
-        id: 'user-consultant-2',
         name: 'Hayden Adams',
         email: 'hayden@uniswap.org',
         avatarUrl: 'https://i.pravatar.cc/150?u=hayden@uniswap.org',
@@ -97,14 +92,14 @@ export const users: Omit<User, 'passwordHash'>[] = [
         role: 'TaxConsultant',
     },
     {
-        id: 'user-staff-1',
         name: 'Vitalik Buterin',
         email: 'vitalik@ethereum.org',
         avatarUrl: 'https://i.pravatar.cc/150?u=vitalik@ethereum.org',
         createdAt: new Date().toISOString(),
         role: 'Staff'
     }
-];
+].map(u => ({...u, id: `user-${u.name.split(' ')[0].toLowerCase()}`}));
+
 
 export const invitations: Invitation[] = [
     {
@@ -129,8 +124,7 @@ export async function seedDatabase() {
 
     users.forEach(user => {
       const userRef = doc(usersCol, user.id);
-      const { passwordHash, ...userData } = user as any;
-      batch1.set(userRef, userData);
+      batch1.set(userRef, user);
     });
 
     invitations.forEach(inv => {

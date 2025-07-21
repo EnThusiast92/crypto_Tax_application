@@ -50,7 +50,6 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  passwordHash: string; // This would not be sent to the client in a real app
   avatarUrl?: string;
   createdAt: string;
   role: Role;

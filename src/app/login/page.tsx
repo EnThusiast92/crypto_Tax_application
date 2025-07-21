@@ -37,26 +37,24 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
   
-  const handleSeed = () => {
+  const handleSeed = async () => {
     setIsSeeding(true);
-    seedDatabase()
-      .then(() => {
-        toast({
-          title: 'Database Seeded',
-          description: 'Your database has been populated with sample data.',
-        });
-      })
-      .catch((error) => {
-        console.error('Seeding failed:', error);
-        toast({
-          title: 'Seeding Failed',
-          description: error instanceof Error ? error.message : 'An unknown error occurred.',
-          variant: 'destructive',
-        });
-      })
-      .finally(() => {
-        setIsSeeding(false);
+    try {
+      await seedDatabase();
+      toast({
+        title: 'Database Seeded',
+        description: 'Your database has been populated with sample data.',
       });
+    } catch (error) {
+      console.error('Seeding failed:', error);
+      toast({
+        title: 'Seeding Failed',
+        description: error instanceof Error ? error.message : 'An unknown error occurred.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSeeding(false);
+    }
   };
 
   const onSubmit = async (data: LoginFormValues) => {
@@ -132,7 +130,7 @@ export default function LoginPage() {
                     <span className="w-full border-t" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">
+                    <span className="bg-card px-2 text-muted-foreground">
                     First-time setup
                     </span>
                 </div>
