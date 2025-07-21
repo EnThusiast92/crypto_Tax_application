@@ -118,37 +118,43 @@ export const invitations: Invitation[] = [
 // NOTE: This function is for seeding the database with initial mock data.
 // It should only be run once. You can call it from a temporary component or a script.
 export async function seedDatabase() {
-    try {
-        const batch = writeBatch(db);
+  try {
+    console.log('🟡 Seeding started...');
+    
+    // Step 1: Seed users and invitations
+    const batch1 = writeBatch(db);
+    const usersCol = collection(db, 'users');
+    const invitationsCol = collection(db, 'invitations');
 
-        // Seed users
-        const usersCol = collection(db, 'users');
-        users.forEach(user => {
-            const userRef = doc(usersCol, user.id);
-            // We are not seeding passwords, auth is handled by Firebase Auth service
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const { passwordHash, ...userData } = user as User;
-            batch.set(userRef, userData);
-        });
+    users.forEach(user => {
+      const userRef = doc(usersCol, user.id);
+      const { passwordHash, ...userData } = user as any;
+      batch1.set(userRef, userData);
+    });
 
-        // Seed invitations
-        const invitationsCol = collection(db, 'invitations');
-        invitations.forEach(invitation => {
-            const invitationRef = doc(invitationsCol, invitation.id);
-            batch.set(invitationRef, invitation);
-        });
-        
-        // Seed transactions for a specific user (e.g., satoshi)
-        const client1TransactionsCol = collection(db, `users/user-client-1/transactions`);
-        transactions.forEach(tx => {
-            const txRef = doc(client1TransactionsCol);
-            batch.set(txRef, tx);
-        });
-        
-        await batch.commit();
-        console.log("Database seeded successfully!");
-    } catch (error) {
-        console.error("Error seeding database: ", error);
-        throw error;
-    }
+    invitations.forEach(inv => {
+      const invitationRef = doc(invitationsCol, inv.id);
+      batch1.set(invitationRef, inv);
+    });
+
+    await batch1.commit();
+    console.log('✅ Users and invitations seeded');
+
+    // Step 2: Seed transactions for satoshi
+    const txCol = collection(db, `users/user-client-1/transactions`);
+    const batch2 = writeBatch(db);
+
+    transactions.forEach(tx => {
+      const txRef = doc(txCol); // auto-id
+      batch2.set(txRef, tx);
+    });
+
+    await batch2.commit();
+    console.log('✅ Transactions seeded');
+
+    console.log('🎉 All data seeded successfully!');
+  } catch (error) {
+    console.error('❌ Seeding error:', error);
+    throw error;
+  }
 }
