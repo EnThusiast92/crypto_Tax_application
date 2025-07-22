@@ -10,11 +10,14 @@ import { useRouter } from 'next/navigation';
 import type { User } from '@/lib/types';
 import { ArrowRight, Check, X, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function ConsultantDashboardPage() {
   const { user, users, invitations, acceptInvitation, rejectInvitation } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const [pendingClients, setPendingClients] = React.useState<User[]>([]);
 
   if (user?.role !== 'TaxConsultant') {
     return (
@@ -24,12 +27,24 @@ export default function ConsultantDashboardPage() {
     );
   }
 
-  // In a real app, this would be a Firestore query based on user.linkedClientIds
-  const linkedClients = users.filter(u => user?.linkedClientIds?.includes(u.id));
-  
   const pendingInvites = invitations.filter(inv => inv.toConsultantEmail === user.email && inv.status === 'pending');
-  const getClientById = (id: string) => users.find(u => u.id === id);
 
+  React.useEffect(() => {
+    const fetchPendingClients = async () => {
+      if (pendingInvites.length > 0) {
+        const clientPromises = pendingInvites.map(invite => getDoc(doc(db, 'users', invite.fromClientId)));
+        const clientDocs = await Promise.all(clientPromises);
+        const clients = clientDocs
+          .filter(doc => doc.exists())
+          .map(doc => ({ id: doc.id, ...doc.data() } as User));
+        setPendingClients(clients);
+      }
+    };
+    fetchPendingClients();
+  }, [invitations, user.email]); // Rerun when invitations change
+
+  const getPendingClientById = (id: string) => pendingClients.find(c => c.id === id);
+  const linkedClients = users.filter(u => user?.linkedClientIds?.includes(u.id));
 
   const handleViewClient = (clientId: string) => {
     router.push(`/consultant/clients/${clientId}`);
@@ -68,8 +83,12 @@ export default function ConsultantDashboardPage() {
             </CardHeader>
             <CardContent className="space-y-4">
                 {pendingInvites.map(invite => {
-                    const client = getClientById(invite.fromClientId);
-                    if (!client) return null;
+                    const client = getPendingClientById(invite.fromClientId);
+                    if (!client) return (
+                        <div key={invite.id} className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
+                           <p>Loading client info...</p>
+                        </div>
+                    );
                     return (
                         <div key={invite.id} className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
                              <div className="flex items-center gap-4">

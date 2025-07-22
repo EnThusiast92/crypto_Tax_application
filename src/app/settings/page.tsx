@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Upload, X, Send, Clock, CheckCircle } from "lucide-react";
+import { Upload, X, Send, Clock, CheckCircle, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import * as React from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -32,7 +32,6 @@ export default function SettingsPage() {
     // Find the linked consultant and any sent invites
     const linkedConsultant = users.find(u => u.id === user.linkedConsultantId);
     const sentInvite = invitations.find(inv => inv.fromClientId === user.id && inv.status === 'pending');
-    const consultantForInvite = sentInvite ? users.find(u => u.email === sentInvite.toConsultantEmail) : null;
     
     const handleRemoveAccess = () => {
         if (user && user.id) {
@@ -47,6 +46,7 @@ export default function SettingsPage() {
         }
         try {
             await sendInvitation(consultantEmail);
+            toast({ title: "Invitation Sent", description: `Your invitation to ${consultantEmail} has been sent.` });
             setConsultantEmail('');
         } catch (error) {
             toast({ title: "Error", description: (error as Error).message, variant: "destructive" });
@@ -153,16 +153,15 @@ export default function SettingsPage() {
                                         Remove Access
                                     </Button>
                                 </div>
-                            ) : sentInvite && consultantForInvite ? (
+                            ) : sentInvite ? (
                                 <div className="flex items-center justify-between rounded-lg border p-3">
                                     <div className="flex items-center gap-3">
-                                        <Avatar className="h-9 w-9">
-                                            <AvatarImage src={consultantForInvite.avatarUrl} alt={consultantForInvite.name} />
-                                            <AvatarFallback>{consultantForInvite.name.charAt(0)}</AvatarFallback>
+                                         <Avatar className="h-9 w-9">
+                                            <AvatarFallback><User /></AvatarFallback>
                                         </Avatar>
                                         <div>
-                                            <p className="font-medium">{consultantForInvite.name}</p>
-                                            <p className="text-sm text-muted-foreground">{consultantForInvite.email}</p>
+                                            <p className="font-medium">Invitation Sent</p>
+                                            <p className="text-sm text-muted-foreground">{sentInvite.toConsultantEmail}</p>
                                         </div>
                                     </div>
                                     <Badge variant="outline" className="capitalize gap-2">
