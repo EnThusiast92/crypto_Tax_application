@@ -42,6 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setLoading(true);
       if (firebaseUser) {
         try {
           const userRef = doc(db, 'users', firebaseUser.uid);
@@ -121,21 +122,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string): Promise<User | null> => {
     try {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const userDocRef = doc(db, 'users', userCredential.user.uid);
-        const userDoc = await getDoc(userDocRef);
-
-        if (!userDoc.exists()) {
-            await signOut(auth);
-            throw new Error("Login successful, but user data not found in database.");
-        }
-        const loggedInUser = { id: userDoc.id, ...userDoc.data() } as User;
-        setUser(loggedInUser);
-        router.push('/dashboard'); // Redirect after successful login
-        return loggedInUser;
+      await signInWithEmailAndPassword(auth, email, password);
+      // onAuthStateChanged will handle the rest
+      router.push('/dashboard');
+      return null; // Let the listener handle setting the user state.
     } catch (error) {
-        console.error("Login failed:", error);
-        throw error; // Re-throw to be caught in the UI
+      console.error("Login failed:", error);
+      throw error; // Re-throw to be caught in the UI
     }
   };
   
@@ -146,11 +139,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const firebaseUser = result.user;
         const userDocRef = doc(db, 'users', firebaseUser.uid);
         const userDoc = await getDoc(userDocRef);
-        let userData: User;
 
-        if (userDoc.exists()) {
-          userData = { id: userDoc.id, ...userDoc.data() } as User;
-        } else {
+        if (!userDoc.exists()) {
           // If the user doesn't exist, create a new entry.
           const newUser: Omit<User, 'id'> = {
             name: firebaseUser.displayName || 'Google User',
@@ -162,11 +152,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             linkedConsultantId: '',
           };
           await setDoc(userDocRef, newUser);
-          userData = { ...newUser, id: firebaseUser.uid };
         }
-        setUser(userData);
+        // onAuthStateChanged will handle setting the user state
         router.push('/dashboard');
-        return userData;
+        return null;
     } catch (error) {
         console.error("Google Sign-In failed:", error);
         throw error;
@@ -190,10 +179,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
         
         await setDoc(doc(db, "users", firebaseUser.uid), newUser);
-        const userWithId: User = { ...newUser, id: firebaseUser.uid };
-        setUser(userWithId);
+        // onAuthStateChanged will handle setting the user state
         router.push('/dashboard');
-        return userWithId;
+        return null;
     } catch (error) {
         console.error("Registration failed:", error);
         throw error;
@@ -202,7 +190,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   const logout = async () => {
     await signOut(auth);
-    setUser(null);
+    // onAuthStateChanged will set user to null
     router.push('/login');
   };
   
@@ -212,6 +200,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteUser = async (userId: string) => {
+    // Note: Deleting user from Firestore doesn't delete them from Firebase Auth.
+    // A more complete solution would use a Cloud Function to handle this.
     await deleteDoc(doc(db, "users", userId));
   };
 
