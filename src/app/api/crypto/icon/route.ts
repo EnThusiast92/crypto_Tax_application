@@ -3,22 +3,45 @@
 import { NextResponse } from 'next/server';
 
 let symbolToIdMap: Record<string, string> | null = null;
+let mapPromise: Promise<void> | null = null;
 let iconCache: Record<string, string> = {};
 const CACHE_TTL = 1000 * 60 * 60; // 1 hour
 const cacheTimestamps: Record<string, number> = {};
 
 async function ensureMap() {
-  if (symbolToIdMap) return;
-  const resp = await fetch('https://api.coingecko.com/api/v3/coins/list');
-  if (!resp.ok) throw new Error(`List fetch failed: ${resp.status}`);
-  const list: { id: string; symbol: string }[] = await resp.json();
-  symbolToIdMap = list.reduce((m, c) => {
-    // We might have duplicates, the first one is usually the most popular one.
-    if (!m[c.symbol.toLowerCase()]) {
-      m[c.symbol.toLowerCase()] = c.id;
+  if (symbolToIdMap) {
+    return;
+  }
+  if (mapPromise) {
+    return mapPromise;
+  }
+
+  mapPromise = (async () => {
+    try {
+        const resp = await fetch('https://api.coingecko.com/api/v3/coins/list');
+        if (!resp.ok) {
+            // Log the error and clear the promise to allow retries
+            console.error(`List fetch failed with status: ${resp.status}`);
+            throw new Error(`List fetch failed: ${resp.status}`);
+        }
+        const list: { id: string; symbol: string }[] = await resp.json();
+        const newMap = list.reduce((m, c) => {
+            // We might have duplicates, the first one is usually the most popular one.
+            if (!m[c.symbol.toLowerCase()]) {
+            m[c.symbol.toLowerCase()] = c.id;
+            }
+            return m;
+        }, {} as Record<string, string>);
+        symbolToIdMap = newMap;
+    } catch (e) {
+        // In case of an error, we must clear the promise to allow future requests to try again
+        mapPromise = null;
+        // Re-throw the error to be caught by the handler
+        throw e;
     }
-    return m;
-  }, {} as Record<string, string>);
+  })();
+
+  return mapPromise;
 }
 
 export async function GET(request: Request) {
@@ -33,6 +56,7 @@ export async function GET(request: Request) {
   try {
     await ensureMap();
     if (!symbolToIdMap) {
+      // This case now indicates a failure in ensureMap that should have been thrown.
       return NextResponse.json({ error: 'Failed to build symbol map from CoinGecko' }, { status: 503 });
     }
     const coinId = symbolToIdMap[sym];
@@ -50,6 +74,7 @@ export async function GET(request: Request) {
     const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${coinId}`;
     const marketResp = await fetch(url);
     if (marketResp.status === 429) {
+      // CoinGecko is rate limiting us. Return a specific error status.
       return NextResponse.json({ error: 'rate limited, try again later' }, { status: 503 });
     }
     if (!marketResp.ok) {
@@ -66,7 +91,8 @@ export async function GET(request: Request) {
     cacheTimestamps[coinId] = Date.now();
     return NextResponse.json({ iconUrl });
   } catch (err: any) {
-    console.error('API /crypto/icon error:', err);
+    console.error(`API /crypto/icon error for symbol "${symbol}":`, err.message);
+    // If ensureMap failed, it will be caught here.
     return NextResponse.json({ error: err.message || 'internal error' }, { status: 500 });
   }
 }
