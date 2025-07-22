@@ -26,7 +26,9 @@ import {
     createUserWithEmailAndPassword, 
     signInWithEmailAndPassword, 
     signOut, 
-    onAuthStateChanged 
+    onAuthStateChanged,
+    GoogleAuthProvider,
+    signInWithPopup
 } from 'firebase/auth';
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
@@ -49,8 +51,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (userSnap.exists()) {
             setUser({ id: userSnap.id, ...userSnap.data() } as User);
           } else {
-            // This can happen if a user is created in Auth but not in Firestore,
-            // or if the user is deleted from Firestore but not Auth.
             setUser(null); 
             console.warn("Authenticated user not found in Firestore. Logging out.");
             signOut(auth);
@@ -75,7 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   React.useEffect(() => {
-    if (!isFirebaseReady) return; // Don't fetch until Firebase is ready
+    if (!isFirebaseReady) return; 
 
     const usersUnsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
         setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
@@ -146,6 +146,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const userWithId: User = { ...newUser, id: firebaseUser.uid };
     setUser(userWithId);
     return userWithId;
+  };
+  
+  const signInWithGoogle = async (): Promise<User> => {
+    const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(auth, provider);
+    const firebaseUser = result.user;
+
+    const userDocRef = doc(db, 'users', firebaseUser.uid);
+    const userDoc = await getDoc(userDocRef);
+
+    if (userDoc.exists()) {
+      // User already exists, just log them in
+      const userData = { id: userDoc.id, ...userDoc.data() } as User;
+      setUser(userData);
+      return userData;
+    } else {
+      // New user, create a document in Firestore
+      const newUser: Omit<User, 'id'> = {
+        name: firebaseUser.displayName || 'Google User',
+        email: firebaseUser.email!,
+        role: 'Client', // Default role for Google sign-up
+        avatarUrl: firebaseUser.photoURL || `https://i.pravatar.cc/150?u=${firebaseUser.email}`,
+        createdAt: Timestamp.now(),
+        linkedClientIds: [],
+        linkedConsultantId: '',
+      };
+      await setDoc(userDocRef, newUser);
+      const userWithId: User = { ...newUser, id: firebaseUser.uid };
+      setUser(userWithId);
+      return userWithId;
+    }
   };
 
   const logout = async () => {
@@ -258,7 +289,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const value = { user, users, invitations, loading, isFirebaseReady, login, logout, register, updateUserRole, deleteUser, updateUser, removeConsultantAccess, sendInvitation, acceptInvitation, rejectInvitation };
+  const value = { user, users, invitations, loading, isFirebaseReady, login, logout, register, updateUserRole, deleteUser, updateUser, removeConsultantAccess, sendInvitation, acceptInvitation, rejectInvitation, signInWithGoogle };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

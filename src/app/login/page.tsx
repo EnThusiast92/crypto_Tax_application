@@ -24,8 +24,9 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, signInWithGoogle } = useAuth();
   const { toast } = useToast();
+  const [isGoogleSubmitting, setIsGoogleSubmitting] = React.useState(false);
 
   const {
     register,
@@ -52,6 +53,25 @@ export default function LoginPage() {
       });
     }
   };
+  
+  const handleGoogleSignIn = async () => {
+    setIsGoogleSubmitting(true);
+    try {
+        await signInWithGoogle();
+        toast({
+            title: 'Google Sign-In Successful',
+            description: 'Welcome to TaxWise!',
+        });
+    } catch (error) {
+        toast({
+            title: 'Google Sign-In Failed',
+            description: (error as Error).message,
+            variant: 'destructive',
+        });
+    } finally {
+        setIsGoogleSubmitting(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -69,7 +89,7 @@ export default function LoginPage() {
                 type="email"
                 placeholder="m@example.com"
                 {...register('email')}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isGoogleSubmitting}
               />
               {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
             </div>
@@ -84,15 +104,15 @@ export default function LoginPage() {
                 id="password"
                 type="password"
                 {...register('password')}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isGoogleSubmitting}
               />
               {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
             </div>
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
+            <Button type="submit" className="w-full" disabled={isSubmitting || isGoogleSubmitting}>
               {isSubmitting ? 'Logging in...' : 'Login'}
             </Button>
-            <Button variant="outline" className="w-full" type="button" disabled={isSubmitting}>
-              Login with Google
+            <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn} disabled={isSubmitting || isGoogleSubmitting}>
+              {isGoogleSubmitting ? 'Please wait...' : 'Login with Google'}
             </Button>
           </form>
           <div className="mt-4 text-center text-sm">

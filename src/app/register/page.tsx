@@ -16,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import type { RegisterFormValues } from '@/lib/types';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Separator } from '@/components/ui/separator';
 
 const registerSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -28,8 +29,9 @@ type FormValues = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { register: registerUser } = useAuth();
+  const { register: registerUser, signInWithGoogle } = useAuth();
   const { toast } = useToast();
+  const [isGoogleSubmitting, setIsGoogleSubmitting] = React.useState(false);
   const {
     register,
     handleSubmit,
@@ -49,12 +51,7 @@ export default function RegisterPage() {
           title: 'Registration Successful',
           description: "We've created your account for you.",
         });
-        // Redirect based on role
-        if(newUser.role === 'TaxConsultant'){
-             router.push('/consultant/dashboard');
-        } else {
-             router.push('/dashboard');
-        }
+        // Redirect is handled by the AuthProvider's useEffect
       } else {
          toast({
             title: 'Registration Failed',
@@ -68,6 +65,25 @@ export default function RegisterPage() {
         description: (error as Error).message,
         variant: 'destructive',
       });
+    }
+  };
+  
+  const handleGoogleSignIn = async () => {
+    setIsGoogleSubmitting(true);
+    try {
+        await signInWithGoogle();
+        toast({
+            title: 'Google Sign-Up Successful',
+            description: 'Welcome to TaxWise!',
+        });
+    } catch (error) {
+        toast({
+            title: 'Google Sign-Up Failed',
+            description: (error as Error).message,
+            variant: 'destructive',
+        });
+    } finally {
+        setIsGoogleSubmitting(false);
     }
   };
 
@@ -86,7 +102,7 @@ export default function RegisterPage() {
                 id="name"
                 placeholder="Satoshi Nakamoto"
                 {...register('name')}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isGoogleSubmitting}
               />
               {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
             </div>
@@ -97,7 +113,7 @@ export default function RegisterPage() {
                 type="email"
                 placeholder="satoshi@gmx.com"
                 {...register('email')}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isGoogleSubmitting}
               />
               {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
             </div>
@@ -107,12 +123,12 @@ export default function RegisterPage() {
                 id="password"
                 type="password"
                 {...register('password')}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isGoogleSubmitting}
               />
               {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
             </div>
             <div className="flex items-center space-x-2">
-                <Checkbox id="isTaxConsultant" {...register('isTaxConsultant')} />
+                <Checkbox id="isTaxConsultant" {...register('isTaxConsultant')} disabled={isSubmitting || isGoogleSubmitting} />
                 <Label
                     htmlFor="isTaxConsultant"
                     className="text-sm font-normal text-muted-foreground"
@@ -120,10 +136,24 @@ export default function RegisterPage() {
                    I am a Tax Consultant
                 </Label>
             </div>
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
+            <Button type="submit" className="w-full" disabled={isSubmitting || isGoogleSubmitting}>
               {isSubmitting ? 'Creating Account...' : 'Create an account'}
             </Button>
           </form>
+          
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+            </div>
+           </div>
+
+            <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn} disabled={isSubmitting || isGoogleSubmitting}>
+              {isGoogleSubmitting ? 'Please wait...' : 'Sign up with Google'}
+            </Button>
+
           <div className="mt-4 text-center text-sm">
             Already have an account?{' '}
             <Link href="/login" className="underline">
