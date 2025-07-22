@@ -4,47 +4,37 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getFirestore, enableNetwork, type Firestore } from "firebase/firestore";
 import { getAuth, type Auth } from "firebase/auth";
-import { config } from 'dotenv';
 
-config(); 
-
+// Your web app's Firebase configuration, directly from your console
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: "AIzaSyBJSapORSs7ULz9rsExA7s8xUIzjUO_iXw",
+  authDomain: "cryptotaxapp-21586.firebaseapp.com",
+  projectId: "cryptotaxapp-21586",
+  storageBucket: "cryptotaxapp-21586.appspot.com",
+  messagingSenderId: "296139586728",
+  appId: "1:296139586728:web:288ab5819d2aae474b169d",
+  measurementId: "G-LZ5F7CGQGX"
 };
 
-interface FirebaseServices {
-  app: FirebaseApp;
-  db: Firestore;
-  auth: Auth;
+// Initialize Firebase
+let app: FirebaseApp;
+let db: Firestore;
+let auth: Auth;
+
+if (getApps().length === 0) {
+  app = initializeApp(firebaseConfig);
+} else {
+  app = getApp();
 }
 
-let firebaseServices: FirebaseServices | null = null;
+db = getFirestore(app);
+auth = getAuth(app);
 
-function initializeFirebase(): FirebaseServices {
-  if (firebaseServices) {
-    return firebaseServices;
-  }
-
-  const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-  const db = getFirestore(app);
-  const auth = getAuth(app);
-
-  try {
-    enableNetwork(db);
-    console.log('✅ Firestore online');
-  } catch (err) {
-    console.error('❌ Firestore enableNetwork failed', err);
-  }
-
-  firebaseServices = { app, db, auth };
-  return firebaseServices;
+try {
+  enableNetwork(db);
+  console.log('✅ Firestore online');
+} catch (err) {
+  console.error('❌ Firestore enableNetwork failed', err);
 }
-
-const { app, db, auth } = initializeFirebase();
 
 export { app, db, auth };
