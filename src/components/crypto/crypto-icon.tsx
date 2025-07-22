@@ -26,8 +26,28 @@ interface CryptoIconProps {
   className?: string;
 }
 
-// In-memory cache for coin IDs to avoid repeated lookups if we need them later.
+// Module-level cache to store the coin list promise and the symbol-to-id mapping.
+let coinListPromise: Promise<any[]> | null = null;
 const coinIdCache = new Map<string, string>();
+
+async function getCoinList() {
+    if (!coinListPromise) {
+        coinListPromise = fetch('https://api.coingecko.com/api/v3/coins/list')
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error('Failed to fetch coin list');
+                }
+                return res.json();
+            })
+            .catch(err => {
+                // Reset promise on error to allow retries
+                coinListPromise = null;
+                throw err;
+            });
+    }
+    return coinListPromise;
+}
+
 
 export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
   const [iconUrl, setIconUrl] = React.useState<string | null>(null);
@@ -60,10 +80,8 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
           return;
         }
 
-        // If not cached, fetch the full list to find the coin ID
-        const listRes = await fetch('https://api.coingecko.com/api/v3/coins/list');
-        if (!listRes.ok) throw new Error('Failed to fetch coin list');
-        const coinList = await listRes.json();
+        // If not cached, fetch the list (or wait for the ongoing fetch)
+        const coinList = await getCoinList();
         
         const coin = coinList.find((c: any) => c.symbol === assetSymbol);
 
