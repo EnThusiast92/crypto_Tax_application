@@ -41,10 +41,10 @@ export default function AdminDashboardPage() {
                     <UsersTable />
                 </CardContent>
             </Card>
-            <SeedDatabase />
         </div>
         <div className="space-y-8">
             <ApplicationSettings />
+            <SeedDatabase />
         </div>
 
       </div>
