@@ -82,65 +82,71 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let unsubs: (() => void)[] = [];
 
     const setupListeners = (currentUser: User) => {
-      // Listener for invitations
-      const invitationsQuery = currentUser.role === 'Client'
-        ? query(collection(db, "invitations"), where("fromClientId", "==", currentUser.id))
-        : query(collection(db, "invitations"), where("toConsultantEmail", "==", currentUser.email));
+        // Devs and Staff see everyone, no need for complex queries
+        if (currentUser.role === 'Developer' || currentUser.role === 'Staff') {
+            const allUsersUnsub = onSnapshot(collection(db, "users"), (snapshot) => {
+                const allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+                setUsers(allUsers);
+            });
+            unsubs.push(allUsersUnsub);
+            return; // Exit early
+        }
 
-      const invsUnsub = onSnapshot(invitationsQuery, (snapshot) => {
-        const invs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation));
-        setInvitations(invs);
-      });
-      unsubs.push(invsUnsub);
-      
-      // Listener for users
-      // This part fetches users linked to the current user.
-      const userIdsToFetch = new Set<string>([currentUser.id]);
-      if (currentUser.role === 'Developer' || currentUser.role === 'Staff') {
-          // Devs/Staff can see everyone
-          const allUsersUnsub = onSnapshot(collection(db, "users"), (snapshot) => {
-              const allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
-              setUsers(allUsers);
-          });
-          unsubs.push(allUsersUnsub);
-          return; // Exit early
-      }
+        // Listener for invitations relevant to the current user
+        const invitationsQuery = currentUser.role === 'Client'
+            ? query(collection(db, "invitations"), where("fromClientId", "==", currentUser.id))
+            : query(collection(db, "invitations"), where("toConsultantEmail", "==", currentUser.email));
 
-      // For clients and consultants, we derive who to fetch based on links and invitations
-      const relatedIdsQuery = currentUser.role === 'Client'
-        ? query(collection(db, "invitations"), where("fromClientId", "==", currentUser.id))
-        : query(collection(db, "invitations"), where("toConsultantEmail", "==", currentUser.email));
-      
-      const relatedIdsUnsub = onSnapshot(relatedIdsQuery, async (invsSnapshot) => {
-          const fetchedInvitations = invsSnapshot.docs.map(doc => doc.data() as Invitation);
-          
-          if(currentUser.linkedConsultantId) userIdsToFetch.add(currentUser.linkedConsultantId);
-          currentUser.linkedClientIds?.forEach(id => userIdsToFetch.add(id));
-          fetchedInvitations.forEach(inv => {
-              if (currentUser.role === 'Client') {
-                  // Fetch the consultant's profile if we find their email in users collection
-                  // This part is tricky without a direct query, so we might need a cloud function in a real app
-              } else { // I am a consultant
-                  userIdsToFetch.add(inv.fromClientId);
-              }
-          });
-          
-          const finalUserIds = Array.from(userIdsToFetch).filter(Boolean);
-          if (finalUserIds.length > 0) {
-              const usersQuery = query(collection(db, 'users'), where(documentId(), 'in', finalUserIds));
-              const usersUnsub = onSnapshot(usersQuery, (usersSnapshot) => {
-                   const fetchedUsers = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
-                   setUsers(fetchedUsers);
-              });
-              unsubs.push(usersUnsub);
-          } else {
-            setUsers([currentUser]);
-          }
-      });
-      unsubs.push(relatedIdsUnsub);
+        const invsUnsub = onSnapshot(invitationsQuery, (invitationsSnapshot) => {
+            const fetchedInvitations = invitationsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation));
+            setInvitations(fetchedInvitations);
 
+            const userIdsToFetch = new Set<string>([currentUser.id]);
+
+            // For a Client
+            if (currentUser.linkedConsultantId) {
+                userIdsToFetch.add(currentUser.linkedConsultantId);
+            }
+            
+            // For a TaxConsultant
+            if (currentUser.linkedClientIds?.length > 0) {
+              currentUser.linkedClientIds.forEach(id => userIdsToFetch.add(id));
+            }
+            
+            // Add users from any pending invitations
+            fetchedInvitations.forEach(inv => {
+                if (currentUser.role === 'Client') {
+                   // A client doesn't need to see the consultant's full profile from this query
+                } else { // I am a consultant
+                    userIdsToFetch.add(inv.fromClientId);
+                }
+            });
+
+            const finalUserIds = Array.from(userIdsToFetch).filter(Boolean);
+
+            if (finalUserIds.length > 0) {
+                // Remove the previous users listener to avoid duplicate data
+                if (unsubs.length > 1) {
+                    const oldUserUnsub = unsubs.pop();
+                    if(oldUserUnsub) oldUserUnsub();
+                }
+                
+                const usersQuery = query(collection(db, 'users'), where(documentId(), 'in', finalUserIds));
+                const usersUnsub = onSnapshot(usersQuery, (usersSnapshot) => {
+                    const fetchedUsers = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+                    setUsers(fetchedUsers);
+                });
+                unsubs.push(usersUnsub);
+            } else {
+                setUsers([currentUser]);
+            }
+        }, (error) => {
+            console.error("Error fetching invitations snapshot:", error);
+        });
+
+        unsubs.push(invsUnsub);
     };
-
+    
     setupListeners(user);
 
     return () => {
