@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
-import { collection, doc, writeBatch, Timestamp, setDoc } from 'firebase/firestore';
-import type { Transaction, AppSettings, User } from '@/lib/types';
+import { collection, doc, writeBatch, Timestamp, query, where, getDocs } from 'firebase/firestore';
+import type { Transaction, User } from '@/lib/types';
 import { useAuth } from '@/context/auth-context';
 
 export function SeedDatabase() {
@@ -29,67 +29,24 @@ export function SeedDatabase() {
         try {
             console.log('🟡 Seeding started...');
             
+            // 1. Get all client users
+            const usersRef = collection(db, 'users');
+            const q = query(usersRef, where('role', '==', 'Client'));
+            const querySnapshot = await getDocs(q);
+            const clientUsers = querySnapshot.docs;
+
+            if (clientUsers.length === 0) {
+                toast({
+                    title: 'No Clients Found',
+                    description: 'There are no users with the "Client" role to seed transactions for.',
+                    variant: 'default',
+                });
+                setIsSeeding(false);
+                return;
+            }
+            
             const batch = writeBatch(db);
 
-            // 1. Seed App Settings
-            const settingsRef = doc(db, 'app', 'settings');
-            const defaultSettings: AppSettings = {
-              toggles: {
-                csvImport: true,
-                taxReport: true,
-                apiSync: false,
-              },
-              permissions: {
-                canManageUsers: false,
-                canViewAllTx: true,
-              },
-              config: {
-                logoUrl: '',
-                taxRules: 'Standard UK tax regulations apply.',
-              },
-            };
-            batch.set(settingsRef, defaultSettings, { merge: true });
-            console.log('🟡 App settings prepared for seeding.');
-            
-            // 2. Seed Sample Users (Client and Consultant)
-            // Note: We use setDoc with a specific ID to avoid conflicts if the user later registers with these emails.
-            // The auth records for these users must be created manually via registration if you want to log in as them.
-            const clientUserId = 'sample-client-satoshi';
-            const consultantUserId = 'sample-consultant-charles';
-
-            const satoshiRef = doc(db, 'users', clientUserId);
-            const satoshiData: Omit<User, 'id'> = {
-                name: 'Satoshi Nakamoto',
-                email: 'satoshi@gmx.com',
-                avatarUrl: `https://i.pravatar.cc/150?u=satoshi@gmx.com`,
-                createdAt: Timestamp.now(),
-                role: 'Client',
-                linkedClientIds: [],
-                linkedConsultantId: '',
-            };
-            batch.set(satoshiRef, satoshiData, { merge: true });
-
-            const charlesRef = doc(db, 'users', consultantUserId);
-            const charlesData: Omit<User, 'id'> = {
-                 name: 'Charles Hoskinson',
-                 email: 'charles@iohk.io',
-                 avatarUrl: `https://i.pravatar.cc/150?u=charles@iohk.io`,
-                 createdAt: Timestamp.now(),
-                 role: 'TaxConsultant',
-                 linkedClientIds: [],
-                 linkedConsultantId: '',
-            };
-            batch.set(charlesRef, charlesData, { merge: true });
-
-            console.log('🟡 Sample users prepared for seeding.');
-
-            // Commit the first batch to ensure users exist before adding subcollections
-            await batch.commit();
-            console.log('✅ Settings and Users seeding complete!');
-
-            // 3. Seed Transactions for the sample client
-            const transactionsBatch = writeBatch(db);
-            const transactionsCol = collection(db, `users/${clientUserId}/transactions`);
             const sampleTransactions: Omit<Transaction, 'id' | 'value'>[] = [
                 { date: '2023-10-26', type: 'Buy', asset: 'BTC', quantity: 0.5, price: 34000, fee: 15, exchange: 'Coinbase', classification: 'Capital Purchase' },
                 { date: '2023-11-15', type: 'Sell', asset: 'ETH', quantity: 2, price: 2000, fee: 8, exchange: 'Binance', classification: 'Capital Disposal' },
@@ -97,19 +54,24 @@ export function SeedDatabase() {
                 { date: '2024-02-20', type: 'Staking', asset: 'ADA', quantity: 1000, price: 0.55, fee: 0, exchange: 'Self-custody', classification: 'Income' },
                 { date: '2024-03-01', type: 'Swap', asset: 'BTC', quantity: 0.1, price: 45000, fee: 10, exchange: 'Coinbase', classification: 'Capital Disposal/Purchase', toAsset: 'ETH', toQuantity: 1.5 },
             ];
-            
-            sampleTransactions.forEach(txData => {
-                const txRef = doc(transactionsCol); // Auto-generate ID
-                const txWithVal = {...txData, value: txData.price * txData.quantity};
-                transactionsBatch.set(txRef, txWithVal);
+
+            let transactionsSeededCount = 0;
+            clientUsers.forEach(clientDoc => {
+                console.log(`🟡 Preparing transactions for client: ${clientDoc.id}`);
+                const transactionsCol = collection(db, `users/${clientDoc.id}/transactions`);
+                sampleTransactions.forEach(txData => {
+                    const txRef = doc(transactionsCol); // Auto-generate ID
+                    const txWithVal = {...txData, value: txData.price * txData.quantity};
+                    batch.set(txRef, txWithVal);
+                    transactionsSeededCount++;
+                });
             });
-            
-            await transactionsBatch.commit();
-            console.log('✅ Transactions seeding for sample client complete!');
+
+            await batch.commit();
 
             toast({
                 title: 'Seed Complete',
-                description: 'Database has been seeded with settings and sample data.',
+                description: `Successfully seeded ${transactionsSeededCount} transactions for ${clientUsers.length} client(s).`,
             });
 
         } catch (error) {
@@ -134,16 +96,10 @@ export function SeedDatabase() {
             </CardHeader>
             <CardContent>
                 <p className="text-sm text-muted-foreground">
-                    Clicking this will overwrite or create:
+                    Clicking this will add a set of sample transactions to every user with the 'Client' role.
                 </p>
-                <ul className="text-sm text-muted-foreground list-disc pl-5 mt-2">
-                    <li>The main application settings document.</li>
-                    <li>A sample Client user ('Satoshi Nakamoto').</li>
-                    <li>A sample Tax Consultant user ('Charles Hoskinson').</li>
-                    <li>Sample transactions for the 'Satoshi Nakamoto' user.</li>
-                </ul>
                  <p className="text-sm text-muted-foreground mt-2">
-                    This is safe to run multiple times. It will add more transactions to the sample client each time.
+                    This is safe to run multiple times. It will add more transactions to the clients each time.
                 </p>
             </CardContent>
             <CardFooter>
