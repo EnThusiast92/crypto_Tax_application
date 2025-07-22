@@ -28,24 +28,50 @@ interface CryptoIconProps {
 }
 
 export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
-  const { iconMap, isLoading } = useIconContext();
+  const { getIcon, isLoading } = useIconContext();
+  const [iconUrl, setIconUrl] = React.useState<string | null>(null);
   const [hasError, setHasError] = React.useState(false);
+
   const assetSymbol = asset?.toLowerCase();
-  
-  const iconUrl = iconMap[assetSymbol];
+
+  React.useEffect(() => {
+    let isCancelled = false;
+    
+    const fetchAndSetIcon = async () => {
+      if (!assetSymbol) return;
+
+      setHasError(false);
+      const url = getIcon(assetSymbol);
+      
+      if (url) {
+        if (!isCancelled) setIconUrl(url);
+      } else {
+        // If not in the map, it's either loading or not present.
+        // We'll rely on the isLoading flag and potential future updates from the context
+        // for dynamically fetched icons. For now, this simplifies logic.
+        // A more advanced implementation could involve a fetch callback here.
+      }
+    };
+    
+    fetchAndSetIcon();
+
+    return () => { isCancelled = true; }
+  }, [assetSymbol, getIcon]);
 
   if (isLoading) {
     return <Skeleton className={cn("rounded-full", className)} />;
   }
+  
+  const finalIconUrl = getIcon(assetSymbol);
 
-  if (hasError || !iconUrl) {
+  if (hasError || !finalIconUrl) {
     return <GenericIcon className={className} />;
   }
 
   return (
     <div className={cn("relative rounded-full", className)}>
        <Image
-          src={iconUrl}
+          src={finalIconUrl}
           alt={`${asset} logo`}
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"

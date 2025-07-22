@@ -7,7 +7,7 @@ import type { FC, ReactNode } from 'react';
 type IconMap = Record<string, string>;
 
 type IconContextType = {
-  iconMap: IconMap;
+  getIcon: (symbol: string) => string | undefined;
   isLoading: boolean;
 };
 
@@ -20,7 +20,6 @@ export const IconProvider: FC<{ children: ReactNode }> = ({ children }) => {
   React.useEffect(() => {
     const fetchIconMap = async () => {
       try {
-        // This file is generated at build time by scripts/fetch-icons.js
         const response = await fetch('/coingecko-icons.json');
         if (!response.ok) {
           throw new Error('Failed to load coingecko-icons.json');
@@ -29,7 +28,6 @@ export const IconProvider: FC<{ children: ReactNode }> = ({ children }) => {
         setIconMap(data);
       } catch (error) {
         console.error('Error loading local icon map:', error);
-        // Keep the icon map empty on error, fallbacks will be used
       } finally {
         setIsLoading(false);
       }
@@ -38,7 +36,11 @@ export const IconProvider: FC<{ children: ReactNode }> = ({ children }) => {
     fetchIconMap();
   }, []);
 
-  const value = { iconMap, isLoading };
+  const getIcon = React.useCallback((symbol: string): string | undefined => {
+    return iconMap[symbol.toLowerCase()];
+  }, [iconMap]);
+  
+  const value = { getIcon, isLoading };
 
   return <IconContext.Provider value={value}>{children}</IconContext.Provider>;
 };
