@@ -155,48 +155,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
     const { user: firebaseUser } = userCredential;
 
-    await runTransaction(db, async (transaction) => {
-      const usersColRef = collection(db, "users");
-      const q = query(usersColRef, limit(1));
-      const snapshot = await getDocs(q);
-
-      let role: Role = data.isTaxConsultant ? 'TaxConsultant' : 'Client';
-
-      // If no users exist, this is the first one. Make them a Developer and setup the app.
-      if (snapshot.empty) {
-        role = 'Developer';
-        const settingsRef = doc(db, 'app', 'settings');
-        const defaultSettings: AppSettings = {
-          toggles: {
-            csvImport: true,
-            taxReport: true,
-            apiSync: false,
-          },
-          permissions: {
-            canManageUsers: true,
-            canViewAllTx: true,
-          },
-          config: {
-            logoUrl: '',
-            taxRules: 'Standard UK tax regulations apply.',
-          },
-        };
-        transaction.set(settingsRef, defaultSettings);
-      }
-      
-      const newUserRef = doc(db, "users", firebaseUser.uid);
-      const newUserDoc: Omit<User, 'id'> = {
-        name: data.name,
-        email: data.email,
-        role,
-        avatarUrl: `https://i.pravatar.cc/150?u=${data.email}`,
-        createdAt: Timestamp.now(),
-        linkedClientIds: [],
-        linkedConsultantId: '',
-      };
-      
-      transaction.set(newUserRef, newUserDoc);
-    });
+    const newUserRef = doc(db, 'users', firebaseUser.uid);
+    const newUserDoc: Omit<User, 'id'> = {
+      name: data.name,
+      email: data.email,
+      role: data.isTaxConsultant ? 'TaxConsultant' : 'Client',
+      avatarUrl: `https://i.pravatar.cc/150?u=${data.email}`,
+      createdAt: Timestamp.now(),
+      linkedClientIds: [],
+      linkedConsultantId: '',
+    };
+    
+    await setDoc(newUserRef, newUserDoc);
   };
   
   const logout = async () => {
