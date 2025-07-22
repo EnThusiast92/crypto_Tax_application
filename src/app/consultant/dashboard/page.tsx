@@ -76,8 +76,6 @@ export default function ConsultantDashboardPage() {
             title: 'Invitation Accepted',
             description: 'Client has been added to your list.',
         });
-        // UI FIX: Immediately remove the accepted invitation from the local state
-        setPendingInvites(prev => prev.filter(inv => inv.id !== invitationId));
     } catch(error) {
         toast({
             title: 'Error Accepting Invite',
@@ -94,8 +92,6 @@ export default function ConsultantDashboardPage() {
             title: 'Invitation Rejected',
             description: 'The invitation has been removed.',
         });
-        // UI FIX: Immediately remove the rejected invitation from the local state
-        setPendingInvites(prev => prev.filter(inv => inv.id !== invitationId));
     } catch(error) {
         toast({
             title: 'Error Rejecting Invite',
