@@ -86,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
         });
         unsubscribes.push(usersUnsubscribe);
-    } else if (user.role === 'TaxConsultant' && user.linkedClientIds.length > 0) {
+    } else if (user.role === 'TaxConsultant' && user.linkedClientIds && user.linkedClientIds.length > 0) {
         const usersQuery = query(collection(db, "users"), where(documentId(), "in", user.linkedClientIds));
         const usersUnsubscribe = onSnapshot(usersQuery, (snapshot) => {
             setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
