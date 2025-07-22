@@ -7,14 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Upload, X, Send, Clock, CheckCircle, User } from "lucide-react";
+import { Upload, X, Send, Clock, CheckCircle, User, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import * as React from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { Invitation } from "@/lib/types";
 
 export default function SettingsPage() {
-    const { user, users, invitations, removeConsultantAccess, sendInvitation } = useAuth();
+    const { user, users, invitations, removeConsultantAccess, sendInvitation, cancelInvitation } = useAuth();
     const [consultantEmail, setConsultantEmail] = React.useState('');
     const { toast } = useToast();
 
@@ -57,6 +57,15 @@ export default function SettingsPage() {
             await sendInvitation(consultantEmail);
             toast({ title: "Invitation Sent", description: `Your invitation to ${consultantEmail} has been sent.` });
             setConsultantEmail('');
+        } catch (error) {
+            toast({ title: "Error", description: (error as Error).message, variant: "destructive" });
+        }
+    }
+    
+    const handleCancelInvite = async (invitationId: string) => {
+        try {
+            await cancelInvitation(invitationId);
+            toast({ title: "Invitation Cancelled", description: "Your invitation has been cancelled." });
         } catch (error) {
             toast({ title: "Error", description: (error as Error).message, variant: "destructive" });
         }
@@ -173,10 +182,16 @@ export default function SettingsPage() {
                                             <p className="text-sm text-muted-foreground">{sentInvite.toConsultantEmail}</p>
                                         </div>
                                     </div>
-                                    <Badge variant="outline" className="capitalize gap-2">
-                                        <InviteStatusIcon status={sentInvite.status} />
-                                        {sentInvite.status}
-                                    </Badge>
+                                    <div className="flex items-center gap-2">
+                                        <Badge variant="outline" className="capitalize gap-2">
+                                            <InviteStatusIcon status={sentInvite.status} />
+                                            {sentInvite.status}
+                                        </Badge>
+                                        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive" onClick={() => handleCancelInvite(sentInvite.id)}>
+                                            <Trash2 className="h-4 w-4 mr-2" />
+                                            Cancel
+                                        </Button>
+                                    </div>
                                 </div>
                             ) : (
                                 <p className="text-sm text-muted-foreground text-center py-4">You have not invited any tax consultants yet.</p>

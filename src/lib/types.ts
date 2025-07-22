@@ -88,6 +88,7 @@ export type AuthContextType = {
   sendInvitation: (consultantEmail: string) => void;
   acceptInvitation: (invitationId: string) => void;
   rejectInvitation: (invitationId: string) => void;
+  cancelInvitation: (invitationId: string) => void;
 };
 
 
