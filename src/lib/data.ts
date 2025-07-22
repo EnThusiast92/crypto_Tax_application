@@ -1,5 +1,5 @@
 
-import type { Transaction, User, Invitation, StatCardData } from './types';
+import type { Transaction, User, StatCardData } from './types';
 import { ArrowUpRight, ArrowDownLeft, Banknote, Landmark } from 'lucide-react';
 import { db } from './firebase';
 import { collection, writeBatch, doc, Timestamp } from 'firebase/firestore';
@@ -35,150 +35,72 @@ export const statCards: StatCardData[] = [
   },
 ];
 
-export const transactions: Omit<Transaction, 'id'>[] = [
-  { date: '2023-10-26', type: 'Buy', asset: 'BTC', quantity: 0.5, price: 34000, fee: 15, value: 17000, exchange: 'Coinbase', classification: 'Capital Purchase' },
-  { date: '2023-11-15', type: 'Sell', asset: 'ETH', quantity: 2, price: 2000, fee: 8, value: 4000, exchange: 'Binance', classification: 'Capital Disposal' },
-  { date: '2023-12-01', type: 'Staking', asset: 'ADA', quantity: 500, price: 0.35, fee: 0, value: 175, exchange: 'Kraken', classification: 'Income' },
-  { date: '2023-12-25', type: 'Airdrop', asset: 'JTO', quantity: 100, price: 2.50, fee: 0, value: 250, exchange: 'Self-custody', classification: 'Income' },
-  { date: '2024-01-10', type: 'Buy', asset: 'SOL', quantity: 10, price: 95, fee: 5, value: 950, exchange: 'Coinbase', classification: 'Capital Purchase' },
-  { date: '2024-01-20', type: 'Sell', asset: 'BTC', quantity: 0.1, price: 42000, fee: 10, value: 4200, exchange: 'Binance', classification: 'Capital Disposal' },
-  { date: '2024-02-05', type: 'Gift', asset: 'DOGE', quantity: 10000, price: 0.08, fee: 0, value: 800, exchange: 'Self-custody', classification: 'Gift Received' },
-  { date: '2024-02-14', type: 'Staking', asset: 'ETH', quantity: 0.1, price: 2800, fee: 0, value: 280, exchange: 'Coinbase', classification: 'Income' },
-  { date: '2024-03-01', type: 'Buy', asset: 'LINK', quantity: 20, price: 18, fee: 2, value: 360, exchange: 'Kraken', classification: 'Capital Purchase' },
-  { date: '2024-03-12', type: 'Sell', asset: 'ADA', quantity: 500, price: 0.7, fee: 1, value: 350, exchange: 'Kraken', classification: 'Capital Disposal' },
-];
-
 export const misclassifiedTransactions: Transaction[] = [
   { id: 'TXN007', date: '2024-02-05', type: 'Gift', asset: 'DOGE', quantity: 10000, price: 0.08, fee: 0, value: 800, exchange: 'Self-custody', classification: 'Gift Received' },
   { id: 'TXN011', date: '2024-03-15', type: 'Buy', asset: 'USDC', quantity: 1000, price: 1, fee: 1, value: 1000, exchange: 'Coinbase', classification: 'Transfer' },
 ];
 
-const now = Timestamp.now();
-
-const rawUsers: Omit<User, 'id' | 'linkedClientIds' | 'linkedConsultantId'>[] = [
-    {
-        name: 'Admin',
-        email: 'admin@cryptotaxpro.com',
-        avatarUrl: 'https://i.pravatar.cc/150?u=admin@cryptotaxpro.com',
-        createdAt: now,
-        role: 'Developer',
-    },
-    {
-        name: 'Satoshi Nakamoto',
-        email: 'satoshi@gmx.com',
-        avatarUrl: 'https://i.pravatar.cc/150?u=satoshi@gmx.com',
-        createdAt: now,
-        role: 'Client',
-    },
-     {
-        name: 'Gavin Wood',
-        email: 'gavin@eth.org',
-        avatarUrl: 'https://i.pravatar.cc/150?u=gavin@eth.org',
-        createdAt: now,
-        role: 'Client',
-    },
-    {
-        name: 'Charles Hoskinson',
-        email: 'charles@iohk.io',
-        avatarUrl: 'https://i.pravatar.cc/150?u=charles@iohk.io',
-        createdAt: now,
-        role: 'TaxConsultant',
-    },
-     {
-        name: 'Hayden Adams',
-        email: 'hayden@uniswap.org',
-        avatarUrl: 'https://i.pravatar.cc/150?u=hayden@uniswap.org',
-        createdAt: now,
-        role: 'TaxConsultant',
-    },
-    {
-        name: 'Vitalik Buterin',
-        email: 'vitalik@ethereum.org',
-        avatarUrl: 'https://i.pravatar.cc/150?u=vitalik@ethereum.org',
-        createdAt: now,
-        role: 'Staff',
-    }
-];
-
-const rawInvitations: Omit<Invitation, 'id' | 'fromClientId'> & { fromClientEmail: string }[] = [
-    {
-        fromClientEmail: 'gavin@eth.org',
-        toConsultantEmail: 'hayden@uniswap.org',
-        status: 'pending'
-    }
-];
-
-
 export async function seedDatabase() {
   try {
     console.log('🟡 Seeding started...');
-    
+    const batch = writeBatch(db);
+
+    // --- Users Collection ---
     const usersCol = collection(db, 'users');
-    const userRefs = new Map<string, string>(); // Maps email to generated user ID
 
-    // Prepare users and generate IDs first
-    const usersToCreate = rawUsers.map(user => {
-      const userRef = doc(usersCol);
-      userRefs.set(user.email, userRef.id);
-      return {
-        ...user,
-        id: userRef.id,
-        linkedClientIds: [], // Default empty array
-        linkedConsultantId: '', // Default empty string
-      };
+    // 1. Developer User
+    const devUserRef = doc(usersCol, 'user-dev-admin');
+    batch.set(devUserRef, {
+        name: 'Admin Developer',
+        email: 'admin@taxwise.com',
+        avatarUrl: 'https://i.pravatar.cc/150?u=admin@taxwise.com',
+        createdAt: Timestamp.now(),
+        role: 'Developer',
+        linkedClientIds: [],
+        linkedConsultantId: '',
     });
 
-    // Now, create relationships using the generated IDs
-    const satoshi = usersToCreate.find(u => u.email === 'satoshi@gmx.com');
-    const charles = usersToCreate.find(u => u.email === 'charles@iohk.io');
+    // 2. Client User
+    const clientUserRef = doc(usersCol, 'user-client-satoshi');
+    batch.set(clientUserRef, {
+        name: 'Satoshi Nakamoto',
+        email: 'satoshi@gmx.com',
+        avatarUrl: 'https://i.pravatar.cc/150?u=satoshi@gmx.com',
+        createdAt: Timestamp.now(),
+        role: 'Client',
+        linkedClientIds: [],
+        linkedConsultantId: '',
+    });
 
-    if (satoshi && charles) {
-      satoshi.linkedConsultantId = charles.id;
-      charles.linkedClientIds.push(satoshi.id);
-    }
+    // 3. Tax Consultant User
+    const consultantUserRef = doc(usersCol, 'user-consultant-charles');
+    batch.set(consultantUserRef, {
+        name: 'Charles Hoskinson',
+        email: 'charles@iohk.io',
+        avatarUrl: 'https://i.pravatar.cc/150?u=charles@iohk.io',
+        createdAt: Timestamp.now(),
+        role: 'TaxConsultant',
+        linkedClientIds: [],
+        linkedConsultantId: '',
+    });
+
+    // --- Transactions Subcollection for Client ---
+    const transactionsCol = collection(db, `users/${clientUserRef.id}/transactions`);
     
-    // Begin Batch 1: Users and Invitations
-    const batch1 = writeBatch(db);
+    const sampleTransactions: Omit<Transaction, 'id'>[] = [
+        { date: '2023-10-26', type: 'Buy', asset: 'BTC', quantity: 0.5, price: 34000, fee: 15, value: 17000, exchange: 'Coinbase', classification: 'Capital Purchase' },
+        { date: '2023-11-15', type: 'Sell', asset: 'ETH', quantity: 2, price: 2000, fee: 8, value: 4000, exchange: 'Binance', classification: 'Capital Disposal' },
+        { date: '2024-01-10', type: 'Buy', asset: 'SOL', quantity: 10, price: 95, fee: 5, value: 950, exchange: 'Coinbase', classification: 'Capital Purchase' },
+    ];
 
-    usersToCreate.forEach(user => {
-      const userRef = doc(usersCol, user.id);
-      const { id, ...userData } = user; // Exclude ID from document data
-      batch1.set(userRef, userData);
+    sampleTransactions.forEach(tx => {
+        const txRef = doc(transactionsCol);
+        batch.set(txRef, tx);
     });
 
-    const invitationsCol = collection(db, 'invitations');
-    rawInvitations.forEach(inv => {
-      const fromClientId = userRefs.get(inv.fromClientEmail);
-      if (fromClientId) {
-          const invRef = doc(invitationsCol);
-          batch1.set(invRef, { 
-              id: invRef.id,
-              fromClientId: fromClientId,
-              toConsultantEmail: inv.toConsultantEmail,
-              status: inv.status,
-          });
-      }
-    });
+    await batch.commit();
+    console.log('🎉 Database seeded successfully!');
 
-    await batch1.commit();
-    console.log('✅ Users and invitations seeded');
-
-    // Begin Batch 2: Transactions for Satoshi
-    const satoshiId = userRefs.get('satoshi@gmx.com');
-    if (satoshiId) {
-        const txCol = collection(db, `users/${satoshiId}/transactions`);
-        const batch2 = writeBatch(db);
-
-        transactions.forEach(tx => {
-            const txRef = doc(txCol);
-            batch2.set(txRef, tx);
-        });
-
-        await batch2.commit();
-        console.log('✅ Transactions seeded');
-    }
-
-    console.log('🎉 All data seeded successfully!');
   } catch (error) {
     console.error('❌ Seeding error:', error);
     throw error;
