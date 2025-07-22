@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import type { User } from '@/lib/types';
 
 
 const loginSchema = z.object({
@@ -38,12 +39,20 @@ function LoginPageContent() {
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
   });
+  
+  const handleRedirect = (user: User | null) => {
+    if (user?.role === 'TaxConsultant') {
+      router.push('/consultant/dashboard');
+    } else {
+      router.push('/dashboard');
+    }
+  }
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsSubmittingManual(true);
     try {
-      await login(data.email, data.password);
-      router.push('/dashboard');
+      const user = await login(data.email, data.password);
+      handleRedirect(user);
     } catch (error) {
       toast({
         title: 'Login Failed',
@@ -58,8 +67,8 @@ function LoginPageContent() {
   const handleGoogleSignIn = async () => {
     setIsSubmittingGoogle(true);
     try {
-        await signInWithGoogle();
-        router.push('/dashboard');
+        const user = await signInWithGoogle();
+        handleRedirect(user);
     } catch (error) {
         toast({
             title: 'Google Sign-In Failed',
