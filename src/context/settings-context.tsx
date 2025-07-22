@@ -37,7 +37,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             setSettings(docSnap.data() as AppSettings);
         } else {
             // If no settings exist in Firestore, use local defaults.
-            // This can happen on first load before the first user is registered.
+            // This can happen on first load before the first user is registered and settings are created.
+            console.warn("App settings not found in Firestore. Using local defaults.");
             setSettings(defaultSettings);
         }
         setLoading(false);

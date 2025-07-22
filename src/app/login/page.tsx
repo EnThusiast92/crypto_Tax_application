@@ -14,9 +14,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { makeAdmin } from '@/ai/flows/make-admin';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal } from 'lucide-react';
 
 
 const loginSchema = z.object({
@@ -73,28 +70,6 @@ function LoginPageContent() {
     }
   };
 
-  const handleMakeAdmin = async () => {
-    const email = prompt("Enter the email address of the user you want to make a Developer:");
-    if (!email) return;
-
-    try {
-      toast({ title: 'Promoting User...', description: 'Please wait.' });
-      const result = await makeAdmin({ email });
-      if (result.success) {
-        toast({ title: 'Success!', description: result.message });
-      } else {
-        throw new Error(result.message);
-      }
-    } catch (error) {
-       toast({
-        title: 'Operation Failed',
-        description: (error as Error).message,
-        variant: 'destructive',
-      });
-    }
-  };
-
-
   const isSubmitting = isSubmittingManual || isSubmittingGoogle;
 
   return (
@@ -148,17 +123,6 @@ function LoginPageContent() {
             </div>
           </CardContent>
         </Card>
-        
-        {/* Temporary Admin Promotion Tool */}
-        <Alert>
-          <Terminal className="h-4 w-4" />
-          <AlertTitle>First-Time Setup</AlertTitle>
-          <AlertDescription className="space-y-2">
-            <div>After registering your first user, click this button to make them a Developer and initialize the app.</div>
-            <Button variant="destructive" size="sm" onClick={handleMakeAdmin}>Make User Admin</Button>
-          </AlertDescription>
-        </Alert>
-
       </div>
     </div>
   );
