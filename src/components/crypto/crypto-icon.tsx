@@ -26,13 +26,17 @@ interface CryptoIconProps {
   className?: string;
 }
 
+// Simple in-memory cache
+const iconCache = new Map<string, string>();
+
 export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
   const [iconUrl, setIconUrl] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState(false);
+  const assetSymbol = asset?.toLowerCase();
 
   React.useEffect(() => {
-    if (!asset) {
+    if (!assetSymbol) {
       setIsLoading(false);
       setError(true);
       return;
@@ -41,26 +45,47 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
     let isCancelled = false;
     
     const fetchIcon = async () => {
-      // Reset state for new asset
       setIsLoading(true);
       setError(false);
-      setIconUrl(null);
+      
+      // 1. Check cache first
+      if (iconCache.has(assetSymbol)) {
+        setIconUrl(iconCache.get(assetSymbol)!);
+        setIsLoading(false);
+        return;
+      }
 
       try {
-        const res = await fetch(`/api/crypto/icon?symbol=${asset.toLowerCase()}`);
-        if (!res.ok) {
-          throw new Error('API response not OK');
-        }
-        const data = await res.json();
-        if (!isCancelled) {
-          if (data.iconUrl && data.iconUrl.startsWith('http')) {
-            setIconUrl(data.iconUrl);
-          } else {
-            setError(true);
+        // 2. Fetch from Coingecko API
+        // This is a simplified approach. A more robust solution might involve a backend to avoid exposing API keys
+        // or to handle more complex logic for finding the right coin ID.
+        const listRes = await fetch('https://api.coingecko.com/api/v3/coins/list');
+        if (!listRes.ok) throw new Error('Failed to fetch coin list');
+        const coinList = await listRes.json();
+        
+        const coin = coinList.find((c: any) => c.symbol === assetSymbol);
+
+        if (coin?.id) {
+          const coinRes = await fetch(`https://api.coingecko.com/api/v3/coins/${coin.id}`);
+          if (!coinRes.ok) throw new Error('Failed to fetch coin details');
+          const coinData = await coinRes.json();
+          const url = coinData.image?.small || coinData.image?.large;
+          
+          if (!isCancelled) {
+            if (url) {
+              setIconUrl(url);
+              iconCache.set(assetSymbol, url); // Save to cache
+            } else {
+              setError(true);
+            }
           }
+        } else {
+           if (!isCancelled) setError(true);
         }
+
       } catch (err) {
         if (!isCancelled) {
+          console.error(`Failed to fetch icon for ${asset}:`, err);
           setError(true);
         }
       } finally {
@@ -75,7 +100,7 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
     return () => {
         isCancelled = true;
     };
-  }, [asset]);
+  }, [assetSymbol]);
   
   if (isLoading) {
     return <Skeleton className={cn("rounded-full", className)} />;
@@ -94,6 +119,7 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           className="object-contain rounded-full"
           onError={() => setError(true)} 
+          unoptimized // Necessary for external URLs from services like Coingecko
         />
     </div>
   );
