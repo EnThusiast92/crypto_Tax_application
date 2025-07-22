@@ -21,7 +21,7 @@ import {
   getDoc,
   onSnapshot,
   Timestamp,
-  limit,
+  documentId,
 } from 'firebase/firestore';
 import { 
     createUserWithEmailAndPassword, 
@@ -54,9 +54,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const userData = { id: userSnap.id, ...userSnap.data() } as User;
             setUser(userData);
           } else {
-             // This case is important for the first time a user registers.
-             // The user doc might not be created yet when this listener fires.
-             // We'll let the register/login functions handle setting the initial user state.
              console.log("User authenticated, but Firestore doc not found yet. It will be created shortly.");
           }
         } catch (error) {
@@ -72,35 +69,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, []);
   
-    React.useEffect(() => {
+  React.useEffect(() => {
     if (!user) {
         setUsers([]);
         setInvitations([]);
         return;
     }
 
-    // Role-based data fetching
     const unsubscribes: (() => void)[] = [];
 
-    // All roles with potential links need to see other users.
-    // Instead of fetching all users, let's fetch only the ones needed.
-    // This is more complex to handle reactively, so for now we allow Staff and Devs to see all.
-    // Clients and Consultants will have their linked users fetched.
+    // --- Role-based Data Fetching ---
+    
+    // Fetch users based on role
     if (user.role === 'Developer' || user.role === 'Staff') {
         const usersUnsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
             setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
         });
         unsubscribes.push(usersUnsubscribe);
-    } else {
-        // For clients and consultants, we can fetch all users as well for now
-        // as the UI needs it to display names etc from IDs.
-        // A better approach would be to only fetch linked users.
-        const usersUnsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
+    } else if (user.role === 'TaxConsultant' && user.linkedClientIds.length > 0) {
+        const usersQuery = query(collection(db, "users"), where(documentId(), "in", user.linkedClientIds));
+        const usersUnsubscribe = onSnapshot(usersQuery, (snapshot) => {
             setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
         });
         unsubscribes.push(usersUnsubscribe);
+    } else if (user.role === 'Client' && user.linkedConsultantId) {
+        const usersQuery = query(collection(db, "users"), where(documentId(), "==", user.linkedConsultantId));
+        const usersUnsubscribe = onSnapshot(usersQuery, (snapshot) => {
+            setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
+        });
+        unsubscribes.push(usersUnsubscribe);
+    } else {
+        // If user is a Client or Consultant with no links, or another role, clear users.
+        setUsers([]);
     }
 
+    // Fetch invitations based on role
     if (user.role === 'Developer' || user.role === 'Staff') {
         const invitesUnsubscribe = onSnapshot(collection(db, "invitations"), (snapshot) => {
             setInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
@@ -179,9 +182,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     
     await setDoc(newUserRef, newUserDoc);
-    const userData = { id: firebaseUser.uid, ...newUserDoc } as User;
-    setUser(userData);
-    return userData;
+    return await fetchAndSetUser(firebaseUser);
   };
   
   const logout = async () => {
@@ -196,8 +197,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteUser = async (userId: string) => {
-    // This is a simplified delete. In a real app, you'd want to handle this
-    // via a server-side function to also delete the Auth user.
     await deleteDoc(doc(db, "users", userId));
   };
 
