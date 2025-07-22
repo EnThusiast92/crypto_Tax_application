@@ -52,16 +52,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (userSnap.exists()) {
             const userData = { id: userSnap.id, ...userSnap.data() } as User;
             setUser(userData);
+            if (router.pathname === '/login' || router.pathname === '/register') {
+                router.push('/dashboard');
+            }
           } else {
-             console.warn("User exists in Auth, but not in Firestore. Forcing sign out.");
+             console.warn("User exists in Auth, but not in Firestore. This can happen if registration was interrupted. Forcing sign out.");
              await signOut(auth);
              setUser(null);
-             router.push('/login');
           }
         } catch (error) {
            console.error("Auth state change error:", error);
            setUser(null);
-           router.push('/login');
         } finally {
             setLoading(false);
         }
@@ -125,18 +126,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   }, [user]);
 
-  const login = async (email: string, password: string): Promise<User | null> => {
+  const login = async (email: string, password: string): Promise<void> => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.push('/dashboard');
-      return null; 
+      // onAuthStateChanged will handle the rest.
     } catch (error) {
       console.error("Login failed:", error);
       throw error; 
     }
   };
   
-   const signInWithGoogle = async (): Promise<User | null> => {
+   const signInWithGoogle = async (): Promise<void> => {
     try {
         const provider = new GoogleAuthProvider();
         const result = await signInWithPopup(auth, provider);
@@ -145,94 +145,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const userDoc = await getDoc(userDocRef);
 
         if (!userDoc.exists()) {
-           await runTransaction(db, async (transaction) => {
-                const usersCol = collection(db, 'users');
-                const userQuery = query(usersCol, limit(1));
-                const snapshot = await transaction.get(userQuery);
-                const isFirstUser = snapshot.empty;
-                
-                let role: Role = 'Client';
-                if (isFirstUser) {
-                    role = 'Developer';
-                    const settingsRef = doc(db, 'app', 'settings');
-                    const defaultSettings: AppSettings = {
-                      toggles: { csvImport: true, taxReport: true, apiSync: false },
-                      permissions: { canManageUsers: false, canViewAllTx: true },
-                      config: { logoUrl: '', taxRules: 'Standard UK tax regulations apply.' },
-                    };
-                    transaction.set(settingsRef, defaultSettings);
-                }
-                
-                const newUser: Omit<User, 'id'> = {
-                    name: firebaseUser.displayName || 'Google User',
-                    email: firebaseUser.email!,
-                    role,
-                    avatarUrl: firebaseUser.photoURL || `https://i.pravatar.cc/150?u=${firebaseUser.email}`,
-                    createdAt: Timestamp.now(),
-                    linkedClientIds: [],
-                    linkedConsultantId: '',
-                };
-                transaction.set(userDocRef, newUser);
-            });
+            const newUser: Omit<User, 'id'> = {
+                name: firebaseUser.displayName || 'Google User',
+                email: firebaseUser.email!,
+                role: 'Client', // Always default to client
+                avatarUrl: firebaseUser.photoURL || `https://i.pravatar.cc/150?u=${firebaseUser.email}`,
+                createdAt: Timestamp.now(),
+                linkedClientIds: [],
+                linkedConsultantId: '',
+            };
+            await setDoc(userDocRef, newUser);
         }
-        router.push('/dashboard');
-        return null;
+        // onAuthStateChanged will handle the rest.
     } catch (error) {
         console.error("Google Sign-In failed:", error);
         throw error;
     }
   };
 
-  const register = async (data: RegisterFormValues): Promise<User | null> => {
+  const register = async (data: RegisterFormValues): Promise<void> => {
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
         const { user: firebaseUser } = userCredential;
         const newUserRef = doc(db, "users", firebaseUser.uid);
         
-        await runTransaction(db, async (transaction) => {
-            const usersCol = collection(db, 'users');
-            const userQuery = query(usersCol, limit(1));
-            const snapshot = await getDocs(userQuery);
-            const isFirstUser = snapshot.empty;
-            
-            let role: Role = data.isTaxConsultant ? 'TaxConsultant' : 'Client';
-
-            if (isFirstUser) {
-                role = 'Developer';
-                const settingsRef = doc(db, 'app', 'settings');
-                const defaultSettings: AppSettings = {
-                  toggles: {
-                    csvImport: true,
-                    taxReport: true,
-                    apiSync: false,
-                  },
-                  permissions: {
-                    canManageUsers: false,
-                    canViewAllTx: true,
-                  },
-                  config: {
-                    logoUrl: '',
-                    taxRules: 'Standard UK tax regulations apply.',
-                  },
-                };
-                transaction.set(settingsRef, defaultSettings);
-            }
-            
-            const newUserDoc: Omit<User, 'id'> = {
-              name: data.name,
-              email: data.email,
-              role,
-              avatarUrl: `https://i.pravatar.cc/150?u=${data.email}`,
-              createdAt: Timestamp.now(),
-              linkedClientIds: [],
-              linkedConsultantId: '',
-            };
-            
-            transaction.set(newUserRef, newUserDoc);
-        });
+        // Simplified registration: always create a 'Client' or 'TaxConsultant'.
+        // The first user can be promoted to 'Developer' using a separate, secure flow.
+        const role: Role = data.isTaxConsultant ? 'TaxConsultant' : 'Client';
         
-        router.push('/dashboard');
-        return null;
+        const newUserDoc: Omit<User, 'id'> = {
+          name: data.name,
+          email: data.email,
+          role,
+          avatarUrl: `https://i.pravatar.cc/150?u=${data.email}`,
+          createdAt: Timestamp.now(),
+          linkedClientIds: [],
+          linkedConsultantId: '',
+        };
+        
+        await setDoc(newUserRef, newUserDoc);
+        // onAuthStateChanged will handle the rest.
     } catch (error) {
         console.error("Registration failed:", error);
         throw error;
