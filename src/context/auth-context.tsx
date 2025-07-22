@@ -122,7 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error("User data not found in Firestore.");
     }
     const userData = { id: userDoc.id, ...userDoc.data() } as User;
-    setUser(userData);
+    // The onAuthStateChanged listener will set the user state
     return userData;
   };
 
@@ -144,7 +144,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     await setDoc(doc(db, "users", firebaseUser.uid), newUser);
     const userWithId: User = { ...newUser, id: firebaseUser.uid };
-    setUser(userWithId);
+    // The onAuthStateChanged listener will set the user state
     return userWithId;
   };
   
@@ -159,7 +159,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (userDoc.exists()) {
       // User already exists, just log them in
       const userData = { id: userDoc.id, ...userDoc.data() } as User;
-      setUser(userData);
+       // The onAuthStateChanged listener will set the user state
       return userData;
     } else {
       // New user, create a document in Firestore
@@ -174,7 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
       await setDoc(userDocRef, newUser);
       const userWithId: User = { ...newUser, id: firebaseUser.uid };
-      setUser(userWithId);
+      // The onAuthStateChanged listener will set the user state
       return userWithId;
     }
   };
