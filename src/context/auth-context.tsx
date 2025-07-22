@@ -42,109 +42,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { toast } = useToast();
   
-  // This effect runs once on mount to check the initial auth state.
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        try {
-            const userRef = doc(db, 'users', firebaseUser.uid);
-            const userSnap = await getDoc(userRef);
+      try {
+        if (firebaseUser) {
+          const userRef = doc(db, 'users', firebaseUser.uid);
+          const userSnap = await getDoc(userRef);
 
-            if (userSnap.exists()) {
-              setUser({ id: userSnap.id, ...userSnap.data() } as User);
-            } else {
-               // This case can happen if a user is deleted from Firestore but not Auth.
-               console.warn("User exists in Auth, but not in Firestore. Forcing sign out.");
-               await signOut(auth);
-               setUser(null);
-            }
-        } catch (error) {
-            console.error("Auth state change error:", error);
-            setUser(null); // Ensure user is null on error
-        } finally {
-            setLoading(false);
+          if (userSnap.exists()) {
+            const userData = { id: userSnap.id, ...userSnap.data() } as User;
+            setUser(userData);
+          } else {
+             console.warn("User exists in Auth, but not in Firestore. Forcing sign out.");
+             await signOut(auth);
+             setUser(null);
+          }
+        } else {
+          setUser(null);
         }
-      } else {
-        // No user is logged in.
-        setUser(null);
-        setLoading(false);
+      } catch (error) {
+          console.error("Auth state change error:", error);
+          setUser(null);
+      } finally {
+          setLoading(false);
       }
     });
 
     return () => unsubscribe();
   }, []);
 
-  // This effect should only run for authenticated users to fetch related data.
-   React.useEffect(() => {
-    if (!user) {
-        setUsers([]);
-        setInvitations([]);
-        return;
-    };
-
-    // Only fetch all users if the current user is a Developer or Staff
-    // This prevents unnecessary data loading for Clients and Consultants.
-    if (user.role === 'Developer' || user.role === 'Staff') {
-        const usersUnsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
-            setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
-        }, (error) => {
-            console.error("Failed to get users snapshot:", error);
-        });
-        
-         const invitationsUnsubscribe = onSnapshot(collection(db, 'invitations'), (snapshot) => {
-            setInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
-        }, (error) => {
-            console.error("Failed to get invitations snapshot:", error);
-        });
-
-        return () => {
-            usersUnsubscribe();
-            invitationsUnsubscribe();
-        }
-    } else if (user.role === 'TaxConsultant') {
-        // For consultants, fetch only their linked clients and invitations.
-        const usersQuery = query(collection(db, 'users'), where('linkedConsultantId', '==', user.id));
-        const usersUnsubscribe = onSnapshot(usersQuery, (snapshot) => {
-             setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
-        });
-
-        const invQuery = query(collection(db, 'invitations'), where('toConsultantEmail', '==', user.email));
-        const invUnsubscribe = onSnapshot(invQuery, (snapshot) => {
-             setInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
-        });
-        
-        return () => {
-            usersUnsubscribe();
-            invUnsubscribe();
-        }
-    } else if (user.role === 'Client') {
-        // For clients, fetch their own invitations and linked consultant's data
-        const invQuery = query(collection(db, 'invitations'), where('fromClientId', '==', user.id));
-        const invUnsubscribe = onSnapshot(invQuery, (snapshot) => {
-             setInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
-        });
-        
-        // Also fetch the full user list for linking purposes (e.g. showing consultant name)
-        // This is a simplification; a real app might fetch only linked users.
-        const usersUnsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
-            setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
-        }, (error) => {
-            console.error("Failed to get users snapshot:", error);
-        });
-
-        return () => {
-            invUnsubscribe();
-            usersUnsubscribe();
-        }
-    }
-
-
-  }, [user]);
-
-
-  // This effect handles redirection based on auth state.
   React.useEffect(() => {
-    if (loading) return; // Don't redirect until the initial auth check is complete
+    if (loading) return; 
 
     const publicPages = ['/login', '/register', '/'];
     const isPublicPage = publicPages.includes(pathname);
@@ -163,24 +91,70 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user, loading, pathname, router]);
 
+  // Data fetching listeners that only run when a user is logged in
+  React.useEffect(() => {
+    if (!user) {
+        setUsers([]);
+        setInvitations([]);
+        return;
+    };
+    
+    // Developer or Staff get all users and invites
+    if (user.role === 'Developer' || user.role === 'Staff') {
+        const usersUnsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
+            setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
+        });
+        const invitationsUnsubscribe = onSnapshot(collection(db, 'invitations'), (snapshot) => {
+            setInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
+        });
+        return () => { usersUnsubscribe(); invitationsUnsubscribe(); };
+    } 
+    // Tax Consultant gets their clients and relevant invites
+    else if (user.role === 'TaxConsultant') {
+        const clientsQuery = query(collection(db, 'users'), where('linkedConsultantId', '==', user.id));
+        const clientsUnsubscribe = onSnapshot(clientsQuery, (snapshot) => {
+             setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
+        });
+
+        const invQuery = query(collection(db, 'invitations'), where('toConsultantEmail', '==', user.email));
+        const invUnsubscribe = onSnapshot(invQuery, (snapshot) => {
+             setInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
+        });
+        
+        return () => { clientsUnsubscribe(); invUnsubscribe(); };
+    }
+    // Client gets their invites and can see all users (for picking a consultant)
+    else if (user.role === 'Client') {
+        const invQuery = query(collection(db, 'invitations'), where('fromClientId', '==', user.id));
+        const invUnsubscribe = onSnapshot(invQuery, (snapshot) => {
+             setInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
+        });
+        
+        const usersUnsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
+            setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
+        });
+
+        return () => { invUnsubscribe(); usersUnsubscribe(); };
+    }
+  }, [user]);
+
 
   const login = async (email: string, password: string): Promise<User> => {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const userDocRef = doc(db, 'users', userCredential.user.uid);
     const userDoc = await getDoc(userDocRef);
     if (!userDoc.exists()) {
-      await signOut(auth); // Sign out if they have an auth record but no DB record
+      await signOut(auth);
       throw new Error("Login successful, but user data not found in database.");
     }
     const loggedInUser = { id: userDoc.id, ...userDoc.data() } as User;
-    setUser(loggedInUser); // Set user state directly
+    setUser(loggedInUser);
     return loggedInUser;
   };
 
   const register = async (data: RegisterFormValues): Promise<User> => {
     const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
     const { user: firebaseUser } = userCredential;
-
     const role: Role = data.isTaxConsultant ? 'TaxConsultant' : 'Client';
     
     const newUser: Omit<User, 'id'> = {
@@ -195,7 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     await setDoc(doc(db, "users", firebaseUser.uid), newUser);
     const userWithId: User = { ...newUser, id: firebaseUser.uid };
-    setUser(userWithId); // Set user state directly
+    setUser(userWithId);
     return userWithId;
   };
   
@@ -203,21 +177,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const provider = new GoogleAuthProvider();
     const result = await signInWithPopup(auth, provider);
     const firebaseUser = result.user;
-
     const userDocRef = doc(db, 'users', firebaseUser.uid);
     const userDoc = await getDoc(userDocRef);
-
     let userData: User;
 
     if (userDoc.exists()) {
-      // If user exists in DB, use that data
       userData = { id: userDoc.id, ...userDoc.data() } as User;
     } else {
-      // If new user, create a DB record for them
       const newUser: Omit<User, 'id'> = {
         name: firebaseUser.displayName || 'Google User',
         email: firebaseUser.email!,
-        role: 'Client', // Default role for new Google sign-ups
+        role: 'Client',
         avatarUrl: firebaseUser.photoURL || `https://i.pravatar.cc/150?u=${firebaseUser.email}`,
         createdAt: Timestamp.now(),
         linkedClientIds: [],
@@ -226,13 +196,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await setDoc(userDocRef, newUser);
       userData = { ...newUser, id: firebaseUser.uid };
     }
-    setUser(userData); // Set user state directly
+    setUser(userData);
     return userData;
   };
 
   const logout = async () => {
     await signOut(auth);
-    setUser(null); // Explicitly set user to null
+    setUser(null);
   };
 
   const updateUserRole = async (userId: string, newRole: Role) => {
@@ -246,8 +216,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       toast({ title: "Action Forbidden", description: "You cannot delete your own account.", variant: "destructive" });
       return;
     }
-    // In a real app, you would also need to delete the user from Firebase Auth, which is a backend operation.
-    // For this prototype, we'll just delete the Firestore document.
     await deleteDoc(doc(db, "users", userId));
     toast({ title: "User Deleted", description: "The user has been deleted from Firestore." });
   };

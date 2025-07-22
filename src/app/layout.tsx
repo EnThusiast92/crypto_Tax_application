@@ -8,6 +8,7 @@ import { TransactionsProvider } from '@/context/transactions-context';
 import { AuthProvider, useAuth } from '@/context/auth-context';
 import { SettingsProvider } from '@/context/settings-context';
 import { usePathname } from 'next/navigation';
+import * as React from 'react';
 
 function AppContent({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -30,13 +31,18 @@ function AppContent({ children }: { children: React.ReactNode }) {
 
   const noShellPages = ['/login', '/register', '/'];
   const isShellRequired = user && !noShellPages.includes(pathname);
+  
+  if (isShellRequired) {
+    return (
+        <SettingsProvider>
+            <TransactionsProvider>
+                <AppShell>{children}</AppShell>
+            </TransactionsProvider>
+        </SettingsProvider>
+    )
+  }
 
-  return (
-    <>
-      {isShellRequired ? <AppShell>{children}</AppShell> : children}
-      <Toaster />
-    </>
-  );
+  return <>{children}</>;
 }
 
 export default function RootLayout({
@@ -56,15 +62,10 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <AuthProvider>
-          <SettingsProvider>
-            <TransactionsProvider>
-              <AppContent>{children}</AppContent>
-            </TransactionsProvider>
-          </SettingsProvider>
+            <AppContent>{children}</AppContent>
         </AuthProvider>
+        <Toaster />
       </body>
     </html>
   );
 }
-
-    
