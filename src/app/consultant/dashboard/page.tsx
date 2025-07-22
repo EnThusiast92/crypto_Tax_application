@@ -7,10 +7,19 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
-import type { User } from '@/lib/types';
+import type { User, Invitation } from '@/lib/types';
 import { ArrowRight, Check, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+
+type DisplayClient = {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl?: string;
+  status: 'active' | 'pending';
+  invitationId?: string;
+};
 
 export default function ConsultantDashboardPage() {
   const { user, users, invitations, acceptInvitation, rejectInvitation } = useAuth();
@@ -61,10 +70,35 @@ export default function ConsultantDashboardPage() {
     }
   }
 
-  const getClientById = (id: string) => users.find(u => u.id === id);
+  // Create a unified list of clients and pending invitations
+  const allClients = React.useMemo(() => {
+    const clientMap = new Map<string, DisplayClient>();
 
-  const activeClients = users.filter(u => user?.linkedClientIds?.includes(u.id));
-  const pendingInvites = invitations.filter(inv => inv.status === 'pending');
+    // Add active clients
+    const activeClients = users.filter(u => user?.linkedClientIds?.includes(u.id));
+    activeClients.forEach(client => {
+      clientMap.set(client.id, { ...client, status: 'active' });
+    });
+
+    // Add pending invitations
+    const pendingInvites = invitations.filter(inv => inv.status === 'pending');
+    pendingInvites.forEach(invite => {
+      // Only add if not already an active client
+      if (!clientMap.has(invite.fromClientId)) {
+        const clientUser = users.find(u => u.id === invite.fromClientId);
+        if (clientUser) {
+          clientMap.set(clientUser.id, {
+            ...clientUser,
+            status: 'pending',
+            invitationId: invite.id,
+          });
+        }
+      }
+    });
+
+    return Array.from(clientMap.values());
+  }, [users, invitations, user?.linkedClientIds]);
+
 
   return (
     <div className="flex flex-col gap-8 animate-in fade-in-0 duration-1000">
@@ -83,77 +117,41 @@ export default function ConsultantDashboardPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {activeClients.length === 0 && pendingInvites.length === 0 ? (
+          {allClients.length === 0 ? (
              <div className="text-center py-12 border-dashed border rounded-lg">
                 <p className="text-muted-foreground">You have no clients or invitations yet.</p>
              </div>
           ) : (
-            <>
-              {/* Render Pending Invitations */}
-              {pendingInvites.map(invite => {
-                  const client = getClientById(invite.fromClientId);
-                  if (!client) {
-                    return (
-                        <div key={invite.id} className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
-                           <div className="flex items-center gap-4">
-                              <Skeleton className="h-10 w-10 rounded-full" />
-                              <div className="space-y-2">
-                                <Skeleton className="h-4 w-32" />
-                                <Skeleton className="h-3 w-48" />
-                              </div>
-                           </div>
-                           <div className="flex gap-2">
-                              <Skeleton className="h-9 w-24" />
-                              <Skeleton className="h-9 w-24" />
-                           </div>
-                        </div>
-                    )
-                  }
-                  return (
-                      <div key={invite.id} className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
-                            <div className="flex items-center gap-4">
-                              <Avatar>
-                                  <AvatarImage src={client.avatarUrl} alt={client.name} />
-                                  <AvatarFallback>{client.name.charAt(0).toUpperCase()}</AvatarFallback>
-                              </Avatar>
-                              <div>
-                                  <p className="font-semibold">{client.name}</p>
-                                  <p className="text-sm text-muted-foreground">{client.email}</p>
-                              </div>
-                          </div>
-                          <div className="flex gap-2">
-                              <Button variant="destructive" size="sm" onClick={() => handleReject(invite.id)}>
-                                  <X className="mr-2 h-4 w-4" />
-                                  Reject
-                              </Button>
-                              <Button variant="default" size="sm" onClick={() => handleAccept(invite.id)}>
-                                  <Check className="mr-2 h-4 w-4" />
-                                  Accept
-                              </Button>
-                          </div>
-                      </div>
-                  )
-              })}
-
-              {/* Render Active Clients */}
-              {activeClients.map((client: User) => (
-                <div key={client.id} className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <Avatar>
-                      <AvatarImage src={client.avatarUrl} alt={client.name} />
-                      <AvatarFallback>{client.name.charAt(0).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-semibold">{client.name}</p>
-                      <p className="text-sm text-muted-foreground">{client.email}</p>
-                    </div>
+            allClients.map((client) => (
+              <div key={client.id} className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors">
+                <div className="flex items-center gap-4">
+                  <Avatar>
+                    <AvatarImage src={client.avatarUrl} alt={client.name} />
+                    <AvatarFallback>{client.name.charAt(0).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-semibold">{client.name}</p>
+                    <p className="text-sm text-muted-foreground">{client.email}</p>
                   </div>
-                  <Button variant="outline" onClick={() => handleViewClient(client.id)}>
+                </div>
+                {client.status === 'pending' && client.invitationId ? (
+                  <div className="flex gap-2">
+                    <Button variant="destructive" size="sm" onClick={() => handleReject(client.invitationId!)}>
+                        <X className="mr-2 h-4 w-4" />
+                        Reject
+                    </Button>
+                    <Button variant="default" size="sm" onClick={() => handleAccept(client.invitationId!)}>
+                        <Check className="mr-2 h-4 w-4" />
+                        Accept
+                    </Button>
+                  </div>
+                ) : (
+                   <Button variant="outline" onClick={() => handleViewClient(client.id)}>
                     View Client <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
-                </div>
-              ))}
-            </>
+                )}
+              </div>
+            ))
           )}
         </CardContent>
       </Card>
