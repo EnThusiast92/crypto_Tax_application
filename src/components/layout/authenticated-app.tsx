@@ -42,7 +42,9 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     if (user) {
          return (
             <SettingsProvider>
-                <AppShell>{children}</AppShell>
+                <TransactionsProvider>
+                    <AppShell>{children}</AppShell>
+                </TransactionsProvider>
             </SettingsProvider>
         )
     }

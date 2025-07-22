@@ -3,9 +3,8 @@
 
 import { CsvUploader } from '@/components/import/csv-uploader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { TransactionsProvider } from '@/context/transactions-context';
 
-function ImportPageContent() {
+export default function ImportPage() {
   return (
     <div className="max-w-4xl mx-auto animate-in fade-in-0 duration-500">
       <header className="mb-8">
@@ -27,13 +26,4 @@ function ImportPageContent() {
       </Card>
     </div>
   );
-}
-
-
-export default function ImportPage() {
-  return (
-    <TransactionsProvider>
-      <ImportPageContent />
-    </TransactionsProvider>
-  )
 }

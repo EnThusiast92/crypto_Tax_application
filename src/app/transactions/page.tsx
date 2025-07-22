@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -14,9 +15,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useTransactions, TransactionsProvider } from '@/context/transactions-context';
+import { useTransactions } from '@/context/transactions-context';
 
-function TransactionsPageContent() {
+export default function TransactionsPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const { transactions, addTransaction } = useTransactions();
 
@@ -69,12 +70,4 @@ function TransactionsPageContent() {
       />
     </>
   );
-}
-
-export default function TransactionsPage() {
-    return (
-        <TransactionsProvider>
-            <TransactionsPageContent />
-        </TransactionsProvider>
-    )
 }

@@ -10,9 +10,9 @@ import { TransactionsTable } from '@/components/dashboard/transactions-table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileDown } from 'lucide-react';
-import { useTransactions, TransactionsProvider } from '@/context/transactions-context';
+import { useTransactions } from '@/context/transactions-context';
 
-function DashboardPageContent() {
+export default function DashboardPage() {
   const { transactions } = useTransactions();
   const { user } = useAuth();
   const router = useRouter();
@@ -61,12 +61,4 @@ function DashboardPageContent() {
       </div>
     </div>
   );
-}
-
-export default function DashboardPage() {
-  return (
-    <TransactionsProvider>
-      <DashboardPageContent />
-    </TransactionsProvider>
-  )
 }
