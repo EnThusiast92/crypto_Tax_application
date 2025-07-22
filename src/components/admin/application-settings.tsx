@@ -11,9 +11,10 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from '../ui/badge';
 import { useSettings } from '@/context/settings-context';
 import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export function ApplicationSettings() {
-    const { settings, updateFeatureToggle, updateSiteConfig, updateStaffPermission } = useSettings();
+    const { settings, loading, updateFeatureToggle, updateSiteConfig, updateStaffPermission } = useSettings();
     const { toast } = useToast();
 
     const handleSave = (section: string) => {
@@ -22,6 +23,36 @@ export function ApplicationSettings() {
             description: `${section} settings have been updated.`,
         });
     };
+
+    if (loading) {
+        return (
+             <div className="space-y-8">
+                <Card>
+                    <CardHeader>
+                        <Skeleton className="h-6 w-1/2" />
+                        <Skeleton className="h-4 w-3/4" />
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-20 w-full" />
+                    </CardContent>
+                    <CardFooter>
+                        <Skeleton className="h-10 w-24" />
+                    </CardFooter>
+                </Card>
+                 <Card>
+                    <CardHeader>
+                        <Skeleton className="h-6 w-1/2" />
+                        <Skeleton className="h-4 w-3/4" />
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <Skeleton className="h-12 w-full" />
+                        <Skeleton className="h-12 w-full" />
+                    </CardContent>
+                </Card>
+            </div>
+        )
+    }
 
     return (
         <>
