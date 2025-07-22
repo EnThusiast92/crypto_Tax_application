@@ -82,31 +82,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     let unsubscribes: (() => void)[] = [];
-
-    // --- User Data Fetching based on Role ---
-    let usersQuery;
-     // The main query depends on the user's linkedClientIds, which might change.
-    const clientIds = user.linkedClientIds?.length ? user.linkedClientIds : ['dummy-id-to-prevent-crash'];
-    const idsToFetch = [...new Set([...clientIds, user.id, user.linkedConsultantId].filter(Boolean))];
-
-
-    if (user.role === 'Developer' || user.role === 'Staff') {
-        usersQuery = query(collection(db, "users"));
-    } else {
-        if (idsToFetch.length > 0) {
-            usersQuery = query(collection(db, "users"), where(documentId(), "in", idsToFetch));
-        }
-    }
     
-    if (usersQuery) {
-         const usersUnsubscribe = onSnapshot(usersQuery, (snapshot) => {
-            setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
-        }, (error) => console.error("Users snapshot error:", error));
-        unsubscribes.push(usersUnsubscribe);
-    }
-
-
-    // --- Invitations Fetching based on Role ---
+    // --- Invitations Fetching ---
     let invitesQuery;
     if (user.role === 'Developer' || user.role === 'Staff') {
         invitesQuery = query(collection(db, "invitations"));
@@ -117,11 +94,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (invitesQuery) {
-        const invitesUnsubscribe = onSnapshot(invitesQuery, (snapshot) => {
-            setInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
+        const invitesUnsubscribe = onSnapshot(invitesQuery, async (snapshot) => {
+            const receivedInvitations = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation));
+            setInvitations(receivedInvitations);
+
+            // --- User Data Fetching based on Invitations and Links ---
+            const clientIdsFromInvites = receivedInvitations.map(inv => inv.fromClientId);
+            const linkedClientIds = user.linkedClientIds || [];
+            const linkedConsultantId = user.linkedConsultantId ? [user.linkedConsultantId] : [];
+
+            const allUserIdsToFetch = [...new Set([
+                user.id, 
+                ...clientIdsFromInvites, 
+                ...linkedClientIds,
+                ...linkedConsultantId
+            ])].filter(Boolean); // Remove any null/undefined IDs
+
+            if (allUserIdsToFetch.length > 0) {
+                 // Firestore 'in' queries are limited to 30 elements. Chunk if necessary.
+                const userDocsPromises = [];
+                for (let i = 0; i < allUserIdsToFetch.length; i += 30) {
+                    const chunk = allUserIdsToFetch.slice(i, i + 30);
+                    const usersQuery = query(collection(db, "users"), where(documentId(), "in", chunk));
+                    userDocsPromises.push(getDocs(usersQuery));
+                }
+
+                try {
+                    const userDocsSnapshots = await Promise.all(userDocsPromises);
+                    const fetchedUsers: User[] = [];
+                    userDocsSnapshots.forEach(snap => {
+                        snap.docs.forEach(doc => {
+                             fetchedUsers.push({ id: doc.id, ...doc.data() } as User);
+                        })
+                    });
+                    
+                    // For Staff/Devs, we want to show all users, so we'll do a separate fetch for that.
+                    if (user.role === 'Developer' || user.role === 'Staff') {
+                        const allUsersQuery = query(collection(db, "users"));
+                        const allUsersSnapshot = await getDocs(allUsersQuery);
+                        const allUsers = allUsersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+                        setUsers(allUsers);
+                    } else {
+                        setUsers(fetchedUsers);
+                    }
+
+                } catch (error) {
+                    console.error("Error fetching user documents:", error);
+                }
+
+            } else {
+                // Still need to load the current user's own data
+                const userDoc = await getDoc(doc(db, 'users', user.id));
+                if (userDoc.exists()) {
+                    setUsers([{ id: userDoc.id, ...userDoc.data() } as User]);
+                }
+            }
         }, (error) => console.error("Invitations snapshot error:", error));
         unsubscribes.push(invitesUnsubscribe);
     }
+
 
     return () => {
         unsubscribes.forEach(unsub => unsub());
@@ -264,13 +295,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const rejectInvitation = async (invitationId: string) => {
-    // Instead of marking as 'rejected', we will just delete the invitation.
-    // This simplifies the client-side logic, as they can just check if an invitation exists.
     const invRef = doc(db, 'invitations', invitationId);
-    const invDoc = await getDoc(invRef);
-    if (!invDoc.exists() || invDoc.data().status !== 'pending') {
-        throw new Error("This invitation is no longer valid or has already been actioned.");
-    }
     await deleteDoc(invRef);
   };
   
@@ -292,6 +317,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       batch.update(clientRef, { linkedConsultantId: "" });
       batch.update(consultantRef, { linkedClientIds: arrayRemove(clientId) });
       
+      // Also delete any "accepted" invitations between them to clean up
+      const invitationsRef = collection(db, 'invitations');
+      const q = query(
+          invitationsRef,
+          where('fromClientId', '==', clientId),
+          where('toConsultantEmail', '==', user.email),
+          where('status', '==', 'accepted')
+      );
+      const acceptedInvites = await getDocs(q);
+      acceptedInvites.forEach(doc => batch.delete(doc.ref));
+
       await batch.commit();
   };
 
