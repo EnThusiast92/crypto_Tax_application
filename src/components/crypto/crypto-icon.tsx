@@ -28,23 +28,17 @@ interface CryptoIconProps {
 }
 
 export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
-  const { iconMap, requestIcon, isLoading, hasError } = useIconContext();
+  const { iconMap, isLoading } = useIconContext();
+  const [hasError, setHasError] = React.useState(false);
   const assetSymbol = asset?.toLowerCase();
   
-  React.useEffect(() => {
-    if (assetSymbol) {
-      requestIcon(assetSymbol);
-    }
-  }, [assetSymbol, requestIcon]);
-
   const iconUrl = iconMap[assetSymbol];
-  const hadError = hasError(assetSymbol);
 
-  if (isLoading(assetSymbol) && !iconUrl) {
+  if (isLoading) {
     return <Skeleton className={cn("rounded-full", className)} />;
   }
 
-  if (hadError || !iconUrl) {
+  if (hasError || !iconUrl) {
     return <GenericIcon className={className} />;
   }
 
@@ -56,7 +50,7 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           className="object-contain rounded-full"
-          onError={() => hasError(assetSymbol, true)} // Mark as errored on image load fail
+          onError={() => setHasError(true)}
           unoptimized
         />
     </div>
