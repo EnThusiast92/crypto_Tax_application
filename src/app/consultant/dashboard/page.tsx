@@ -7,19 +7,52 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
-import type { User } from '@/lib/types';
-import { ArrowRight, Check, X, Mail } from 'lucide-react';
+import type { User, Invitation } from '@/lib/types';
+import { ArrowRight, Check, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ConsultantDashboardPage() {
   const { user, users, invitations, acceptInvitation, rejectInvitation } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const [pendingInvites, setPendingInvites] = React.useState<Invitation[]>([]);
   const [pendingClients, setPendingClients] = React.useState<User[]>([]);
   const [loadingClients, setLoadingClients] = React.useState(true);
+
+  React.useEffect(() => {
+    const currentPending = invitations.filter(inv => inv.toConsultantEmail === user?.email && inv.status === 'pending');
+    setPendingInvites(currentPending);
+  }, [invitations, user?.email]);
+
+  React.useEffect(() => {
+    const fetchPendingClients = async () => {
+      if (pendingInvites.length === 0) {
+        setPendingClients([]);
+        setLoadingClients(false);
+        return;
+      }
+      setLoadingClients(true);
+      const pendingClientIds = pendingInvites.map(invite => invite.fromClientId);
+      const uniqueClientIds = [...new Set(pendingClientIds)];
+      
+      try {
+        const clientPromises = uniqueClientIds.map(id => getDoc(doc(db, 'users', id)));
+        const clientDocs = await Promise.all(clientPromises);
+        const clients = clientDocs
+          .filter(doc => doc.exists())
+          .map(doc => ({ id: doc.id, ...doc.data() } as User));
+        setPendingClients(clients);
+      } catch (error) {
+        console.error("Error fetching pending clients:", error);
+        toast({ title: 'Error', description: 'Could not load client information.', variant: 'destructive'});
+      } finally {
+        setLoadingClients(false);
+      }
+    };
+    fetchPendingClients();
+  }, [pendingInvites, toast]);
 
   if (user?.role !== 'TaxConsultant') {
     return (
@@ -29,29 +62,7 @@ export default function ConsultantDashboardPage() {
     );
   }
 
-  const pendingInvites = invitations.filter(inv => inv.toConsultantEmail === user.email && inv.status === 'pending');
   const linkedClients = users.filter(u => user?.linkedClientIds?.includes(u.id));
-
-  React.useEffect(() => {
-    const fetchPendingClients = async () => {
-      setLoadingClients(true);
-      const pendingClientIds = pendingInvites.map(invite => invite.fromClientId);
-      if (pendingClientIds.length > 0) {
-        const uniqueClientIds = [...new Set(pendingClientIds)];
-        const clientPromises = uniqueClientIds.map(id => getDoc(doc(db, 'users', id)));
-        const clientDocs = await Promise.all(clientPromises);
-        const clients = clientDocs
-          .filter(doc => doc.exists())
-          .map(doc => ({ id: doc.id, ...doc.data() } as User));
-        setPendingClients(clients);
-      } else {
-        setPendingClients([]);
-      }
-      setLoadingClients(false);
-    };
-    fetchPendingClients();
-  }, [invitations]);
-
   const getPendingClientById = (id: string) => pendingClients.find(c => c.id === id);
 
   const handleViewClient = (clientId: string) => {
@@ -65,6 +76,8 @@ export default function ConsultantDashboardPage() {
             title: 'Invitation Accepted',
             description: 'Client has been added to your list.',
         });
+        // UI FIX: Immediately remove the accepted invitation from the local state
+        setPendingInvites(prev => prev.filter(inv => inv.id !== invitationId));
     } catch(error) {
         toast({
             title: 'Error Accepting Invite',
@@ -81,6 +94,8 @@ export default function ConsultantDashboardPage() {
             title: 'Invitation Rejected',
             description: 'The invitation has been removed.',
         });
+        // UI FIX: Immediately remove the rejected invitation from the local state
+        setPendingInvites(prev => prev.filter(inv => inv.id !== invitationId));
     } catch(error) {
         toast({
             title: 'Error Rejecting Invite',
