@@ -3,6 +3,10 @@ import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   /* config options here */
+  experimental: {
+    // This is required for the Gitpod preview to work correctly.
+    allowedDevOrigins: ['*'],
+  },
   typescript: {
     ignoreBuildErrors: true,
   },
