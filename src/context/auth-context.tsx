@@ -45,15 +45,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const userRef = doc(db, 'users', firebaseUser.uid);
-        // Using onSnapshot to listen for real-time updates to the user document
         const unsubUser = onSnapshot(userRef, (userSnap) => {
           if (userSnap.exists()) {
             setUser({ id: userSnap.id, ...userSnap.data() } as User);
           } else {
-            setUser(null);
+            // This can happen if a user is created in Auth but not in Firestore,
+            // or if the user is deleted from Firestore but not Auth.
+            setUser(null); 
+            console.warn("Authenticated user not found in Firestore. Logging out.");
+            signOut(auth);
           }
            setLoading(false);
            setIsFirebaseReady(true);
+        }, (error) => {
+            console.error("Error in user snapshot listener:", error);
+            setUser(null);
+            setLoading(false);
+            setIsFirebaseReady(true);
         });
         return () => unsubUser();
       } else {
@@ -174,8 +182,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const snapshot = await getDocs(q);
     if (snapshot.empty) throw new Error("No tax consultant found with this email.");
     
-    const consultant = snapshot.docs[0].data() as User;
-    if (user.linkedConsultantId === consultant.id) throw new Error("You are already linked with this consultant.");
+    const consultantDoc = snapshot.docs[0];
+    const consultantId = consultantDoc.id;
+
+    if (user.linkedConsultantId === consultantId) throw new Error("You are already linked with this consultant.");
 
     const invQ = query(collection(db, 'invitations'), where('fromClientId', '==', user.id), where('toConsultantEmail', '==', consultantEmail), where('status', '==', 'pending'));
     const invSnapshot = await getDocs(invQ);

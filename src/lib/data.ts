@@ -55,7 +55,7 @@ export const misclassifiedTransactions: Transaction[] = [
 
 const now = Timestamp.now();
 
-export const users: Omit<User, 'id'>[] = [
+const rawUsers: Omit<User, 'id'>[] = [
     {
         name: 'Admin',
         email: 'admin@cryptotaxpro.com',
@@ -112,10 +112,9 @@ export const users: Omit<User, 'id'>[] = [
     }
 ];
 
-export const invitations: Invitation[] = [
+const rawInvitations: Omit<Invitation, 'id' | 'fromClientId'> & { fromClientEmail: string }[] = [
     {
-        id: 'inv-1',
-        fromClientId: 'user-gavin',
+        fromClientEmail: 'gavin@eth.org',
         toConsultantEmail: 'hayden@uniswap.org',
         status: 'pending'
     }
@@ -126,62 +125,65 @@ export async function seedDatabase() {
   try {
     console.log('🟡 Seeding started...');
     
-    // Use a map to get the auto-generated IDs
+    const userIdsByEmail: Record<string, string> = {};
     const userIds: Record<string, string> = {};
-    users.forEach((user, index) => {
-        // Create a predictable ID based on the email for linking purposes
-        const userId = `user-${user.email.split('@')[0]}`;
-        userIds[index] = userId;
-    })
+    const usersToSeed: User[] = rawUsers.map(user => {
+      const id = `user-${user.email.split('@')[0]}`;
+      userIdsByEmail[user.email] = id;
+      return { ...user, id };
+    });
 
-    // Step 1: Seed users and invitations
     const batch1 = writeBatch(db);
     const usersCol = collection(db, 'users');
     const invitationsCol = collection(db, 'invitations');
 
-    users.forEach((user, index) => {
-      const userId = userIds[index];
-      const userRef = doc(usersCol, userId);
+    usersToSeed.forEach((user) => {
+      const userRef = doc(usersCol, user.id);
       
       const userData: any = {...user};
-      // Make sure linkings are correct using the generated IDs
       if(user.email === 'satoshi@gmx.com') {
-          const consultantIndex = users.findIndex(u => u.email === 'charles@iohk.io');
-          userData.linkedConsultantId = userIds[consultantIndex];
+          userData.linkedConsultantId = userIdsByEmail['charles@iohk.io'];
       }
       if(user.email === 'charles@iohk.io') {
-          const clientIndex = users.findIndex(u => u.email === 'satoshi@gmx.com');
-          userData.linkedClientIds = [userIds[clientIndex]];
+          userData.linkedClientIds = [userIdsByEmail['satoshi@gmx.com']];
       }
-
+      delete userData.id;
       batch1.set(userRef, userData);
     });
 
-    invitations.forEach(inv => {
-      const fromClientIndex = users.findIndex(u => u.email === 'gavin@eth.org');
-      const fromClientId = userIds[fromClientIndex];
-      const invitationRef = doc(invitationsCol, inv.id);
-      batch1.set(invitationRef, {...inv, fromClientId });
+    rawInvitations.forEach(inv => {
+      const fromClientId = userIdsByEmail[inv.fromClientEmail];
+      if (fromClientId) {
+          const id = `inv-${Date.now()}-${Math.random()}`;
+          const invitationRef = doc(invitationsCol, id);
+          batch1.set(invitationRef, { 
+              id,
+              fromClientId,
+              toConsultantEmail: inv.toConsultantEmail,
+              status: inv.status,
+          });
+      }
     });
 
     await batch1.commit();
     console.log('✅ Users and invitations seeded');
 
-    // Step 2: Seed transactions for satoshi
-    const satoshiIndex = users.findIndex(u => u.email === 'satoshi@gmx.com');
-    const satoshiId = userIds[satoshiIndex];
-    const txCol = collection(db, `users/${satoshiId}/transactions`);
-    const batch2 = writeBatch(db);
+    const satoshiId = userIdsByEmail['satoshi@gmx.com'];
+    if (satoshiId) {
+        const txCol = collection(db, `users/${satoshiId}/transactions`);
+        const batch2 = writeBatch(db);
 
-    transactions.forEach(tx => {
-      const txRef = doc(txCol); // auto-id
-      batch2.set(txRef, tx);
-    });
+        transactions.forEach(tx => {
+            const txRef = doc(txCol);
+            batch2.set(txRef, tx);
+        });
 
-    await batch2.commit();
-    console.log('✅ Transactions seeded');
+        await batch2.commit();
+        console.log('✅ Transactions seeded');
+    }
 
     console.log('🎉 All data seeded successfully!');
+    return true;
   } catch (error) {
     console.error('❌ Seeding error:', error);
     throw error;

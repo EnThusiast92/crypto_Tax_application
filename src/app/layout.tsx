@@ -34,7 +34,11 @@ function AppContent({ children }: { children: React.ReactNode }) {
   return (
     <>
       {isShellRequired ? (
-        <AppShell>{children}</AppShell>
+        <SettingsProvider>
+            <TransactionsProvider>
+                <AppShell>{children}</AppShell>
+            </TransactionsProvider>
+        </SettingsProvider>
       ) : (
         children
       )}
@@ -60,11 +64,7 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <AuthProvider>
-          <SettingsProvider>
-            <TransactionsProvider>
-              <AppContent>{children}</AppContent>
-            </TransactionsProvider>
-          </SettingsProvider>
+          <AppContent>{children}</AppContent>
         </AuthProvider>
       </body>
     </html>
