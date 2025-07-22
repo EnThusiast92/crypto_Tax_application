@@ -23,6 +23,7 @@ import {
   Timestamp,
   documentId,
   writeBatch,
+  addDoc,
 } from 'firebase/firestore';
 import { 
     createUserWithEmailAndPassword, 
@@ -82,12 +83,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // --- Role-based Data Fetching ---
     
     let usersQuery;
+    // For Developers or Staff, fetch all users.
     if (user.role === 'Developer' || user.role === 'Staff') {
         usersQuery = query(collection(db, "users"));
-    } else if (user.role === 'TaxConsultant' && user.linkedClientIds && user.linkedClientIds.length > 0) {
+    } 
+    // For Tax Consultants, fetch only their linked clients.
+    else if (user.role === 'TaxConsultant' && user.linkedClientIds && user.linkedClientIds.length > 0) {
         usersQuery = query(collection(db, "users"), where(documentId(), "in", user.linkedClientIds));
-    } else if (user.role === 'Client' && user.linkedConsultantId) {
-        // Only fetch the single consultant's document
+    } 
+    // For Clients, fetch only their linked consultant.
+    else if (user.role === 'Client' && user.linkedConsultantId) {
         const consultantRef = doc(db, "users", user.linkedConsultantId);
         const usersUnsubscribe = onSnapshot(consultantRef, (doc) => {
             if (doc.exists()) {
@@ -95,34 +100,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             } else {
                 setUsers([]);
             }
-        });
+        }, (error) => console.error("Consultant snapshot error:", error));
         unsubscribes.push(usersUnsubscribe);
     }
 
     if (usersQuery) {
         const usersUnsubscribe = onSnapshot(usersQuery, (snapshot) => {
             setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
-        });
+        }, (error) => console.error("Users snapshot error:", error));
         unsubscribes.push(usersUnsubscribe);
-    } else if (!user.linkedConsultantId) {
-        // If user is a Client or Consultant with no links, clear users.
-        setUsers([]);
+    } else if (user.role === 'Client' && !user.linkedConsultantId) {
+       setUsers([]); // Clear users if client has no consultant
     }
+
 
     // Fetch invitations based on role
     let invitesQuery;
+    // For Developers or Staff, fetch all invitations.
     if (user.role === 'Developer' || user.role === 'Staff') {
         invitesQuery = query(collection(db, "invitations"));
-    } else if (user.role === 'TaxConsultant') {
+    } 
+    // For Tax Consultants, fetch invitations sent to them.
+    else if (user.role === 'TaxConsultant') {
         invitesQuery = query(collection(db, "invitations"), where("toConsultantEmail", "==", user.email));
-    } else if (user.role === 'Client') {
+    } 
+    // For Clients, fetch invitations they sent.
+    else if (user.role === 'Client') {
         invitesQuery = query(collection(db, "invitations"), where("fromClientId", "==", user.id));
     }
 
     if (invitesQuery) {
         const invitesUnsubscribe = onSnapshot(invitesQuery, (snapshot) => {
             setInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
-        });
+        }, (error) => console.error("Invitations snapshot error:", error));
         unsubscribes.push(invitesUnsubscribe);
     }
 
@@ -176,7 +186,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const newUserRef = doc(db, 'users', firebaseUser.uid);
     const role: Role = data.isTaxConsultant ? 'TaxConsultant' : 'Client';
-
+    
     const newUserDoc: Omit<User, 'id'> = {
       name: data.name,
       email: data.email,
@@ -218,7 +228,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const snapshot = await getDocs(q);
     if (snapshot.empty) throw new Error("No tax consultant found with this email.");
     
-    const consultantId = snapshot.docs[0].id;
+    const consultantDoc = snapshot.docs[0];
+    const consultantId = consultantDoc.id;
     if (user.linkedConsultantId === consultantId) throw new Error("You are already linked with this consultant.");
 
     const invQ = query(collection(db, 'invitations'), where('fromClientId', '==', user.id), where('toConsultantEmail', '==', consultantEmail), where('status', '==', 'pending'));
@@ -229,17 +240,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       fromClientId: user.id,
       toConsultantEmail: consultantEmail,
       status: 'pending',
+      createdAt: Timestamp.now(),
     };
     
-    const newDocRef = doc(collection(db, 'invitations'));
-    await setDoc(newDocRef, newInvitation);
+    await addDoc(collection(db, 'invitations'), newInvitation);
   };
   
   const acceptInvitation = async (invitationId: string) => {
     if (!user || user.role !== 'TaxConsultant') return;
     
+    const invRef = doc(db, 'invitations', invitationId);
+    
     await runTransaction(db, async (transaction) => {
-      const invRef = doc(db, 'invitations', invitationId);
       const invDoc = await transaction.get(invRef);
       if (!invDoc.exists()) throw new Error("Invitation not found!");
       
@@ -247,6 +259,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const clientRef = doc(db, 'users', invitation.fromClientId);
       const consultantRef = doc(db, 'users', user.id);
 
+      // Perform the updates within the transaction
       transaction.update(clientRef, { linkedConsultantId: user.id });
       transaction.update(consultantRef, { linkedClientIds: arrayUnion(invitation.fromClientId) });
       transaction.update(invRef, { status: 'accepted' });
@@ -259,21 +272,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
   
   const removeConsultantAccess = async (clientId: string) => {
-    if (!user) return;
-    await runTransaction(db, async (transaction) => {
-        const clientRef = doc(db, "users", clientId);
-        const clientDoc = await transaction.get(clientRef);
-        if (!clientDoc.exists()) throw new Error("Client not found!");
+      if (!user || user.role !== 'Client') return;
 
-        const clientData = clientDoc.data() as User;
-        const consultantId = clientData.linkedConsultantId;
-        if (!consultantId) return;
+      const clientRef = doc(db, "users", clientId);
+      const clientDoc = await getDoc(clientRef);
+      if (!clientDoc.exists()) throw new Error("Client document not found!");
+      
+      const clientData = clientDoc.data() as User;
+      const consultantId = clientData.linkedConsultantId;
+      if (!consultantId) return; // No consultant to remove
 
-        const consultantRef = doc(db, "users", consultantId);
-        
-        transaction.update(clientRef, { linkedConsultantId: "" });
-        transaction.update(consultantRef, { linkedClientIds: arrayRemove(clientId) });
-    });
+      const consultantRef = doc(db, "users", consultantId);
+
+      const batch = writeBatch(db);
+      
+      // Client removes consultant's ID from their own document
+      batch.update(clientRef, { linkedConsultantId: "" });
+      
+      // Client removes their own ID from the consultant's document
+      batch.update(consultantRef, { linkedClientIds: arrayRemove(clientId) });
+
+      await batch.commit();
   };
 
 

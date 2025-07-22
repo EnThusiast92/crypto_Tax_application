@@ -45,6 +45,7 @@ export type Invitation = {
   fromClientId: string;
   toConsultantEmail: string;
   status: 'pending' | 'accepted' | 'rejected';
+  createdAt: Timestamp;
 }
 
 // RBAC and Auth Types
