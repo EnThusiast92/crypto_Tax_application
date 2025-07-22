@@ -74,76 +74,80 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   React.useEffect(() => {
     if (!user) {
-        setUsers([]);
-        setInvitations([]);
-        return;
+      setUsers([]);
+      setInvitations([]);
+      return;
     }
 
-    let unsubscribes: (() => void)[] = [];
-    
-    const handleRoleBasedDataFetching = async (currentUser: User) => {
-        // --- Users Fetching ---
-        if (currentUser.role === 'Developer' || currentUser.role === 'Staff') {
-            const allUsersQuery = query(collection(db, "users"));
-            const usersUnsubscribe = onSnapshot(allUsersQuery, (snapshot) => {
-                const allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
-                setUsers(allUsers);
-            });
-            unsubscribes.push(usersUnsubscribe);
-        } else {
-            // For Clients and Consultants, fetch specific users they are linked to.
-            const userIdsToFetch = new Set<string>();
-            if (currentUser.id) userIdsToFetch.add(currentUser.id);
-            if (currentUser.linkedConsultantId) userIdsToFetch.add(currentUser.linkedConsultantId);
-            if (currentUser.linkedClientIds) {
-                currentUser.linkedClientIds.forEach(id => userIdsToFetch.add(id));
-            }
-            
-            // Also fetch users from pending invitations
-            const invitesQuery = currentUser.role === 'Client'
-                ? query(collection(db, "invitations"), where("fromClientId", "==", currentUser.id))
-                : query(collection(db, "invitations"), where("toConsultantEmail", "==", currentUser.email));
-            
-            const invitesUnsubscribe = onSnapshot(invitesQuery, async (invitesSnapshot) => {
-                const receivedInvitations = invitesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation));
-                setInvitations(receivedInvitations);
+    let unsubs: (() => void)[] = [];
 
-                receivedInvitations.forEach(inv => userIdsToFetch.add(inv.fromClientId));
+    const setupListeners = (currentUser: User) => {
+      // Listener for invitations
+      const invitationsQuery = currentUser.role === 'Client'
+        ? query(collection(db, "invitations"), where("fromClientId", "==", currentUser.id))
+        : query(collection(db, "invitations"), where("toConsultantEmail", "==", currentUser.email));
 
-                const finalUserIds = Array.from(userIdsToFetch).filter(Boolean);
+      const invsUnsub = onSnapshot(invitationsQuery, (snapshot) => {
+        const invs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation));
+        setInvitations(invs);
+      });
+      unsubs.push(invsUnsub);
+      
+      // Listener for users
+      // This part fetches users linked to the current user.
+      const userIdsToFetch = new Set<string>([currentUser.id]);
+      if (currentUser.role === 'Developer' || currentUser.role === 'Staff') {
+          // Devs/Staff can see everyone
+          const allUsersUnsub = onSnapshot(collection(db, "users"), (snapshot) => {
+              const allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+              setUsers(allUsers);
+          });
+          unsubs.push(allUsersUnsub);
+          return; // Exit early
+      }
 
-                if (finalUserIds.length > 0) {
-                    // Firestore 'in' query limitation (30)
-                    const chunks = [];
-                    for (let i = 0; i < finalUserIds.length; i += 30) {
-                        chunks.push(finalUserIds.slice(i, i + 30));
-                    }
-                    try {
-                        const userDocsSnapshots = await Promise.all(
-                            chunks.map(chunk => getDocs(query(collection(db, "users"), where(documentId(), "in", chunk))))
-                        );
-                        const fetchedUsers: User[] = [];
-                        userDocsSnapshots.forEach(snap => {
-                            snap.docs.forEach(doc => fetchedUsers.push({ id: doc.id, ...doc.data() } as User));
-                        });
-                        setUsers(fetchedUsers);
-                    } catch (error) {
-                        console.error("Error fetching user documents:", error);
-                    }
-                } else {
-                   setUsers(currentUser ? [currentUser] : []);
-                }
-            });
-            unsubscribes.push(invitesUnsubscribe);
-        }
+      // For clients and consultants, we derive who to fetch based on links and invitations
+      const relatedIdsQuery = currentUser.role === 'Client'
+        ? query(collection(db, "invitations"), where("fromClientId", "==", currentUser.id))
+        : query(collection(db, "invitations"), where("toConsultantEmail", "==", currentUser.email));
+      
+      const relatedIdsUnsub = onSnapshot(relatedIdsQuery, async (invsSnapshot) => {
+          const fetchedInvitations = invsSnapshot.docs.map(doc => doc.data() as Invitation);
+          
+          if(currentUser.linkedConsultantId) userIdsToFetch.add(currentUser.linkedConsultantId);
+          currentUser.linkedClientIds?.forEach(id => userIdsToFetch.add(id));
+          fetchedInvitations.forEach(inv => {
+              if (currentUser.role === 'Client') {
+                  // Fetch the consultant's profile if we find their email in users collection
+                  // This part is tricky without a direct query, so we might need a cloud function in a real app
+              } else { // I am a consultant
+                  userIdsToFetch.add(inv.fromClientId);
+              }
+          });
+          
+          const finalUserIds = Array.from(userIdsToFetch).filter(Boolean);
+          if (finalUserIds.length > 0) {
+              const usersQuery = query(collection(db, 'users'), where(documentId(), 'in', finalUserIds));
+              const usersUnsub = onSnapshot(usersQuery, (usersSnapshot) => {
+                   const fetchedUsers = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+                   setUsers(fetchedUsers);
+              });
+              unsubs.push(usersUnsub);
+          } else {
+            setUsers([currentUser]);
+          }
+      });
+      unsubs.push(relatedIdsUnsub);
+
     };
-    
-    handleRoleBasedDataFetching(user);
+
+    setupListeners(user);
 
     return () => {
-        unsubscribes.forEach(unsub => unsub());
+      unsubs.forEach(unsub => unsub());
     };
   }, [user]);
+
 
   const fetchAndSetUser = async (firebaseUser: FirebaseUser): Promise<User | null> => {
       const userDocRef = doc(db, 'users', firebaseUser.uid);
@@ -229,17 +233,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error("Only clients can send invitations.");
     }
     
+    // Check if consultant exists
+    const consultantQuery = query(collection(db, 'users'), where('email', '==', consultantEmail), where('role', '==', 'TaxConsultant'));
+    const consultantSnapshot = await getDocs(consultantQuery);
+    if(consultantSnapshot.empty) {
+        throw new Error("No tax consultant found with this email.");
+    }
+
     const invitationsRef = collection(db, 'invitations');
     
     const q = query(
         invitationsRef,
         where('fromClientId', '==', user.id),
-        where('toConsultantEmail', '==', consultantEmail),
         where('status', '==', 'pending')
     );
     const existingInviteSnapshot = await getDocs(q);
     if (!existingInviteSnapshot.empty) {
-        throw new Error("You already have a pending invitation for this consultant.");
+        throw new Error("You already have a pending invitation.");
     }
     
     const newInvitation: Omit<Invitation, 'id'> = {
@@ -311,7 +321,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const q = query(
           invitationsRef,
           where('fromClientId', '==', clientId),
-          where('toConsultantEmail', '==', users.find(u => u.id === consultantId)?.email)
+          where('status', '==', 'accepted')
       );
       const acceptedInvites = await getDocs(q);
       acceptedInvites.forEach(doc => batch.delete(doc.ref));
