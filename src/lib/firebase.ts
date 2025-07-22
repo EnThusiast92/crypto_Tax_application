@@ -13,11 +13,9 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-// Initialize Firebase for SSR
-const app: FirebaseApp = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-
-const auth: Auth = getAuth(app);
+// This pattern ensures that we're only initializing Firebase once.
+const app: FirebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const db: Firestore = getFirestore(app);
-
+const auth: Auth = getAuth(app);
 
 export { app, auth, db };

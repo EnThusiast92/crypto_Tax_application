@@ -45,15 +45,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        const userRef = doc(db, 'users', firebaseUser.uid);
-        const userSnap = await getDoc(userRef);
+        try {
+            const userRef = doc(db, 'users', firebaseUser.uid);
+            const userSnap = await getDoc(userRef);
 
-        if (userSnap.exists()) {
-          setUser({ id: userSnap.id, ...userSnap.data() } as User);
-        } else {
-           console.warn("User exists in Auth, but not in Firestore. Forcing sign out.");
-           await signOut(auth);
-           setUser(null);
+            if (userSnap.exists()) {
+              setUser({ id: userSnap.id, ...userSnap.data() } as User);
+            } else {
+               console.warn("User exists in Auth, but not in Firestore. Forcing sign out.");
+               await signOut(auth);
+               setUser(null);
+            }
+        } catch (error) {
+            console.error("Error fetching user document on auth state change:", error);
+            // Don't sign out, maybe it's a temporary network issue.
+            // But we should stop loading.
         }
       } else {
         setUser(null);
@@ -69,10 +75,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const usersUnsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
         setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
+    }, (error) => {
+        console.error("Failed to get users snapshot:", error);
     });
 
     const invitationsUnsubscribe = onSnapshot(collection(db, 'invitations'), (snapshot) => {
         setInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
+    }, (error) => {
+        console.error("Failed to get invitations snapshot:", error);
     });
 
     return () => {
@@ -111,7 +121,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error("Login successful, but user data not found in database.");
     }
     const loggedInUser = { id: userDoc.id, ...userDoc.data() } as User;
-    setUser(loggedInUser);
+    // The onAuthStateChanged listener will set the user state.
+    // We return the user here so the UI can react immediately if needed.
     return loggedInUser;
   };
 
@@ -133,7 +144,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     await setDoc(doc(db, "users", firebaseUser.uid), newUser);
     const userWithId: User = { ...newUser, id: firebaseUser.uid };
-    setUser(userWithId);
+    // onAuthStateChanged will handle setting the user state.
     return userWithId;
   };
   
@@ -162,15 +173,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await setDoc(userDocRef, newUser);
       userData = { ...newUser, id: firebaseUser.uid };
     }
-    setUser(userData);
+    // onAuthStateChanged will handle setting the user state.
     return userData;
   };
 
   const logout = async () => {
     await signOut(auth);
-    setUser(null);
-    setLoading(false); // Explicitly set loading to false on logout
-    router.push('/login');
+    // onAuthStateChanged will set user to null
   };
 
   const updateUserRole = async (userId: string, newRole: Role) => {
@@ -184,6 +193,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       toast({ title: "Action Forbidden", description: "You cannot delete your own account.", variant: "destructive" });
       return;
     }
+    // Deleting a user from Firestore doesn't delete their auth entry.
+    // A more complete solution would use a Cloud Function to handle this.
+    // For this app, we'll just delete the Firestore record.
     await deleteDoc(doc(db, "users", userId));
     toast({ title: "User Deleted", description: "The user has been deleted." });
   };
