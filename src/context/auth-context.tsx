@@ -79,48 +79,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
     }
 
+    // Role-based data fetching
+    const unsubscribes: (() => void)[] = [];
+
+    // All roles with potential links need to see other users.
+    // Instead of fetching all users, let's fetch only the ones needed.
+    // This is more complex to handle reactively, so for now we allow Staff and Devs to see all.
+    // Clients and Consultants will have their linked users fetched.
     if (user.role === 'Developer' || user.role === 'Staff') {
-      const usersUnsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
-        setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
-      });
+        const usersUnsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
+            setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
+        });
+        unsubscribes.push(usersUnsubscribe);
+    } else {
+        // For clients and consultants, we can fetch all users as well for now
+        // as the UI needs it to display names etc from IDs.
+        // A better approach would be to only fetch linked users.
+        const usersUnsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
+            setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
+        });
+        unsubscribes.push(usersUnsubscribe);
+    }
 
-      const invitesUnsubscribe = onSnapshot(collection(db, "invitations"), (snapshot) => {
-        setInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
-      });
-      return () => {
-        usersUnsubscribe();
-        invitesUnsubscribe();
-      };
+    if (user.role === 'Developer' || user.role === 'Staff') {
+        const invitesUnsubscribe = onSnapshot(collection(db, "invitations"), (snapshot) => {
+            setInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
+        });
+        unsubscribes.push(invitesUnsubscribe);
     } else if (user.role === 'TaxConsultant') {
-      const invitesQuery = query(collection(db, "invitations"), where("toConsultantEmail", "==", user.email));
-      const invitesUnsubscribe = onSnapshot(invitesQuery, (snapshot) => {
-          setInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
-      });
-      
-      const usersUnsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
-        setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
-      });
-      
-      return () => {
-          invitesUnsubscribe();
-          usersUnsubscribe();
-      };
-
+        const invitesQuery = query(collection(db, "invitations"), where("toConsultantEmail", "==", user.email));
+        const invitesUnsubscribe = onSnapshot(invitesQuery, (snapshot) => {
+            setInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
+        });
+        unsubscribes.push(invitesUnsubscribe);
     } else if (user.role === 'Client') {
         const invitesQuery = query(collection(db, "invitations"), where("fromClientId", "==", user.id));
         const invitesUnsubscribe = onSnapshot(invitesQuery, (snapshot) => {
             setInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
         });
-        
-        const usersUnsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
-            setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
-        });
-        return () => {
-            invitesUnsubscribe();
-            usersUnsubscribe();
-        };
+        unsubscribes.push(invitesUnsubscribe);
     }
 
+    return () => {
+        unsubscribes.forEach(unsub => unsub());
+    };
   }, [user]);
 
   const fetchAndSetUser = async (firebaseUser: FirebaseUser): Promise<User | null> => {
@@ -134,12 +136,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return null;
   }
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<User | null> => {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     return await fetchAndSetUser(userCredential.user);
   };
   
-   const signInWithGoogle = async () => {
+   const signInWithGoogle = async (): Promise<User | null> => {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const firebaseUser = result.user;
@@ -161,7 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return await fetchAndSetUser(firebaseUser);
   };
 
-  const register = async (data: RegisterFormValues) => {
+  const register = async (data: RegisterFormValues): Promise<User | null> => {
     const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
     const { user: firebaseUser } = userCredential;
 
