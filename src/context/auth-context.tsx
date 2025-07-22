@@ -45,26 +45,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // User is signed in, see if we have their data, otherwise sign out.
         const userRef = doc(db, 'users', firebaseUser.uid);
         const userSnap = await getDoc(userRef);
 
         if (userSnap.exists()) {
           setUser({ id: userSnap.id, ...userSnap.data() } as User);
         } else {
-           // This case can happen if the user was deleted from Firestore but not Auth.
            console.warn("User exists in Auth, but not in Firestore. Forcing sign out.");
            await signOut(auth);
            setUser(null);
         }
       } else {
-        // User is signed out.
         setUser(null);
       }
       setLoading(false);
     });
 
-    // Cleanup subscription on unmount
     return () => unsubscribe();
   }, []);
 
@@ -95,28 +91,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       router.push('/login');
     }
 
-    if (user) {
-        if (isPublicPage || pathname === '/login' || pathname === '/register') {
-            switch (user.role) {
-                case 'Developer': router.push('/admin/dashboard'); break;
-                case 'TaxConsultant': router.push('/consultant/dashboard'); break;
-                case 'Staff': router.push('/staff/dashboard'); break;
-                default: router.push('/dashboard'); break;
-            }
+    if (user && (isPublicPage || pathname === '/login' || pathname === '/register')) {
+        switch (user.role) {
+            case 'Developer': router.push('/admin/dashboard'); break;
+            case 'TaxConsultant': router.push('/consultant/dashboard'); break;
+            case 'Staff': router.push('/staff/dashboard'); break;
+            default: router.push('/dashboard'); break;
         }
     }
   }, [user, loading, pathname, router]);
 
 
   const login = async (email: string, password: string): Promise<User> => {
-    // This will trigger onAuthStateChanged, which will then fetch the user doc
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    // The listener will handle setting the user state, we just need to return a user-like object
-    // to satisfy the component logic, even though the definitive state comes from the listener.
     const userDocRef = doc(db, 'users', userCredential.user.uid);
     const userDoc = await getDoc(userDocRef);
     if (!userDoc.exists()) {
-      throw new Error("Login successful, but user data not found.");
+      await signOut(auth);
+      throw new Error("Login successful, but user data not found in database.");
     }
     const loggedInUser = { id: userDoc.id, ...userDoc.data() } as User;
     setUser(loggedInUser);
@@ -141,7 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     await setDoc(doc(db, "users", firebaseUser.uid), newUser);
     const userWithId: User = { ...newUser, id: firebaseUser.uid };
-    // The onAuthStateChanged listener will pick this new user up.
+    setUser(userWithId);
     return userWithId;
   };
   
@@ -156,14 +148,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let userData: User;
 
     if (userDoc.exists()) {
-      // User already exists, just log them in
       userData = { id: userDoc.id, ...userDoc.data() } as User;
     } else {
-      // New user, create a document in Firestore
       const newUser: Omit<User, 'id'> = {
         name: firebaseUser.displayName || 'Google User',
         email: firebaseUser.email!,
-        role: 'Client', // Default role for Google sign-up
+        role: 'Client',
         avatarUrl: firebaseUser.photoURL || `https://i.pravatar.cc/150?u=${firebaseUser.email}`,
         createdAt: Timestamp.now(),
         linkedClientIds: [],
@@ -172,7 +162,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await setDoc(userDocRef, newUser);
       userData = { ...newUser, id: firebaseUser.uid };
     }
-    // The onAuthStateChanged listener will pick this new user up.
     setUser(userData);
     return userData;
   };
@@ -180,6 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     await signOut(auth);
     setUser(null);
+    setLoading(false); // Explicitly set loading to false on logout
     router.push('/login');
   };
 
@@ -299,3 +289,5 @@ export function useAuth() {
   }
   return context;
 }
+
+    
