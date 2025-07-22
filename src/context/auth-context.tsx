@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import type { User, AuthContextType, RegisterFormValues, Role, EditUserFormValues, Invitation, AppSettings } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { auth, db } from '@/lib/firebase';
@@ -53,22 +53,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const userData = { id: userSnap.id, ...userSnap.data() } as User;
             setUser(userData);
           } else {
-             console.warn("User exists in Auth, but not in Firestore. This might happen if the user was deleted from Firestore but not Auth. Forcing sign out.");
+             console.warn("User exists in Auth, but not in Firestore. Forcing sign out.");
              await signOut(auth);
              setUser(null);
+             router.push('/login');
           }
         } catch (error) {
            console.error("Auth state change error:", error);
            setUser(null);
+           router.push('/login');
+        } finally {
+            setLoading(false);
         }
       } else {
         setUser(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [router]);
   
     React.useEffect(() => {
     if (!user) {
@@ -77,7 +81,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
     }
 
-    // Only subscribe to all users/invites if the user has the appropriate role
     if (user.role === 'Developer' || user.role === 'Staff') {
       const usersUnsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
         setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
@@ -96,7 +99,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
       });
       
-      // A consultant might need to see user info for their linked clients
       const usersUnsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
         setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
       });
@@ -112,7 +114,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
         });
         
-        // A client might need to see their linked consultant's info
         const usersUnsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
             setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
         });
@@ -127,7 +128,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string): Promise<User | null> => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // onAuthStateChanged will handle the rest
       router.push('/dashboard');
       return null; 
     } catch (error) {
@@ -154,7 +154,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 let role: Role = 'Client';
                 if (isFirstUser) {
                     role = 'Developer';
-                    // Seed initial app settings if this is the very first user
                     const settingsRef = doc(db, 'app', 'settings');
                     const defaultSettings: AppSettings = {
                       toggles: { csvImport: true, taxReport: true, apiSync: false },
@@ -199,8 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             let role: Role = data.isTaxConsultant ? 'TaxConsultant' : 'Client';
 
             if (isFirstUser) {
-                role = 'Developer'; // The first user to register is always the developer.
-                // Seed initial app settings if this is the very first user
+                role = 'Developer';
                 const settingsRef = doc(db, 'app', 'settings');
                 const defaultSettings: AppSettings = {
                   toggles: {
@@ -252,8 +250,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteUser = async (userId: string) => {
-    // Note: Deleting user from Firestore doesn't delete them from Firebase Auth.
-    // A more complete solution would use a Cloud Function to handle this.
     await deleteDoc(doc(db, "users", userId));
   };
 
