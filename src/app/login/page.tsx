@@ -14,7 +14,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { seedDatabase } from '@/lib/data';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -25,9 +24,8 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, isFirebaseReady } = useAuth();
+  const { login } = useAuth();
   const { toast } = useToast();
-  const [isSeeding, setIsSeeding] = React.useState(false);
 
   const {
     register,
@@ -36,35 +34,6 @@ export default function LoginPage() {
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
   });
-  
-  const handleSeed = async () => {
-    setIsSeeding(true);
-    console.log('🚀 Starting seed process...');
-
-    try {
-        await Promise.race([
-        seedDatabase(),
-        new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Seeding timed out')), 15000)
-        ),
-        ]);
-
-        toast({
-        title: 'Seed Complete',
-        description: 'Database has been seeded.',
-        });
-    } catch (err) {
-        console.error('❌ Seeding failed:', err);
-        toast({
-        title: 'Seed Failed',
-        description: (err as Error).message || 'An error occurred during seeding.',
-        variant: 'destructive',
-        });
-    } finally {
-        setIsSeeding(false);
-        console.log('🔁 Seeding UI reset');
-    }
-  };
 
   const onSubmit = async (data: LoginFormValues) => {
     try {
@@ -133,24 +102,6 @@ export default function LoginPage() {
             </Link>
           </div>
         </CardContent>
-        <CardFooter className="flex flex-col gap-4">
-            <div className="relative w-full">
-                <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-card px-2 text-muted-foreground">
-                    First-time setup
-                    </span>
-                </div>
-            </div>
-            <Button variant="secondary" className="w-full" onClick={handleSeed} disabled={isSeeding || !isFirebaseReady}>
-                {isSeeding ? 'Seeding...' : !isFirebaseReady ? 'Connecting...' : 'Seed Database'}
-            </Button>
-            <p className="text-xs text-muted-foreground text-center px-4">
-                Click this once to populate your new Firebase database with sample users and transactions.
-            </p>
-        </CardFooter>
       </Card>
     </div>
   );

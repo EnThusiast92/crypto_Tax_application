@@ -6,6 +6,7 @@ import { useAuth } from '@/context/auth-context';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { UsersTable } from '@/components/admin/users-table';
 import { ApplicationSettings } from '@/components/admin/application-settings';
+import { SeedDatabase } from '@/components/admin/seed-database';
 
 export default function AdminDashboardPage() {
   const { user } = useAuth();
@@ -40,6 +41,7 @@ export default function AdminDashboardPage() {
                     <UsersTable />
                 </CardContent>
             </Card>
+            <SeedDatabase />
         </div>
         <div className="space-y-8">
             <ApplicationSettings />
