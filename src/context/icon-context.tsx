@@ -8,6 +8,7 @@ type IconMap = Record<string, string>;
 
 type IconContextType = {
   getIcon: (symbol: string) => string | undefined;
+  fetchAndCacheIcon: (symbol: string) => Promise<void>;
   isLoading: boolean;
 };
 
@@ -16,6 +17,8 @@ const IconContext = React.createContext<IconContextType | undefined>(undefined);
 export const IconProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [iconMap, setIconMap] = React.useState<IconMap>({});
   const [isLoading, setIsLoading] = React.useState(true);
+  // Keep track of symbols we've already tried to fetch to prevent re-fetching on every render
+  const attemptedFetches = React.useRef(new Set<string>());
 
   React.useEffect(() => {
     const fetchIconMap = async () => {
@@ -37,10 +40,37 @@ export const IconProvider: FC<{ children: ReactNode }> = ({ children }) => {
   }, []);
 
   const getIcon = React.useCallback((symbol: string): string | undefined => {
-    return iconMap[symbol.toLowerCase()];
+    return iconMap[symbol?.toLowerCase()];
+  }, [iconMap]);
+
+  const fetchAndCacheIcon = React.useCallback(async (symbol: string) => {
+    const lowerSymbol = symbol.toLowerCase();
+    if (!lowerSymbol || iconMap[lowerSymbol] || attemptedFetches.current.has(lowerSymbol)) {
+      return;
+    }
+    
+    attemptedFetches.current.add(lowerSymbol);
+
+    try {
+      const res = await fetch(`/api/crypto/icon?symbol=${lowerSymbol}`);
+      if (!res.ok) {
+        // Don't throw an error, just log it. The component will handle the fallback.
+        console.warn(`Could not fetch icon for ${symbol}. Status: ${res.status}`);
+        return;
+      }
+      const data = await res.json();
+      if (data.iconUrl) {
+        setIconMap(prevMap => ({
+          ...prevMap,
+          [lowerSymbol]: data.iconUrl,
+        }));
+      }
+    } catch (error) {
+      console.error(`Error fetching icon for ${symbol}:`, error);
+    }
   }, [iconMap]);
   
-  const value = { getIcon, isLoading };
+  const value = { getIcon, fetchAndCacheIcon, isLoading };
 
   return <IconContext.Provider value={value}>{children}</IconContext.Provider>;
 };
