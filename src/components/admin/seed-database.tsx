@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
-import { collection, doc, writeBatch, Timestamp } from 'firebase/firestore';
-import type { User, Transaction } from '@/lib/types';
+import { collection, doc, writeBatch, Timestamp, setDoc } from 'firebase/firestore';
+import type { User, Transaction, AppSettings } from '@/lib/types';
 
 export function SeedDatabase() {
     const [isSeeding, setIsSeeding] = React.useState(false);
@@ -18,13 +18,34 @@ export function SeedDatabase() {
         try {
             console.log('🟡 Seeding started...');
             const batch = writeBatch(db);
+
+            // 1. Seed App Settings
+            const settingsRef = doc(db, 'app', 'settings');
+            const defaultSettings: AppSettings = {
+              toggles: {
+                csvImport: true,
+                taxReport: true,
+                apiSync: false,
+              },
+              permissions: {
+                canManageUsers: false,
+                canViewAllTx: true,
+              },
+              config: {
+                logoUrl: '',
+                taxRules: 'Standard UK tax regulations apply.',
+              },
+            };
+            batch.set(settingsRef, defaultSettings);
+            console.log('🟡 App settings prepared for seeding.');
+
+
+            // 2. Seed Users
             const usersCol = collection(db, 'users');
 
-            // 1. Developer User (This assumes you have created this user via the app's registration)
-            // Note: Seeding won't create auth entries, so these users can't log in unless created via UI.
-            // This seed is for DATA only. You should have already registered 'admin@taxwise.com'.
+            // NOTE: Seeding won't create auth entries. These users can't log in unless created via UI.
+            // This seed is for DATA only. You should have already registered your main admin user.
             
-            // 2. Client User
             const clientUserRef = doc(usersCol, 'user-client-satoshi');
             const clientUserData: Omit<User, 'id'> = {
                 name: 'Satoshi Nakamoto',
@@ -33,11 +54,10 @@ export function SeedDatabase() {
                 createdAt: Timestamp.now(),
                 role: 'Client',
                 linkedClientIds: [],
-                linkedConsultantId: '',
+                linkedConsultantId: 'user-consultant-charles',
             };
             batch.set(clientUserRef, clientUserData);
             
-            // 3. Tax Consultant User
             const consultantUserRef = doc(usersCol, 'user-consultant-charles');
             const consultantUserData: Omit<User, 'id'> = {
                 name: 'Charles Hoskinson',
@@ -45,12 +65,11 @@ export function SeedDatabase() {
                 avatarUrl: 'https://i.pravatar.cc/150?u=charles@iohk.io',
                 createdAt: Timestamp.now(),
                 role: 'TaxConsultant',
-                linkedClientIds: [],
+                linkedClientIds: ['user-client-satoshi'],
                 linkedConsultantId: '',
             };
             batch.set(consultantUserRef, consultantUserData);
 
-            // 4. Staff User
             const staffUserRef = doc(usersCol, 'user-staff-vitalik');
             const staffUserData: Omit<User, 'id'> = {
                 name: 'Vitalik Buterin',
@@ -62,14 +81,9 @@ export function SeedDatabase() {
                 linkedConsultantId: '',
             };
             batch.set(staffUserRef, staffUserData);
+            console.log('🟡 Users prepared for seeding.');
 
-
-            // Commit users first
-            await batch.commit();
-            console.log('✅ Users seeded successfully!');
-            
-            // Now seed transactions for the client
-            const txBatch = writeBatch(db);
+            // 3. Seed Transactions for the client
             const transactionsCol = collection(db, `users/${clientUserRef.id}/transactions`);
             const sampleTransactions: Omit<Transaction, 'id' | 'value'>[] = [
                 { date: '2023-10-26', type: 'Buy', asset: 'BTC', quantity: 0.5, price: 34000, fee: 15, exchange: 'Coinbase', classification: 'Capital Purchase' },
@@ -82,15 +96,18 @@ export function SeedDatabase() {
             sampleTransactions.forEach(txData => {
                 const txRef = doc(transactionsCol); // Auto-generate ID
                 const txWithVal = {...txData, value: txData.price * txData.quantity};
-                txBatch.set(txRef, txWithVal);
+                batch.set(txRef, txWithVal);
             });
+            console.log('🟡 Transactions prepared for seeding.');
 
-            await txBatch.commit();
-            console.log('✅ Transactions seeded successfully!');
+
+            // Commit the batch
+            await batch.commit();
+            console.log('✅ Seeding complete!');
 
             toast({
                 title: 'Seed Complete',
-                description: 'Database has been seeded with sample users and transactions.',
+                description: 'Database has been seeded with sample settings, users and transactions.',
             });
 
         } catch (error) {
@@ -110,12 +127,20 @@ export function SeedDatabase() {
             <CardHeader>
                 <CardTitle className="text-destructive">Danger Zone</CardTitle>
                 <CardDescription>
-                    This action will populate your database with sample data. It will not create user logins.
+                    This action will populate your Firestore database with sample data.
                 </CardDescription>
             </CardHeader>
             <CardContent>
                 <p className="text-sm text-muted-foreground">
-                    Clicking the button will add sample Client, Consultant, and Staff users to your 'users' collection, along with sample transactions for the Client. This is useful for testing the application's features without manually entering data.
+                    Clicking this will overwrite or create:
+                </p>
+                <ul className="text-sm text-muted-foreground list-disc pl-5 mt-2">
+                    <li>The main application settings document.</li>
+                    <li>Sample Client, Consultant, and Staff users.</li>
+                    <li>Sample transactions for the Client user.</li>
+                </ul>
+                 <p className="text-sm text-muted-foreground mt-2">
+                    This is useful for testing, but it will not create user logins (Auth records). You must still register users through the UI to log in as them.
                 </p>
             </CardContent>
             <CardFooter>
