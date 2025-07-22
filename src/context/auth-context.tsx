@@ -227,38 +227,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error("Only clients can send invitations.");
     }
     
-    // Simplification: We no longer check for consultant existence here
-    // to avoid permission errors. The check is implicitly handled
-    // by the consultant when they log in and see (or don't see) the invite.
-    try {
-        const invitationsRef = collection(db, 'invitations');
-        
-        // Optional: Check if an invite already exists for this consultant to prevent spam.
-        // This query works because the client is filtering by their own ID.
-        const existingInviteQuery = query(
-            invitationsRef,
-            where('fromClientId', '==', user.id),
-            where('toConsultantEmail', '==', consultantEmail),
-            where('status', '==', 'pending')
-        );
-        const existingInviteSnapshot = await getDocs(existingInviteQuery);
-        if (!existingInviteSnapshot.empty) {
-            throw new Error("You already have a pending invitation for this consultant.");
-        }
-        
-        // Create the new invitation document. This is allowed by the security rules.
-        const newInvitation: Omit<Invitation, 'id'> = {
-            fromClientId: user.id,
-            toConsultantEmail: consultantEmail,
-            status: 'pending',
-            createdAt: Timestamp.now(),
-        };
-        await addDoc(invitationsRef, newInvitation);
-
-    } catch (e: any) {
-        console.error("Invitation failed: ", e);
-        throw e;
+    const invitationsRef = collection(db, 'invitations');
+    
+    // Check if an invite already exists for this consultant to prevent spam.
+    const q = query(
+        invitationsRef,
+        where('fromClientId', '==', user.id),
+        where('toConsultantEmail', '==', consultantEmail),
+        where('status', '==', 'pending')
+    );
+    const existingInviteSnapshot = await getDocs(q);
+    if (!existingInviteSnapshot.empty) {
+        throw new Error("You already have a pending invitation for this consultant.");
     }
+    
+    // Create the new invitation document.
+    const newInvitation: Omit<Invitation, 'id'> = {
+        fromClientId: user.id,
+        toConsultantEmail: consultantEmail,
+        status: 'pending',
+        createdAt: Timestamp.now(),
+    };
+    await addDoc(invitationsRef, newInvitation);
   };
   
   const acceptInvitation = async (invitationId: string) => {
@@ -277,7 +267,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const consultantRef = doc(db, 'users', user.id);
 
       const clientDoc = await transaction.get(clientRef);
-       if (!clientDoc.exists()) throw new Error("Client account not found!");
+      if (!clientDoc.exists()) throw new Error("Client account not found!");
       if (clientDoc.data().linkedConsultantId) throw new Error("Client is already linked to another consultant.");
 
       // Perform the updates within the transaction

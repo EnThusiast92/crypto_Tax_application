@@ -31,13 +31,16 @@ export default function ConsultantDashboardPage() {
 
   React.useEffect(() => {
     const fetchPendingClients = async () => {
-      if (pendingInvites.length > 0) {
-        const clientPromises = pendingInvites.map(invite => getDoc(doc(db, 'users', invite.fromClientId)));
+      const pendingClientIds = pendingInvites.map(invite => invite.fromClientId);
+      if (pendingClientIds.length > 0) {
+        const clientPromises = pendingClientIds.map(id => getDoc(doc(db, 'users', id)));
         const clientDocs = await Promise.all(clientPromises);
         const clients = clientDocs
           .filter(doc => doc.exists())
           .map(doc => ({ id: doc.id, ...doc.data() } as User));
         setPendingClients(clients);
+      } else {
+        setPendingClients([]);
       }
     };
     fetchPendingClients();
@@ -50,20 +53,36 @@ export default function ConsultantDashboardPage() {
     router.push(`/consultant/clients/${clientId}`);
   };
 
-  const handleAccept = (invitationId: string) => {
-    acceptInvitation(invitationId);
-    toast({
-        title: 'Invitation Accepted',
-        description: 'Client has been added to your list.',
-    });
+  const handleAccept = async (invitationId: string) => {
+    try {
+        await acceptInvitation(invitationId);
+        toast({
+            title: 'Invitation Accepted',
+            description: 'Client has been added to your list.',
+        });
+    } catch(error) {
+        toast({
+            title: 'Error Accepting Invite',
+            description: (error as Error).message,
+            variant: 'destructive',
+        });
+    }
   }
 
-  const handleReject = (invitationId: string) => {
-    rejectInvitation(invitationId);
-     toast({
-        title: 'Invitation Rejected',
-        description: 'The invitation has been removed.',
-    });
+  const handleReject = async (invitationId: string) => {
+    try {
+        await rejectInvitation(invitationId);
+        toast({
+            title: 'Invitation Rejected',
+            description: 'The invitation has been removed.',
+        });
+    } catch(error) {
+        toast({
+            title: 'Error Rejecting Invite',
+            description: (error as Error).message,
+            variant: 'destructive',
+        });
+    }
   }
 
   return (
@@ -102,7 +121,7 @@ export default function ConsultantDashboardPage() {
                                 </div>
                             </div>
                             <div className="flex gap-2">
-                                <Button variant="ghost" size="sm" onClick={() => handleReject(invite.id)}>
+                                <Button variant="destructive" size="sm" onClick={() => handleReject(invite.id)}>
                                     <X className="mr-2 h-4 w-4" />
                                     Reject
                                 </Button>
