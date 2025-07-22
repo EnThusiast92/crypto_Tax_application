@@ -5,6 +5,7 @@ import React from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useIconContext } from '@/context/icon-context';
 
 const GenericIcon = ({ className }: { className?: string }) => (
     <div className={cn("flex items-center justify-center rounded-full bg-muted/50", className)}>
@@ -27,58 +28,23 @@ interface CryptoIconProps {
 }
 
 export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
-  const [iconUrl, setIconUrl] = React.useState<string | null>(null);
-  const [errored, setErrored] = React.useState(false);
-  const [isLoading, setIsLoading] = React.useState(true);
+  const { iconMap, requestIcon, isLoading, hasError } = useIconContext();
   const assetSymbol = asset?.toLowerCase();
-
-  React.useEffect(() => {
-    if (!assetSymbol) {
-      setIsLoading(false);
-      setErrored(true);
-      return;
-    }
-    
-    let cancelled = false;
-    
-    const fetchIcon = async () => {
-      setIsLoading(true);
-      setErrored(false);
-      setIconUrl(null);
-
-      try {
-        const res = await fetch(`/api/crypto/icon?symbol=${assetSymbol}`);
-        if (!res.ok) {
-          console.error(`Icon fetch failed for ${assetSymbol}: ${res.status}`, await res.text());
-          throw new Error('fetch failed');
-        }
-        const { iconUrl: fetchedUrl } = await res.json();
-        if (!cancelled) {
-            setIconUrl(fetchedUrl);
-        }
-      } catch (err) {
-        if (!cancelled) {
-            setErrored(true);
-        }
-      } finally {
-        if (!cancelled) {
-            setIsLoading(false);
-        }
-      }
-    };
-
-    fetchIcon();
-    
-    return () => { 
-        cancelled = true;
-    };
-  }, [assetSymbol]);
   
-  if (isLoading) {
+  React.useEffect(() => {
+    if (assetSymbol) {
+      requestIcon(assetSymbol);
+    }
+  }, [assetSymbol, requestIcon]);
+
+  const iconUrl = iconMap[assetSymbol];
+  const hadError = hasError(assetSymbol);
+
+  if (isLoading(assetSymbol) && !iconUrl) {
     return <Skeleton className={cn("rounded-full", className)} />;
   }
 
-  if (errored || !iconUrl) {
+  if (hadError || !iconUrl) {
     return <GenericIcon className={className} />;
   }
 
@@ -90,7 +56,7 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           className="object-contain rounded-full"
-          onError={() => setErrored(true)} 
+          onError={() => hasError(assetSymbol, true)} // Mark as errored on image load fail
           unoptimized
         />
     </div>

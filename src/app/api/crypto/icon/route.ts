@@ -2,6 +2,10 @@
 // app/api/crypto/icon/route.ts
 import { NextResponse } from 'next/server';
 
+// This file is kept for potential future use or for single-icon lookups if needed,
+// but the primary, high-performance logic has been moved to /api/crypto/icons.
+// The new batch endpoint is more efficient for loading multiple icons at once.
+
 let symbolToIdMap: Record<string, string> | null = null;
 let mapPromise: Promise<void> | null = null;
 let iconCache: Record<string, string> = {};
@@ -20,13 +24,11 @@ async function ensureMap() {
     try {
         const resp = await fetch('https://api.coingecko.com/api/v3/coins/list');
         if (!resp.ok) {
-            // Log the error and clear the promise to allow retries
             console.error(`List fetch failed with status: ${resp.status}`);
             throw new Error(`List fetch failed: ${resp.status}`);
         }
         const list: { id: string; symbol: string }[] = await resp.json();
         const newMap = list.reduce((m, c) => {
-            // We might have duplicates, the first one is usually the most popular one.
             if (!m[c.symbol.toLowerCase()]) {
             m[c.symbol.toLowerCase()] = c.id;
             }
@@ -34,9 +36,7 @@ async function ensureMap() {
         }, {} as Record<string, string>);
         symbolToIdMap = newMap;
     } catch (e) {
-        // In case of an error, we must clear the promise to allow future requests to try again
         mapPromise = null;
-        // Re-throw the error to be caught by the handler
         throw e;
     }
   })();
@@ -56,7 +56,6 @@ export async function GET(request: Request) {
   try {
     await ensureMap();
     if (!symbolToIdMap) {
-      // This case now indicates a failure in ensureMap that should have been thrown.
       return NextResponse.json({ error: 'Failed to build symbol map from CoinGecko' }, { status: 503 });
     }
     const coinId = symbolToIdMap[sym];
@@ -64,17 +63,14 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: `unknown symbol "${symbol}"` }, { status: 404 });
     }
 
-    // Return cached image if still fresh
     const last = cacheTimestamps[coinId] || 0;
     if (iconCache[coinId] && Date.now() - last < CACHE_TTL) {
       return NextResponse.json({ iconUrl: iconCache[coinId] });
     }
 
-    // Fetch via markets endpoint (single-coin)
     const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${coinId}`;
     const marketResp = await fetch(url);
     if (marketResp.status === 429) {
-      // CoinGecko is rate limiting us. Return a specific error status.
       return NextResponse.json({ error: 'rate limited, try again later' }, { status: 503 });
     }
     if (!marketResp.ok) {
@@ -86,13 +82,11 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'no image in response' }, { status: 404 });
     }
 
-    // Cache and return
     iconCache[coinId] = iconUrl;
     cacheTimestamps[coinId] = Date.now();
     return NextResponse.json({ iconUrl });
   } catch (err: any) {
     console.error(`API /crypto/icon error for symbol "${symbol}":`, err.message);
-    // If ensureMap failed, it will be caught here.
     return NextResponse.json({ error: err.message || 'internal error' }, { status: 500 });
   }
 }

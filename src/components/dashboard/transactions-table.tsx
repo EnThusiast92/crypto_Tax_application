@@ -25,8 +25,9 @@ import type { Transaction } from '@/lib/types';
 import { columns } from './columns';
 import { TransactionDetail } from '@/components/transactions/transaction-detail';
 import { cn } from '@/lib/utils';
+import { IconProvider } from '@/context/icon-context';
 
-export function TransactionsTable({ data }: { data: Transaction[] }) {
+function TransactionsTableContent({ data }: { data: Transaction[] }) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
@@ -117,7 +118,6 @@ export function TransactionsTable({ data }: { data: Transaction[] }) {
                     )}
                     onClick={(e) => {
                       const target = e.target as HTMLElement;
-                      // Don't toggle expansion if a button, checkbox, or dropdown menu item was clicked
                       if (target.closest('button, [role="checkbox"], [role="menuitem"]')) {
                         return;
                       }
@@ -169,4 +169,12 @@ export function TransactionsTable({ data }: { data: Transaction[] }) {
       </div>
     </div>
   );
+}
+
+export function TransactionsTable({ data }: { data: Transaction[] }) {
+  return (
+    <IconProvider>
+      <TransactionsTableContent data={data} />
+    </IconProvider>
+  )
 }
