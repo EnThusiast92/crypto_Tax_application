@@ -5,7 +5,7 @@ import * as React from 'react';
 import type { Transaction } from '@/lib/types';
 import { useAuth } from './auth-context';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, addDoc, serverTimestamp, query, orderBy, writeBatch, doc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, serverTimestamp, query, orderBy, writeBatch, doc, onSnapshot } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 type TransactionsContextType = {
@@ -20,34 +20,32 @@ const TransactionsContext = React.createContext<TransactionsContextType | undefi
 export function TransactionsProvider({ children }: { children: React.ReactNode }) {
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const { user, isFirebaseReady } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
 
   React.useEffect(() => {
-    if (!user || !isFirebaseReady) {
+    if (!user) {
       setTransactions([]);
       setLoading(false);
       return;
     }
 
-    const fetchTransactions = async () => {
-      setLoading(true);
-      try {
-        const transactionsCol = collection(db, `users/${user.id}/transactions`);
-        const q = query(transactionsCol, orderBy('date', 'desc'));
-        const snapshot = await getDocs(q);
+    setLoading(true);
+    const transactionsCol = collection(db, `users/${user.id}/transactions`);
+    const q = query(transactionsCol, orderBy('date', 'desc'));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
         const userTransactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
         setTransactions(userTransactions);
-      } catch (error) {
+        setLoading(false);
+    }, (error) => {
         console.error("Error fetching transactions:", error);
         toast({ title: 'Error', description: 'Could not fetch transactions.', variant: 'destructive' });
-      } finally {
         setLoading(false);
-      }
-    };
+    });
 
-    fetchTransactions();
-  }, [user, isFirebaseReady, toast]);
+    return () => unsubscribe();
+  }, [user, toast]);
 
   const addTransaction = async (newTransactionData: Omit<Transaction, 'id' | 'value'>) => {
     if (!user) return;
@@ -56,11 +54,9 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
       const newTransaction = {
         ...newTransactionData,
         value: newTransactionData.quantity * newTransactionData.price,
-        createdAt: serverTimestamp(), // For ordering
       };
-      const docRef = await addDoc(transactionsCol, newTransaction);
-      // Firestore listeners should handle the update, but we can optimistically update state too
-      setTransactions(prev => [{ id: docRef.id, ...newTransaction } as Transaction, ...prev]);
+      await addDoc(transactionsCol, newTransaction);
+      // Firestore listener handles state update
     } catch (error) {
        console.error("Error adding transaction:", error);
        toast({ title: 'Error', description: 'Could not save the transaction.', variant: 'destructive' });
@@ -72,23 +68,18 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
     try {
         const transactionsCol = collection(db, `users/${user.id}/transactions`);
         const batch = writeBatch(db);
-        const transactionsToAdd: Transaction[] = [];
 
         newTransactionsData.forEach(txData => {
             const docRef = doc(transactionsCol);
             const newTransaction = {
                 ...txData,
                 value: txData.quantity * txData.price,
-                createdAt: serverTimestamp()
             };
             batch.set(docRef, newTransaction);
-            transactionsToAdd.push({ id: docRef.id, ...newTransaction } as Transaction);
         });
 
         await batch.commit();
-
-        // Optimistically update state
-        setTransactions(prev => [...transactionsToAdd, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+        // Firestore listener handles state update
         
     } catch (error) {
         console.error("Error adding transactions in batch:", error);

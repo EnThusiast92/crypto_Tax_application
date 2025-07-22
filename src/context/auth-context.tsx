@@ -5,7 +5,7 @@ import * as React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import type { User, AuthContextType, RegisterFormValues, Role, EditUserFormValues, Invitation } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { db, auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import {
   collection,
   query,
@@ -109,16 +109,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 
   const login = async (email: string, password: string): Promise<User> => {
+    // This will trigger onAuthStateChanged, which will then fetch the user doc
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    // The listener will handle setting the user state, we just need to return a user-like object
+    // to satisfy the component logic, even though the definitive state comes from the listener.
     const userDocRef = doc(db, 'users', userCredential.user.uid);
     const userDoc = await getDoc(userDocRef);
     if (!userDoc.exists()) {
-        await signOut(auth);
-        throw new Error("Login successful, but user data not found in database.");
+      throw new Error("Login successful, but user data not found.");
     }
-    const userData = { id: userDoc.id, ...userDoc.data() } as User;
-    setUser(userData); // Manually set user state
-    return userData;
+    const loggedInUser = { id: userDoc.id, ...userDoc.data() } as User;
+    setUser(loggedInUser);
+    return loggedInUser;
   };
 
   const register = async (data: RegisterFormValues): Promise<User> => {
@@ -139,7 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     await setDoc(doc(db, "users", firebaseUser.uid), newUser);
     const userWithId: User = { ...newUser, id: firebaseUser.uid };
-    setUser(userWithId); // Manually set user state after registration
+    // The onAuthStateChanged listener will pick this new user up.
     return userWithId;
   };
   
@@ -170,7 +172,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await setDoc(userDocRef, newUser);
       userData = { ...newUser, id: firebaseUser.uid };
     }
-    setUser(userData); // Manually set user state
+    // The onAuthStateChanged listener will pick this new user up.
+    setUser(userData);
     return userData;
   };
 

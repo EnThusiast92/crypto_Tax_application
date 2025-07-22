@@ -20,19 +20,10 @@ export function SeedDatabase() {
             const batch = writeBatch(db);
             const usersCol = collection(db, 'users');
 
-            // 1. Developer User
-            const devUserRef = doc(usersCol, 'user-dev-admin');
-            const devUserData: Omit<User, 'id'> = {
-                name: 'Admin Developer',
-                email: 'admin@taxwise.com',
-                avatarUrl: 'https://i.pravatar.cc/150?u=admin@taxwise.com',
-                createdAt: Timestamp.now(),
-                role: 'Developer',
-                linkedClientIds: [],
-                linkedConsultantId: '',
-            };
-            batch.set(devUserRef, devUserData);
-
+            // 1. Developer User (This assumes you have created this user via the app's registration)
+            // Note: Seeding won't create auth entries, so these users can't log in unless created via UI.
+            // This seed is for DATA only. You should have already registered 'admin@taxwise.com'.
+            
             // 2. Client User
             const clientUserRef = doc(usersCol, 'user-client-satoshi');
             const clientUserData: Omit<User, 'id'> = {
@@ -59,6 +50,20 @@ export function SeedDatabase() {
             };
             batch.set(consultantUserRef, consultantUserData);
 
+            // 4. Staff User
+            const staffUserRef = doc(usersCol, 'user-staff-vitalik');
+            const staffUserData: Omit<User, 'id'> = {
+                name: 'Vitalik Buterin',
+                email: 'vitalik@ethereum.org',
+                avatarUrl: 'https://i.pravatar.cc/150?u=vitalik@ethereum.org',
+                createdAt: Timestamp.now(),
+                role: 'Staff',
+                linkedClientIds: [],
+                linkedConsultantId: '',
+            };
+            batch.set(staffUserRef, staffUserData);
+
+
             // Commit users first
             await batch.commit();
             console.log('✅ Users seeded successfully!');
@@ -66,15 +71,18 @@ export function SeedDatabase() {
             // Now seed transactions for the client
             const txBatch = writeBatch(db);
             const transactionsCol = collection(db, `users/${clientUserRef.id}/transactions`);
-            const sampleTransactions: Omit<Transaction, 'id'>[] = [
-                { date: '2023-10-26', type: 'Buy', asset: 'BTC', quantity: 0.5, price: 34000, fee: 15, value: 17000, exchange: 'Coinbase', classification: 'Capital Purchase' },
-                { date: '2023-11-15', type: 'Sell', asset: 'ETH', quantity: 2, price: 2000, fee: 8, value: 4000, exchange: 'Binance', classification: 'Capital Disposal' },
-                { date: '2024-01-10', type: 'Buy', asset: 'SOL', quantity: 10, price: 95, fee: 5, value: 950, exchange: 'Coinbase', classification: 'Capital Purchase' },
+            const sampleTransactions: Omit<Transaction, 'id' | 'value'>[] = [
+                { date: '2023-10-26', type: 'Buy', asset: 'BTC', quantity: 0.5, price: 34000, fee: 15, exchange: 'Coinbase', classification: 'Capital Purchase' },
+                { date: '2023-11-15', type: 'Sell', asset: 'ETH', quantity: 2, price: 2000, fee: 8, exchange: 'Binance', classification: 'Capital Disposal' },
+                { date: '2024-01-10', type: 'Buy', asset: 'SOL', quantity: 10, price: 95, fee: 5, exchange: 'Coinbase', classification: 'Capital Purchase' },
+                { date: '2024-02-20', type: 'Staking', asset: 'ADA', quantity: 1000, price: 0.55, fee: 0, exchange: 'Self-custody', classification: 'Income' },
+                { date: '2024-03-01', type: 'Swap', asset: 'BTC', quantity: 0.1, price: 45000, fee: 10, exchange: 'Coinbase', classification: 'Capital Disposal/Purchase', toAsset: 'ETH', toQuantity: 1.5 },
             ];
             
-            sampleTransactions.forEach(tx => {
+            sampleTransactions.forEach(txData => {
                 const txRef = doc(transactionsCol); // Auto-generate ID
-                txBatch.set(txRef, tx);
+                const txWithVal = {...txData, value: txData.price * txData.quantity};
+                txBatch.set(txRef, txWithVal);
             });
 
             await txBatch.commit();
@@ -102,12 +110,12 @@ export function SeedDatabase() {
             <CardHeader>
                 <CardTitle className="text-destructive">Danger Zone</CardTitle>
                 <CardDescription>
-                    This action will overwrite existing sample data. Only use this for initial setup.
+                    This action will populate your database with sample data. It will not create user logins.
                 </CardDescription>
             </CardHeader>
             <CardContent>
                 <p className="text-sm text-muted-foreground">
-                    Clicking the button will populate your Firestore database with sample users (including an admin, client, and consultant) and transaction data. This is useful for testing the application's features without manually entering data.
+                    Clicking the button will add sample Client, Consultant, and Staff users to your 'users' collection, along with sample transactions for the Client. This is useful for testing the application's features without manually entering data.
                 </p>
             </CardContent>
             <CardFooter>
