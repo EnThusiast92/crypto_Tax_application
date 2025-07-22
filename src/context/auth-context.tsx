@@ -93,7 +93,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         unsubscribes.push(usersUnsubscribe);
     } else if (user.role === 'TaxConsultant') {
         const clientIds = user.linkedClientIds?.length ? user.linkedClientIds : ['dummy-id-to-prevent-crash'];
-        const selfAndClients = [...clientIds, user.id];
+        // We always fetch the current user's document in addition to clients
+        const selfAndClients = [...new Set([...clientIds, user.id])];
         usersQuery = query(collection(db, "users"), where(documentId(), "in", selfAndClients));
         const usersUnsubscribe = onSnapshot(usersQuery, (snapshot) => {
             setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
@@ -134,7 +135,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
         unsubscribes.forEach(unsub => unsub());
     };
-  }, [user]); // This useEffect now depends on the entire user object, so it re-runs when linkedClientIds changes.
+  }, [user]);
 
   const fetchAndSetUser = async (firebaseUser: FirebaseUser): Promise<User | null> => {
       const userDocRef = doc(db, 'users', firebaseUser.uid);
@@ -243,27 +244,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
   
   const acceptInvitation = async (invitationId: string) => {
-    if (!user || user.role !== 'TaxConsultant') return;
+    if (!user || user.role !== 'TaxConsultant') {
+        throw new Error("Only consultants can accept invitations.");
+    }
     
     const invRef = doc(db, 'invitations', invitationId);
     
     await runTransaction(db, async (transaction) => {
-      const invDoc = await transaction.get(invRef);
-      if (!invDoc.exists()) throw new Error("Invitation not found!");
+        const invDoc = await transaction.get(invRef);
+        if (!invDoc.exists() || invDoc.data().status !== 'pending') {
+            throw new Error("This invitation is no longer valid.");
+        }
       
-      const invitation = invDoc.data() as Invitation;
-      if (invitation.status !== 'pending') throw new Error("This invitation has already been actioned.");
-      
-      const clientRef = doc(db, 'users', invitation.fromClientId);
-      const consultantRef = doc(db, 'users', user.id);
+        const invitation = invDoc.data() as Invitation;
+        const clientRef = doc(db, 'users', invitation.fromClientId);
+        const consultantRef = doc(db, 'users', user.id);
 
-      const clientDoc = await transaction.get(clientRef);
-      if (!clientDoc.exists()) throw new Error("Client account not found!");
-      if (clientDoc.data().linkedConsultantId) throw new Error("Client is already linked to another consultant.");
+        const clientDoc = await transaction.get(clientRef);
+        if (!clientDoc.exists() || clientDoc.data().linkedConsultantId) {
+            throw new Error("Client is not available or already linked.");
+        }
 
-      transaction.update(clientRef, { linkedConsultantId: user.id });
-      transaction.update(consultantRef, { linkedClientIds: arrayUnion(invitation.fromClientId) });
-      transaction.update(invRef, { status: 'accepted' });
+        // Perform the writes
+        transaction.update(clientRef, { linkedConsultantId: user.id });
+        transaction.update(consultantRef, { linkedClientIds: arrayUnion(invitation.fromClientId) });
+        transaction.update(invRef, { status: 'accepted' });
     });
   };
 
@@ -277,22 +282,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           throw new Error("You do not have permission to perform this action.");
       }
       
-      const clientRef = doc(db, "users", clientId);
-      const clientDoc = await getDoc(clientRef);
-
-      if (!clientDoc.exists()) throw new Error("Client document not found!");
-      
-      const clientData = clientDoc.data() as User;
-      const consultantId = clientData.linkedConsultantId;
+      const clientDoc = users.find(u => u.id === clientId);
+      const consultantId = clientDoc?.linkedConsultantId;
       
       if (!consultantId) {
-          console.log("No consultant to remove.");
-          return; 
+          throw new Error("No linked consultant found to remove.");
       }
 
+      const clientRef = doc(db, "users", clientId);
       const consultantRef = doc(db, "users", consultantId);
+      
       const batch = writeBatch(db);
-
       batch.update(clientRef, { linkedConsultantId: "" });
       batch.update(consultantRef, { linkedClientIds: arrayRemove(clientId) });
       
@@ -312,3 +312,5 @@ export function useAuth() {
   }
   return context;
 }
+
+    
