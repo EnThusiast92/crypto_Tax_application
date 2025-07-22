@@ -223,27 +223,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   const sendInvitation = async (consultantEmail: string) => {
     if (!user || user.role !== 'Client') throw new Error("Only clients can send invitations.");
-    
-    const q = query(collection(db, "users"), where("email", "==", consultantEmail), where("role", "==", "TaxConsultant"));
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) throw new Error("No tax consultant found with this email.");
-    
-    const consultantDoc = snapshot.docs[0];
-    const consultantId = consultantDoc.id;
-    if (user.linkedConsultantId === consultantId) throw new Error("You are already linked with this consultant.");
 
-    const invQ = query(collection(db, 'invitations'), where('fromClientId', '==', user.id), where('toConsultantEmail', '==', consultantEmail), where('status', '==', 'pending'));
-    const invSnapshot = await getDocs(invQ);
-    if (!invSnapshot.empty) throw new Error("You already have a pending invitation for this consultant.");
+    try {
+        await runTransaction(db, async (transaction) => {
+            // 1. Find the consultant by email.
+            const usersRef = collection(db, 'users');
+            const consultantQuery = query(usersRef, where("email", "==", consultantEmail), where("role", "==", "TaxConsultant"));
+            const consultantSnapshot = await getDocs(consultantQuery);
 
-    const newInvitation: Omit<Invitation, 'id'> = {
-      fromClientId: user.id,
-      toConsultantEmail: consultantEmail,
-      status: 'pending',
-      createdAt: Timestamp.now(),
-    };
-    
-    await addDoc(collection(db, 'invitations'), newInvitation);
+            if (consultantSnapshot.empty) {
+                throw new Error("No tax consultant found with this email.");
+            }
+            const consultantDoc = consultantSnapshot.docs[0];
+            const consultantId = consultantDoc.id;
+
+            if (user.linkedConsultantId === consultantId) {
+                throw new Error("You are already linked with this consultant.");
+            }
+
+            // 2. Check for existing pending invitations to prevent duplicates.
+            const invitationsRef = collection(db, 'invitations');
+            const invQuery = query(invitationsRef, 
+                where('fromClientId', '==', user.id), 
+                where('toConsultantEmail', '==', consultantEmail), 
+                where('status', '==', 'pending')
+            );
+            const invSnapshot = await getDocs(invQuery);
+            if (!invSnapshot.empty) {
+                throw new Error("You already have a pending invitation for this consultant.");
+            }
+
+            // 3. Create the new invitation document.
+            const newInvitationRef = doc(collection(db, 'invitations'));
+            const newInvitation: Omit<Invitation, 'id'> = {
+                fromClientId: user.id,
+                toConsultantEmail: consultantEmail,
+                status: 'pending',
+                createdAt: Timestamp.now(),
+            };
+            transaction.set(newInvitationRef, newInvitation);
+        });
+    } catch (e) {
+        console.error("Invitation transaction failed: ", e);
+        if (e instanceof Error) {
+           throw e; // rethrow error to be caught by the component
+        }
+        throw new Error("An unknown error occurred during the invitation process.");
+    }
   };
   
   const acceptInvitation = async (invitationId: string) => {
@@ -272,27 +298,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
   
   const removeConsultantAccess = async (clientId: string) => {
-      if (!user || user.role !== 'Client') return;
+      if (!user || user.role !== 'Client' || clientId !== user.id) {
+          throw new Error("You do not have permission to perform this action.");
+      }
 
       const clientRef = doc(db, "users", clientId);
-      const clientDoc = await getDoc(clientRef);
-      if (!clientDoc.exists()) throw new Error("Client document not found!");
       
-      const clientData = clientDoc.data() as User;
-      const consultantId = clientData.linkedConsultantId;
-      if (!consultantId) return; // No consultant to remove
+      await runTransaction(db, async (transaction) => {
+          const clientDoc = await transaction.get(clientRef);
+          if (!clientDoc.exists()) throw new Error("Client document not found!");
+          
+          const clientData = clientDoc.data() as User;
+          const consultantId = clientData.linkedConsultantId;
+          
+          if (!consultantId) return; // No consultant to remove
 
-      const consultantRef = doc(db, "users", consultantId);
+          const consultantRef = doc(db, "users", consultantId);
 
-      const batch = writeBatch(db);
-      
-      // Client removes consultant's ID from their own document
-      batch.update(clientRef, { linkedConsultantId: "" });
-      
-      // Client removes their own ID from the consultant's document
-      batch.update(consultantRef, { linkedClientIds: arrayRemove(clientId) });
-
-      await batch.commit();
+          // Client removes consultant's ID from their own document
+          transaction.update(clientRef, { linkedConsultantId: "" });
+          
+          // Client removes their own ID from the consultant's document
+          transaction.update(consultantRef, { linkedClientIds: arrayRemove(clientId) });
+      });
   };
 
 
