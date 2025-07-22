@@ -3,12 +3,11 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
-import { useAuth } from '@/context/auth-context';
+import { AuthProvider, useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,23 +26,28 @@ const registerSchema = z.object({
 
 type FormValues = z.infer<typeof registerSchema>;
 
-export default function RegisterPage() {
-  const router = useRouter();
+
+function RegisterPageContent() {
   const { register: registerUser, signInWithGoogle } = useAuth();
   const { toast } = useToast();
-  const [isGoogleSubmitting, setIsGoogleSubmitting] = React.useState(false);
+  const [isSubmittingManual, setIsSubmittingManual] = React.useState(false);
+  const [isSubmittingGoogle, setIsSubmittingGoogle] = React.useState(false);
+  
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
       isTaxConsultant: false,
     }
   });
+  
+  const isSubmitting = isSubmittingManual || isSubmittingGoogle;
 
   const onSubmit = async (data: FormValues) => {
+    setIsSubmittingManual(true);
     try {
       const newUser = await registerUser(data);
       if (newUser) {
@@ -51,13 +55,6 @@ export default function RegisterPage() {
           title: 'Registration Successful',
           description: "We've created your account for you.",
         });
-        // Redirect is handled by the AuthProvider's useEffect
-      } else {
-         toast({
-            title: 'Registration Failed',
-            description: 'An unknown error occurred.',
-            variant: 'destructive',
-          });
       }
     } catch (error) {
       toast({
@@ -65,17 +62,21 @@ export default function RegisterPage() {
         description: (error as Error).message,
         variant: 'destructive',
       });
+    } finally {
+        setIsSubmittingManual(false);
     }
   };
   
   const handleGoogleSignIn = async () => {
-    setIsGoogleSubmitting(true);
+    setIsSubmittingGoogle(true);
     try {
-        await signInWithGoogle();
-        toast({
-            title: 'Google Sign-Up Successful',
-            description: 'Welcome to TaxWise!',
-        });
+        const newUser = await signInWithGoogle();
+        if (newUser) {
+            toast({
+                title: 'Google Sign-Up Successful',
+                description: 'Welcome to TaxWise!',
+            });
+        }
     } catch (error) {
         toast({
             title: 'Google Sign-Up Failed',
@@ -83,7 +84,7 @@ export default function RegisterPage() {
             variant: 'destructive',
         });
     } finally {
-        setIsGoogleSubmitting(false);
+        setIsSubmittingGoogle(false);
     }
   };
 
@@ -102,7 +103,7 @@ export default function RegisterPage() {
                 id="name"
                 placeholder="Satoshi Nakamoto"
                 {...register('name')}
-                disabled={isSubmitting || isGoogleSubmitting}
+                disabled={isSubmitting}
               />
               {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
             </div>
@@ -113,7 +114,7 @@ export default function RegisterPage() {
                 type="email"
                 placeholder="satoshi@gmx.com"
                 {...register('email')}
-                disabled={isSubmitting || isGoogleSubmitting}
+                disabled={isSubmitting}
               />
               {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
             </div>
@@ -123,12 +124,12 @@ export default function RegisterPage() {
                 id="password"
                 type="password"
                 {...register('password')}
-                disabled={isSubmitting || isGoogleSubmitting}
+                disabled={isSubmitting}
               />
               {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
             </div>
             <div className="flex items-center space-x-2">
-                <Checkbox id="isTaxConsultant" {...register('isTaxConsultant')} disabled={isSubmitting || isGoogleSubmitting} />
+                <Checkbox id="isTaxConsultant" {...register('isTaxConsultant')} disabled={isSubmitting} />
                 <Label
                     htmlFor="isTaxConsultant"
                     className="text-sm font-normal text-muted-foreground"
@@ -136,8 +137,8 @@ export default function RegisterPage() {
                    I am a Tax Consultant
                 </Label>
             </div>
-            <Button type="submit" className="w-full" disabled={isSubmitting || isGoogleSubmitting}>
-              {isSubmitting ? 'Creating Account...' : 'Create an account'}
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmittingManual ? 'Creating Account...' : 'Create an account'}
             </Button>
           </form>
           
@@ -150,8 +151,8 @@ export default function RegisterPage() {
             </div>
            </div>
 
-            <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn} disabled={isSubmitting || isGoogleSubmitting}>
-              {isGoogleSubmitting ? 'Please wait...' : 'Sign up with Google'}
+            <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn} disabled={isSubmitting}>
+              {isSubmittingGoogle ? 'Please wait...' : 'Sign up with Google'}
             </Button>
 
           <div className="mt-4 text-center text-sm">
@@ -164,4 +165,12 @@ export default function RegisterPage() {
       </Card>
     </div>
   );
+}
+
+export default function RegisterPage() {
+    return (
+        <AuthProvider>
+            <RegisterPageContent />
+        </AuthProvider>
+    )
 }

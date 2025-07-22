@@ -8,7 +8,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
-import { useAuth } from '@/context/auth-context';
+import { AuthProvider, useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,21 +22,23 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-export default function LoginPage() {
-  const router = useRouter();
+
+function LoginPageContent() {
   const { login, signInWithGoogle } = useAuth();
   const { toast } = useToast();
-  const [isGoogleSubmitting, setIsGoogleSubmitting] = React.useState(false);
+  const [isSubmittingManual, setIsSubmittingManual] = React.useState(false);
+  const [isSubmittingGoogle, setIsSubmittingGoogle] = React.useState(false);
 
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
   });
 
   const onSubmit = async (data: LoginFormValues) => {
+    setIsSubmittingManual(true);
     try {
       const loggedInUser = await login(data.email, data.password);
       if (loggedInUser) {
@@ -51,17 +53,21 @@ export default function LoginPage() {
         description: (error as Error).message,
         variant: 'destructive',
       });
+    } finally {
+      setIsSubmittingManual(false);
     }
   };
   
   const handleGoogleSignIn = async () => {
-    setIsGoogleSubmitting(true);
+    setIsSubmittingGoogle(true);
     try {
-        await signInWithGoogle();
-        toast({
-            title: 'Google Sign-In Successful',
-            description: 'Welcome to TaxWise!',
-        });
+        const loggedInUser = await signInWithGoogle();
+        if (loggedInUser) {
+             toast({
+                title: 'Google Sign-In Successful',
+                description: `Welcome, ${loggedInUser.name}!`,
+            });
+        }
     } catch (error) {
         toast({
             title: 'Google Sign-In Failed',
@@ -69,9 +75,11 @@ export default function LoginPage() {
             variant: 'destructive',
         });
     } finally {
-        setIsGoogleSubmitting(false);
+        setIsSubmittingGoogle(false);
     }
   };
+
+  const isSubmitting = isSubmittingManual || isSubmittingGoogle;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -89,7 +97,7 @@ export default function LoginPage() {
                 type="email"
                 placeholder="m@example.com"
                 {...register('email')}
-                disabled={isSubmitting || isGoogleSubmitting}
+                disabled={isSubmitting}
               />
               {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
             </div>
@@ -104,15 +112,15 @@ export default function LoginPage() {
                 id="password"
                 type="password"
                 {...register('password')}
-                disabled={isSubmitting || isGoogleSubmitting}
+                disabled={isSubmitting}
               />
               {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
             </div>
-            <Button type="submit" className="w-full" disabled={isSubmitting || isGoogleSubmitting}>
-              {isSubmitting ? 'Logging in...' : 'Login'}
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmittingManual ? 'Logging in...' : 'Login'}
             </Button>
-            <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn} disabled={isSubmitting || isGoogleSubmitting}>
-              {isGoogleSubmitting ? 'Please wait...' : 'Login with Google'}
+            <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn} disabled={isSubmitting}>
+              {isSubmittingGoogle ? 'Please wait...' : 'Login with Google'}
             </Button>
           </form>
           <div className="mt-4 text-center text-sm">
@@ -125,4 +133,12 @@ export default function LoginPage() {
       </Card>
     </div>
   );
+}
+
+export default function LoginPage() {
+    return (
+        <AuthProvider>
+            <LoginPageContent />
+        </AuthProvider>
+    )
 }
