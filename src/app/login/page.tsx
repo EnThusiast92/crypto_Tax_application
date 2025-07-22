@@ -42,7 +42,7 @@ export default function LoginPage() {
     console.log('🚀 Starting seed process...');
 
     try {
-        const result = await Promise.race([
+        await Promise.race([
         seedDatabase(),
         new Promise((_, reject) =>
             setTimeout(() => reject(new Error('Seeding timed out')), 15000)

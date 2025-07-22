@@ -1,11 +1,12 @@
 
-// src/lib/firebase.ts
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore, enableNetwork } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+'use client';
+
+import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
+import { getFirestore, enableNetwork, type Firestore } from "firebase/firestore";
+import { getAuth, type Auth } from "firebase/auth";
 import { config } from 'dotenv';
 
-config(); // Load environment variables from .env
+config(); 
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -16,14 +17,34 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-const db = getFirestore(app);
-const auth = getAuth(app);
+interface FirebaseServices {
+  app: FirebaseApp;
+  db: Firestore;
+  auth: Auth;
+}
 
-// Ensures Firestore tries to connect online, useful for development and seeding.
-enableNetwork(db)
-  .then(() => console.log('✅ Firestore online'))
-  .catch((err) => console.error('❌ Firestore enableNetwork failed', err));
+let firebaseServices: FirebaseServices | null = null;
+
+function initializeFirebase(): FirebaseServices {
+  if (firebaseServices) {
+    return firebaseServices;
+  }
+
+  const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+
+  try {
+    enableNetwork(db);
+    console.log('✅ Firestore online');
+  } catch (err) {
+    console.error('❌ Firestore enableNetwork failed', err);
+  }
+
+  firebaseServices = { app, db, auth };
+  return firebaseServices;
+}
+
+const { app, db, auth } = initializeFirebase();
 
 export { app, db, auth };
