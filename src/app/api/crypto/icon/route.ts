@@ -1,24 +1,53 @@
-
 // app/api/crypto/icon/route.ts
 
 import { NextResponse } from 'next/server';
 
 // This cache will now persist across requests in the same server instance.
 let coinListCache: { [symbol: string]: string } = {};
+let topCoinsCache: { [symbol: string]: string } = {};
 let cacheTimestamp = 0;
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
+async function preloadTopCoins() {
+  try {
+    const res = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=gbp&order=market_cap_desc&per_page=200&page=1');
+    if (!res.ok) {
+      console.error('Failed to preload top coins from CoinGecko');
+      return;
+    }
+    const data = await res.json();
+    const newCache: { [symbol: string]: string } = {};
+    for (const coin of data) {
+      newCache[coin.symbol.toLowerCase()] = coin.id;
+    }
+    topCoinsCache = newCache;
+    console.log('Successfully preloaded and cached top 200 coins.');
+  } catch (error) {
+    console.error('Error preloading or processing top coins:', error);
+  }
+}
+
 async function getCoinGeckoId(symbol: string): Promise<string | null> {
   const now = Date.now();
-  // Refresh cache every 24 hours or if it's empty
+  const lowerSymbol = symbol.toLowerCase();
+
+  // 1. Check top coins cache first
+  if (topCoinsCache[lowerSymbol]) {
+    return topCoinsCache[lowerSymbol];
+  }
+
+  // 2. If not in top coins, check the full list cache
+  // Refresh full list cache every 24 hours or if it's empty
   if (Object.keys(coinListCache).length === 0 || now - cacheTimestamp > CACHE_DURATION) {
     try {
+      // Also preload top coins when refreshing the main list
+      await preloadTopCoins();
+      
       const res = await fetch('https://api.coingecko.com/api/v3/coins/list');
       if (!res.ok) {
-        // If fetching the list fails, don't wipe the old cache if it exists
-        console.error('Failed to fetch coin list from CoinGecko');
-        // Return from existing cache if possible
-        return coinListCache[symbol.toLowerCase()] || null;
+        console.error('Failed to fetch full coin list from CoinGecko');
+        // Return from existing (potentially stale) cache if possible
+        return coinListCache[lowerSymbol] || null;
       }
       const data = await res.json();
       const newCache: { [symbol: string]: string } = {};
@@ -27,15 +56,21 @@ async function getCoinGeckoId(symbol: string): Promise<string | null> {
       }
       coinListCache = newCache;
       cacheTimestamp = now;
+      console.log('Successfully fetched and cached the full coin list.');
     } catch (error) {
       console.error('Error fetching or processing CoinGecko coin list:', error);
       // In case of error, rely on the potentially stale cache
-      return coinListCache[symbol.toLowerCase()] || null;
+      return coinListCache[lowerSymbol] || null;
     }
   }
-
-  return coinListCache[symbol.toLowerCase()] || null;
+  
+  // 3. Return from the full list cache
+  return coinListCache[lowerSymbol] || null;
 }
+
+// Initial preload when the server starts
+preloadTopCoins();
+
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -48,7 +83,6 @@ export async function GET(request: Request) {
   try {
     const id = await getCoinGeckoId(symbol);
     if (!id) {
-      // It's common for some symbols not to be found, so this isn't necessarily a server error.
       return NextResponse.json({ iconUrl: null, error: 'Symbol not found' }, { status: 404 });
     }
 
