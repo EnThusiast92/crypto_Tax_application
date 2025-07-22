@@ -4,13 +4,13 @@
 import * as React from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useSettings } from '@/context/settings-context';
-import { useTransactions } from '@/context/transactions-context';
+import { useTransactions, TransactionsProvider } from '@/context/transactions-context';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { UsersTable } from '@/components/admin/users-table';
 import { TransactionsTable } from '@/components/dashboard/transactions-table';
 import { ShieldAlert } from 'lucide-react';
 
-export default function StaffDashboardPage() {
+function StaffDashboardPageContent() {
   const { user } = useAuth();
   const { settings } = useSettings();
   const { transactions } = useTransactions();
@@ -93,4 +93,12 @@ export default function StaffDashboardPage() {
       </div>
     </div>
   );
+}
+
+export default function StaffDashboardPage() {
+    return (
+        <TransactionsProvider>
+            <StaffDashboardPageContent />
+        </TransactionsProvider>
+    )
 }

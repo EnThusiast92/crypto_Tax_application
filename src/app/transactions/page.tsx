@@ -14,9 +14,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useTransactions } from '@/context/transactions-context';
+import { useTransactions, TransactionsProvider } from '@/context/transactions-context';
 
-export default function TransactionsPage() {
+function TransactionsPageContent() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const { transactions, addTransaction } = useTransactions();
 
@@ -69,4 +69,12 @@ export default function TransactionsPage() {
       />
     </>
   );
+}
+
+export default function TransactionsPage() {
+    return (
+        <TransactionsProvider>
+            <TransactionsPageContent />
+        </TransactionsProvider>
+    )
 }

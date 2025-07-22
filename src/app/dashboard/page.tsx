@@ -8,9 +8,9 @@ import { TransactionsTable } from '@/components/dashboard/transactions-table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileDown } from 'lucide-react';
-import { useTransactions } from '@/context/transactions-context';
+import { useTransactions, TransactionsProvider } from '@/context/transactions-context';
 
-export default function DashboardPage() {
+function DashboardPageContent() {
   const { transactions } = useTransactions();
   const recentTransactions = transactions.slice(0, 5);
 
@@ -45,4 +45,12 @@ export default function DashboardPage() {
       </div>
     </div>
   );
+}
+
+export default function DashboardPage() {
+  return (
+    <TransactionsProvider>
+      <DashboardPageContent />
+    </TransactionsProvider>
+  )
 }
