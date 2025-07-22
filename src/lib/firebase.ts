@@ -14,7 +14,8 @@ const firebaseConfig = {
 };
 
 const app: FirebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
-const db: Firestore = getFirestore(app);
+// Connect to the specific database instance named 'cryptotaxapp'
+const db: Firestore = getFirestore(app, 'cryptotaxapp');
 const auth: Auth = getAuth(app);
 
 export { app, auth, db };
