@@ -40,8 +40,6 @@ export default function SettingsPage() {
                     title: 'Access Removed',
                     description: 'The consultant no longer has access to your data.',
                 });
-                // Note: The UI will update automatically because the `user` object from `useAuth`
-                // will change, triggering a re-render.
             } catch (error) {
                  toast({ title: "Error", description: (error as Error).message, variant: "destructive" });
             }

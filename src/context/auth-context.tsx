@@ -85,33 +85,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // --- User Data Fetching based on Role ---
     let usersQuery;
+     // The main query depends on the user's linkedClientIds, which might change.
+    const clientIds = user.linkedClientIds?.length ? user.linkedClientIds : ['dummy-id-to-prevent-crash'];
+    const idsToFetch = [...new Set([...clientIds, user.id, user.linkedConsultantId].filter(Boolean))];
+
+
     if (user.role === 'Developer' || user.role === 'Staff') {
         usersQuery = query(collection(db, "users"));
-        const usersUnsubscribe = onSnapshot(usersQuery, (snapshot) => {
+    } else {
+        if (idsToFetch.length > 0) {
+            usersQuery = query(collection(db, "users"), where(documentId(), "in", idsToFetch));
+        }
+    }
+    
+    if (usersQuery) {
+         const usersUnsubscribe = onSnapshot(usersQuery, (snapshot) => {
             setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
         }, (error) => console.error("Users snapshot error:", error));
         unsubscribes.push(usersUnsubscribe);
-    } else if (user.role === 'TaxConsultant') {
-        const clientIds = user.linkedClientIds?.length ? user.linkedClientIds : ['dummy-id-to-prevent-crash'];
-        // We always fetch the current user's document in addition to clients
-        const selfAndClients = [...new Set([...clientIds, user.id])];
-        usersQuery = query(collection(db, "users"), where(documentId(), "in", selfAndClients));
-        const usersUnsubscribe = onSnapshot(usersQuery, (snapshot) => {
-            setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
-        }, (error) => console.error("Consultant's clients snapshot error:", error));
-        unsubscribes.push(usersUnsubscribe);
-    } else if (user.role === 'Client') {
-        const idsToFetch = [user.id];
-        if (user.linkedConsultantId) idsToFetch.push(user.linkedConsultantId);
-        if (idsToFetch.length > 0) {
-            usersQuery = query(collection(db, "users"), where(documentId(), "in", idsToFetch));
-            const usersUnsubscribe = onSnapshot(usersQuery, (snapshot) => {
-                setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
-            }, (error) => console.error("Client's consultant snapshot error:", error));
-            unsubscribes.push(usersUnsubscribe);
-        } else {
-           setUsers([user]); // Just show self if no consultant
-        }
     }
 
 
@@ -253,7 +244,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await runTransaction(db, async (transaction) => {
         const invDoc = await transaction.get(invRef);
         if (!invDoc.exists() || invDoc.data().status !== 'pending') {
-            throw new Error("This invitation is no longer valid.");
+            throw new Error("This invitation is no longer valid or has already been actioned.");
         }
       
         const invitation = invDoc.data() as Invitation;
@@ -262,7 +253,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const clientDoc = await transaction.get(clientRef);
         if (!clientDoc.exists() || clientDoc.data().linkedConsultantId) {
-            throw new Error("Client is not available or already linked.");
+            throw new Error("Client is not available or already linked to another consultant.");
         }
 
         // Perform the writes
@@ -273,8 +264,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const rejectInvitation = async (invitationId: string) => {
+    // Instead of marking as 'rejected', we will just delete the invitation.
+    // This simplifies the client-side logic, as they can just check if an invitation exists.
     const invRef = doc(db, 'invitations', invitationId);
-    await updateDoc(invRef, { status: 'rejected' });
+    const invDoc = await getDoc(invRef);
+    if (!invDoc.exists() || invDoc.data().status !== 'pending') {
+        throw new Error("This invitation is no longer valid or has already been actioned.");
+    }
+    await deleteDoc(invRef);
   };
   
   const removeConsultantAccess = async (clientId: string) => {
@@ -282,8 +279,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           throw new Error("You do not have permission to perform this action.");
       }
       
-      const clientDoc = users.find(u => u.id === clientId);
-      const consultantId = clientDoc?.linkedConsultantId;
+      const consultantId = user.linkedConsultantId;
       
       if (!consultantId) {
           throw new Error("No linked consultant found to remove.");
@@ -312,5 +308,3 @@ export function useAuth() {
   }
   return context;
 }
-
-    

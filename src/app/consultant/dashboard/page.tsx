@@ -11,7 +11,7 @@ import type { User, Invitation } from '@/lib/types';
 import { ArrowRight, Check, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, documentId } from 'firebase/firestore';
 
 export default function ConsultantDashboardPage() {
   const { user, users, invitations, acceptInvitation, rejectInvitation } = useAuth();
@@ -20,7 +20,6 @@ export default function ConsultantDashboardPage() {
   const [pendingClients, setPendingClients] = React.useState<User[]>([]);
   const [loadingClients, setLoadingClients] = React.useState(true);
   
-  // This is the key fix: always derive pending invites from the source of truth (invitations)
   const pendingInvites = React.useMemo(() => 
     invitations.filter(inv => inv.status === 'pending'), 
     [invitations]
@@ -38,7 +37,6 @@ export default function ConsultantDashboardPage() {
       const uniqueClientIds = [...new Set(pendingClientIds)];
       
       try {
-        // Fetch only clients that are not already in the main `users` list to avoid redundant fetches
         const existingUserIds = users.map(u => u.id);
         const idsToFetch = uniqueClientIds.filter(id => !existingUserIds.includes(id));
 
@@ -50,7 +48,10 @@ export default function ConsultantDashboardPage() {
               .map(doc => ({ id: doc.id, ...doc.data() } as User));
             setPendingClients(prev => [...prev.filter(c => !idsToFetch.includes(c.id)), ...newClients]);
         } else {
-            setPendingClients([]);
+            // This handles the case where the client data might already be in `users`
+            // but the invitation is new. We ensure the pendingClients list is accurate.
+            const allPossibleClients = users.filter(u => uniqueClientIds.includes(u.id));
+            setPendingClients(allPossibleClients);
         }
 
       } catch (error) {
