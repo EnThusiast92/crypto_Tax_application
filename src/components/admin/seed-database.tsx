@@ -6,21 +6,31 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
-import { collection, doc, writeBatch, Timestamp } from 'firebase/firestore';
-import type { User, Transaction, AppSettings } from '@/lib/types';
+import { collection, doc, writeBatch, Timestamp, setDoc } from 'firebase/firestore';
+import type { Transaction, AppSettings } from '@/lib/types';
+import { useAuth } from '@/context/auth-context';
 
 export function SeedDatabase() {
     const [isSeeding, setIsSeeding] = React.useState(false);
     const { toast } = useToast();
+    const { user } = useAuth();
 
     const seedDatabase = async () => {
+        if (!user) {
+            toast({
+                title: 'Error',
+                description: 'You must be logged in as a developer to seed the database.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
         setIsSeeding(true);
         try {
             console.log('🟡 Seeding started...');
-            const { writeBatch, doc, collection, Timestamp } = await import('firebase/firestore');
             
-            // Batch for settings and users
-            const initialBatch = writeBatch(db);
+            // Batch for settings
+            const settingsBatch = writeBatch(db);
 
             // 1. Seed App Settings
             const settingsRef = doc(db, 'app', 'settings');
@@ -39,57 +49,16 @@ export function SeedDatabase() {
                 taxRules: 'Standard UK tax regulations apply.',
               },
             };
-            initialBatch.set(settingsRef, defaultSettings);
+            settingsBatch.set(settingsRef, defaultSettings);
             console.log('🟡 App settings prepared for seeding.');
-
-
-            // 2. Seed Users
-            const usersCol = collection(db, 'users');
             
-            const clientUserRef = doc(usersCol, 'user-client-satoshi');
-            const clientUserData: Omit<User, 'id'> = {
-                name: 'Satoshi Nakamoto',
-                email: 'satoshi@gmx.com',
-                avatarUrl: 'https://i.pravatar.cc/150?u=satoshi@gmx.com',
-                createdAt: Timestamp.now(),
-                role: 'Client',
-                linkedClientIds: [],
-                linkedConsultantId: 'user-consultant-charles',
-            };
-            initialBatch.set(clientUserRef, clientUserData);
-            
-            const consultantUserRef = doc(usersCol, 'user-consultant-charles');
-            const consultantUserData: Omit<User, 'id'> = {
-                name: 'Charles Hoskinson',
-                email: 'charles@iohk.io',
-                avatarUrl: 'https://i.pravatar.cc/150?u=charles@iohk.io',
-                createdAt: Timestamp.now(),
-                role: 'TaxConsultant',
-                linkedClientIds: ['user-client-satoshi'],
-                linkedConsultantId: '',
-            };
-            initialBatch.set(consultantUserRef, consultantUserData);
+            await settingsBatch.commit();
+            console.log('✅ Settings seeding complete!');
 
-            const staffUserRef = doc(usersCol, 'user-staff-vitalik');
-            const staffUserData: Omit<User, 'id'> = {
-                name: 'Vitalik Buterin',
-                email: 'vitalik@ethereum.org',
-                avatarUrl: 'https://i.pravatar.cc/150?u=vitalik@ethereum.org',
-                createdAt: Timestamp.now(),
-                role: 'Staff',
-                linkedClientIds: [],
-                linkedConsultantId: '',
-            };
-            initialBatch.set(staffUserRef, staffUserData);
-            console.log('🟡 Users prepared for seeding.');
 
-            // Commit the first batch
-            await initialBatch.commit();
-            console.log('✅ Settings and Users seeding complete!');
-
-            // 3. Seed Transactions for the client in a separate batch
+            // 2. Seed Transactions for the current developer user
             const transactionsBatch = writeBatch(db);
-            const transactionsCol = collection(db, `users/${clientUserRef.id}/transactions`);
+            const transactionsCol = collection(db, `users/${user.id}/transactions`);
             const sampleTransactions: Omit<Transaction, 'id' | 'value'>[] = [
                 { date: '2023-10-26', type: 'Buy', asset: 'BTC', quantity: 0.5, price: 34000, fee: 15, exchange: 'Coinbase', classification: 'Capital Purchase' },
                 { date: '2023-11-15', type: 'Sell', asset: 'ETH', quantity: 2, price: 2000, fee: 8, exchange: 'Binance', classification: 'Capital Disposal' },
@@ -104,13 +73,12 @@ export function SeedDatabase() {
                 transactionsBatch.set(txRef, txWithVal);
             });
             
-            // Commit the transactions batch
             await transactionsBatch.commit();
             console.log('✅ Transactions seeding complete!');
 
             toast({
                 title: 'Seed Complete',
-                description: 'Database has been seeded with sample settings, users and transactions.',
+                description: 'Database has been seeded with settings and sample transactions for your account.',
             });
 
         } catch (error) {
@@ -130,20 +98,19 @@ export function SeedDatabase() {
             <CardHeader>
                 <CardTitle className="text-destructive">Danger Zone</CardTitle>
                 <CardDescription>
-                    This action will populate your Firestore database with sample data.
+                    This action will populate your Firestore database with initial data.
                 </CardDescription>
             </CardHeader>
             <CardContent>
                 <p className="text-sm text-muted-foreground">
-                    Clicking this will overwrite or create:
+                    Clicking this will create:
                 </p>
                 <ul className="text-sm text-muted-foreground list-disc pl-5 mt-2">
                     <li>The main application settings document.</li>
-                    <li>Sample Client, Consultant, and Staff users.</li>
-                    <li>Sample transactions for the Client user.</li>
+                    <li>Sample transactions for your own developer account.</li>
                 </ul>
                  <p className="text-sm text-muted-foreground mt-2">
-                    This is useful for testing, but it will not create user logins (Auth records). You must still register users through the UI to log in as them.
+                    This action is safe to run multiple times, but it will add more sample transactions to your account each time. It will no longer create other users, so you can register test accounts normally.
                 </p>
             </CardContent>
             <CardFooter>
