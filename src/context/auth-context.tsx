@@ -93,9 +93,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         unsubscribes.push(usersUnsubscribe);
     } else if (user.role === 'Client' && user.linkedConsultantId) {
-        const usersQuery = query(collection(db, "users"), where(documentId(), "==", user.linkedConsultantId));
-        const usersUnsubscribe = onSnapshot(usersQuery, (snapshot) => {
-            setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
+        // Only fetch the single consultant's document
+        const consultantRef = doc(db, "users", user.linkedConsultantId);
+        const usersUnsubscribe = onSnapshot(consultantRef, (doc) => {
+            if (doc.exists()) {
+                setUsers([{ id: doc.id, ...doc.data() } as User]);
+            } else {
+                setUsers([]);
+            }
         });
         unsubscribes.push(usersUnsubscribe);
     } else {
