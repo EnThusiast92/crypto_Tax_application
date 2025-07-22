@@ -22,9 +22,10 @@ export default function ConsultantDashboardPage() {
   const [loadingClients, setLoadingClients] = React.useState(true);
 
   React.useEffect(() => {
-    const currentPending = invitations.filter(inv => inv.toConsultantEmail === user?.email && inv.status === 'pending');
+    // Correctly filter for only pending invitations from the global list
+    const currentPending = invitations.filter(inv => inv.status === 'pending');
     setPendingInvites(currentPending);
-  }, [invitations, user?.email]);
+  }, [invitations]);
 
   React.useEffect(() => {
     const fetchPendingClients = async () => {
@@ -146,7 +147,7 @@ export default function ConsultantDashboardPage() {
                                         <X className="mr-2 h-4 w-4" />
                                         Reject
                                     </Button>
-                                    <Button variant="accent" size="sm" onClick={() => handleAccept(invite.id)}>
+                                    <Button variant="default" size="sm" onClick={() => handleAccept(invite.id)}>
                                         <Check className="mr-2 h-4 w-4" />
                                         Accept
                                     </Button>
