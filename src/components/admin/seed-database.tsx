@@ -18,7 +18,9 @@ export function SeedDatabase() {
         try {
             console.log('🟡 Seeding started...');
             const { writeBatch, doc, collection, Timestamp } = await import('firebase/firestore');
-            const batch = writeBatch(db);
+            
+            // Batch for settings and users
+            const initialBatch = writeBatch(db);
 
             // 1. Seed App Settings
             const settingsRef = doc(db, 'app', 'settings');
@@ -37,15 +39,12 @@ export function SeedDatabase() {
                 taxRules: 'Standard UK tax regulations apply.',
               },
             };
-            batch.set(settingsRef, defaultSettings);
+            initialBatch.set(settingsRef, defaultSettings);
             console.log('🟡 App settings prepared for seeding.');
 
 
             // 2. Seed Users
             const usersCol = collection(db, 'users');
-
-            // NOTE: Seeding won't create auth entries. These users can't log in unless created via UI.
-            // This seed is for DATA only. You should have already registered your main admin user.
             
             const clientUserRef = doc(usersCol, 'user-client-satoshi');
             const clientUserData: Omit<User, 'id'> = {
@@ -57,7 +56,7 @@ export function SeedDatabase() {
                 linkedClientIds: [],
                 linkedConsultantId: 'user-consultant-charles',
             };
-            batch.set(clientUserRef, clientUserData);
+            initialBatch.set(clientUserRef, clientUserData);
             
             const consultantUserRef = doc(usersCol, 'user-consultant-charles');
             const consultantUserData: Omit<User, 'id'> = {
@@ -69,7 +68,7 @@ export function SeedDatabase() {
                 linkedClientIds: ['user-client-satoshi'],
                 linkedConsultantId: '',
             };
-            batch.set(consultantUserRef, consultantUserData);
+            initialBatch.set(consultantUserRef, consultantUserData);
 
             const staffUserRef = doc(usersCol, 'user-staff-vitalik');
             const staffUserData: Omit<User, 'id'> = {
@@ -81,10 +80,15 @@ export function SeedDatabase() {
                 linkedClientIds: [],
                 linkedConsultantId: '',
             };
-            batch.set(staffUserRef, staffUserData);
+            initialBatch.set(staffUserRef, staffUserData);
             console.log('🟡 Users prepared for seeding.');
 
-            // 3. Seed Transactions for the client
+            // Commit the first batch
+            await initialBatch.commit();
+            console.log('✅ Settings and Users seeding complete!');
+
+            // 3. Seed Transactions for the client in a separate batch
+            const transactionsBatch = writeBatch(db);
             const transactionsCol = collection(db, `users/${clientUserRef.id}/transactions`);
             const sampleTransactions: Omit<Transaction, 'id' | 'value'>[] = [
                 { date: '2023-10-26', type: 'Buy', asset: 'BTC', quantity: 0.5, price: 34000, fee: 15, exchange: 'Coinbase', classification: 'Capital Purchase' },
@@ -97,14 +101,12 @@ export function SeedDatabase() {
             sampleTransactions.forEach(txData => {
                 const txRef = doc(transactionsCol); // Auto-generate ID
                 const txWithVal = {...txData, value: txData.price * txData.quantity};
-                batch.set(txRef, txWithVal);
+                transactionsBatch.set(txRef, txWithVal);
             });
-            console.log('🟡 Transactions prepared for seeding.');
-
-
-            // Commit the batch
-            await batch.commit();
-            console.log('✅ Seeding complete!');
+            
+            // Commit the transactions batch
+            await transactionsBatch.commit();
+            console.log('✅ Transactions seeding complete!');
 
             toast({
                 title: 'Seed Complete',
