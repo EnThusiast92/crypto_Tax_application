@@ -2,6 +2,8 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/auth-context';
 import { statCards } from '@/lib/data';
 import { StatCard } from '@/components/dashboard/stat-card';
 import { TransactionsTable } from '@/components/dashboard/transactions-table';
@@ -12,6 +14,20 @@ import { useTransactions, TransactionsProvider } from '@/context/transactions-co
 
 function DashboardPageContent() {
   const { transactions } = useTransactions();
+  const { user } = useAuth();
+  const router = useRouter();
+
+  React.useEffect(() => {
+    if (user?.role === 'TaxConsultant') {
+      router.replace('/consultant/dashboard');
+    }
+  }, [user, router]);
+
+  // Prevent rendering the dashboard for the wrong role or while user is loading
+  if (!user || user.role === 'TaxConsultant') {
+    return null; // or a loading spinner
+  }
+
   const recentTransactions = transactions.slice(0, 5);
 
   return (
