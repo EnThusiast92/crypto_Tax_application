@@ -1,8 +1,8 @@
 
-import type { Transaction, User, Invitation } from './types';
+import type { Transaction, User, Invitation, StatCardData } from './types';
 import { ArrowUpRight, ArrowDownLeft, Banknote, Landmark } from 'lucide-react';
 import { db } from './firebase';
-import { collection, writeBatch, doc, Timestamp, setDoc } from 'firebase/firestore';
+import { collection, writeBatch, doc, Timestamp } from 'firebase/firestore';
 
 export const statCards: StatCardData[] = [
   {
@@ -71,7 +71,7 @@ const rawUsers: Omit<User, 'id'>[] = [
         avatarUrl: 'https://i.pravatar.cc/150?u=satoshi@gmx.com',
         createdAt: now,
         role: 'Client',
-        linkedConsultantId: 'user-charles',
+        linkedConsultantId: 'user-charles', // placeholder
         linkedClientIds: [],
     },
      {
@@ -89,7 +89,7 @@ const rawUsers: Omit<User, 'id'>[] = [
         avatarUrl: 'https://i.pravatar.cc/150?u=charles@iohk.io',
         createdAt: now,
         role: 'TaxConsultant',
-        linkedClientIds: ['user-satoshi'],
+        linkedClientIds: ['user-satoshi'], // placeholder
         linkedConsultantId: '',
     },
      {
@@ -126,7 +126,7 @@ export async function seedDatabase() {
     console.log('🟡 Seeding started...');
     
     const userIdsByEmail: Record<string, string> = {};
-    const userIds: Record<string, string> = {};
+
     const usersToSeed: User[] = rawUsers.map(user => {
       const id = `user-${user.email.split('@')[0]}`;
       userIdsByEmail[user.email] = id;
@@ -154,8 +154,8 @@ export async function seedDatabase() {
     rawInvitations.forEach(inv => {
       const fromClientId = userIdsByEmail[inv.fromClientEmail];
       if (fromClientId) {
-          const id = `inv-${Date.now()}-${Math.random()}`;
-          const invitationRef = doc(invitationsCol, id);
+          const invitationRef = doc(invitationsCol);
+          const id = invitationRef.id;
           batch1.set(invitationRef, { 
               id,
               fromClientId,
@@ -183,7 +183,6 @@ export async function seedDatabase() {
     }
 
     console.log('🎉 All data seeded successfully!');
-    return true;
   } catch (error) {
     console.error('❌ Seeding error:', error);
     throw error;
