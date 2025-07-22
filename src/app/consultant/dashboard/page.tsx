@@ -33,7 +33,9 @@ export default function ConsultantDashboardPage() {
     const fetchPendingClients = async () => {
       const pendingClientIds = pendingInvites.map(invite => invite.fromClientId);
       if (pendingClientIds.length > 0) {
-        const clientPromises = pendingClientIds.map(id => getDoc(doc(db, 'users', id)));
+        // To prevent a Firestore query error with an empty array
+        const uniqueClientIds = [...new Set(pendingClientIds)];
+        const clientPromises = uniqueClientIds.map(id => getDoc(doc(db, 'users', id)));
         const clientDocs = await Promise.all(clientPromises);
         const clients = clientDocs
           .filter(doc => doc.exists())
@@ -44,7 +46,7 @@ export default function ConsultantDashboardPage() {
       }
     };
     fetchPendingClients();
-  }, [invitations, user.email]); // Rerun when invitations change
+  }, [invitations]); // This now correctly depends on invitations
 
   const getPendingClientById = (id: string) => pendingClients.find(c => c.id === id);
   const linkedClients = users.filter(u => user?.linkedClientIds?.includes(u.id));
