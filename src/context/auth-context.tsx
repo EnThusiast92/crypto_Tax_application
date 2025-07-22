@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import type { User, AuthContextType, RegisterFormValues, Role, EditUserFormValues, Invitation } from '@/lib/types';
+import type { User, AuthContextType, RegisterFormValues, Role, EditUserFormValues, Invitation, AppSettings } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { auth, db } from '@/lib/firebase';
 import {
@@ -21,6 +21,7 @@ import {
   getDoc,
   onSnapshot,
   Timestamp,
+  limit,
 } from 'firebase/firestore';
 import { 
     createUserWithEmailAndPassword, 
@@ -52,7 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const userData = { id: userSnap.id, ...userSnap.data() } as User;
             setUser(userData);
           } else {
-             console.warn("User exists in Auth, but not in Firestore. Forcing sign out.");
+             console.warn("User exists in Auth, but not in Firestore. This might happen if the user was deleted from Firestore but not Auth. Forcing sign out.");
              await signOut(auth);
              setUser(null);
           }
@@ -76,7 +77,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
     }
 
-    if (user.role === 'Developer') {
+    // Only subscribe to all users/invites if the user has the appropriate role
+    if (user.role === 'Developer' || user.role === 'Staff') {
       const usersUnsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
         setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
       });
@@ -94,6 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
       });
       
+      // A consultant might need to see user info for their linked clients
       const usersUnsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
         setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
       });
@@ -109,6 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
         });
         
+        // A client might need to see their linked consultant's info
         const usersUnsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
             setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
         });
@@ -125,10 +129,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await signInWithEmailAndPassword(auth, email, password);
       // onAuthStateChanged will handle the rest
       router.push('/dashboard');
-      return null; // Let the listener handle setting the user state.
+      return null; 
     } catch (error) {
       console.error("Login failed:", error);
-      throw error; // Re-throw to be caught in the UI
+      throw error; 
     }
   };
   
@@ -141,19 +145,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const userDoc = await getDoc(userDocRef);
 
         if (!userDoc.exists()) {
-          // If the user doesn't exist, create a new entry.
-          const newUser: Omit<User, 'id'> = {
-            name: firebaseUser.displayName || 'Google User',
-            email: firebaseUser.email!,
-            role: 'Client', // Default role for new Google sign-ups
-            avatarUrl: firebaseUser.photoURL || `https://i.pravatar.cc/150?u=${firebaseUser.email}`,
-            createdAt: Timestamp.now(),
-            linkedClientIds: [],
-            linkedConsultantId: '',
-          };
-          await setDoc(userDocRef, newUser);
+           await runTransaction(db, async (transaction) => {
+                const usersCol = collection(db, 'users');
+                const userQuery = query(usersCol, limit(1));
+                const snapshot = await transaction.get(userQuery);
+                const isFirstUser = snapshot.empty;
+                
+                let role: Role = 'Client';
+                if (isFirstUser) {
+                    role = 'Developer';
+                    // Seed initial app settings if this is the very first user
+                    const settingsRef = doc(db, 'app', 'settings');
+                    const defaultSettings: AppSettings = {
+                      toggles: { csvImport: true, taxReport: true, apiSync: false },
+                      permissions: { canManageUsers: false, canViewAllTx: true },
+                      config: { logoUrl: '', taxRules: 'Standard UK tax regulations apply.' },
+                    };
+                    transaction.set(settingsRef, defaultSettings);
+                }
+                
+                const newUser: Omit<User, 'id'> = {
+                    name: firebaseUser.displayName || 'Google User',
+                    email: firebaseUser.email!,
+                    role,
+                    avatarUrl: firebaseUser.photoURL || `https://i.pravatar.cc/150?u=${firebaseUser.email}`,
+                    createdAt: Timestamp.now(),
+                    linkedClientIds: [],
+                    linkedConsultantId: '',
+                };
+                transaction.set(userDocRef, newUser);
+            });
         }
-        // onAuthStateChanged will handle setting the user state
         router.push('/dashboard');
         return null;
     } catch (error) {
@@ -166,20 +188,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
         const { user: firebaseUser } = userCredential;
-        const role: Role = data.isTaxConsultant ? 'TaxConsultant' : 'Client';
+        const newUserRef = doc(db, "users", firebaseUser.uid);
         
-        const newUser: Omit<User, 'id'> = {
-          name: data.name,
-          email: data.email,
-          role,
-          avatarUrl: `https://i.pravatar.cc/150?u=${data.email}`,
-          createdAt: Timestamp.now(),
-          linkedClientIds: [],
-          linkedConsultantId: '',
-        };
+        await runTransaction(db, async (transaction) => {
+            const usersCol = collection(db, 'users');
+            const userQuery = query(usersCol, limit(1));
+            const snapshot = await getDocs(userQuery);
+            const isFirstUser = snapshot.empty;
+            
+            let role: Role = data.isTaxConsultant ? 'TaxConsultant' : 'Client';
+
+            if (isFirstUser) {
+                role = 'Developer'; // The first user to register is always the developer.
+                // Seed initial app settings if this is the very first user
+                const settingsRef = doc(db, 'app', 'settings');
+                const defaultSettings: AppSettings = {
+                  toggles: {
+                    csvImport: true,
+                    taxReport: true,
+                    apiSync: false,
+                  },
+                  permissions: {
+                    canManageUsers: false,
+                    canViewAllTx: true,
+                  },
+                  config: {
+                    logoUrl: '',
+                    taxRules: 'Standard UK tax regulations apply.',
+                  },
+                };
+                transaction.set(settingsRef, defaultSettings);
+            }
+            
+            const newUserDoc: Omit<User, 'id'> = {
+              name: data.name,
+              email: data.email,
+              role,
+              avatarUrl: `https://i.pravatar.cc/150?u=${data.email}`,
+              createdAt: Timestamp.now(),
+              linkedClientIds: [],
+              linkedConsultantId: '',
+            };
+            
+            transaction.set(newUserRef, newUserDoc);
+        });
         
-        await setDoc(doc(db, "users", firebaseUser.uid), newUser);
-        // onAuthStateChanged will handle setting the user state
         router.push('/dashboard');
         return null;
     } catch (error) {
@@ -190,7 +243,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   const logout = async () => {
     await signOut(auth);
-    // onAuthStateChanged will set user to null
     router.push('/login');
   };
   
@@ -288,5 +340,3 @@ export function useAuth() {
   }
   return context;
 }
-
-    

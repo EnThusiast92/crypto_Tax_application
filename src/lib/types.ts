@@ -53,7 +53,7 @@ export interface User {
   name: string;
   email: string;
   avatarUrl?: string;
-  createdAt: Timestamp | string; // Allow string for local object, but Timestamp for Firestore
+  createdAt: Timestamp;
   role: Role;
   linkedClientIds: string[]; // For consultants
   linkedConsultantId: string; // For clients
@@ -76,10 +76,10 @@ export type AuthContextType = {
   users: User[];
   invitations: Invitation[];
   loading: boolean;
-  login: (email: string, password: string) => Promise<User>;
+  login: (email: string, password: string) => Promise<User | null>;
   logout: () => void;
-  register: (data: RegisterFormValues) => Promise<User>;
-  signInWithGoogle: () => Promise<User>;
+  register: (data: RegisterFormValues) => Promise<User | null>;
+  signInWithGoogle: () => Promise<User | null>;
   updateUserRole: (userId: string, newRole: Role) => void;
   deleteUser: (userId:string) => void;
   updateUser: (userId: string, data: EditUserFormValues) => void;
@@ -115,6 +115,7 @@ export type AppSettings = {
 
 export type SettingsContextType = {
   settings: AppSettings;
+  loading: boolean;
   updateFeatureToggle: (key: keyof FeatureToggles, value: boolean) => void;
   updateSiteConfig: (key: keyof SiteConfig, value: string) => void;
   updateStaffPermission: (key: keyof StaffPermissions, value: boolean) => void;
