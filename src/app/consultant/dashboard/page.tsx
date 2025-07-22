@@ -17,15 +17,14 @@ export default function ConsultantDashboardPage() {
   const { user, users, invitations, acceptInvitation, rejectInvitation } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-  const [pendingInvites, setPendingInvites] = React.useState<Invitation[]>([]);
   const [pendingClients, setPendingClients] = React.useState<User[]>([]);
   const [loadingClients, setLoadingClients] = React.useState(true);
-
-  React.useEffect(() => {
-    // Correctly filter for only pending invitations from the global list
-    const currentPending = invitations.filter(inv => inv.status === 'pending');
-    setPendingInvites(currentPending);
-  }, [invitations]);
+  
+  // This is the key fix: always derive pending invites from the source of truth (invitations)
+  const pendingInvites = React.useMemo(() => 
+    invitations.filter(inv => inv.status === 'pending'), 
+    [invitations]
+  );
 
   React.useEffect(() => {
     const fetchPendingClients = async () => {
@@ -39,12 +38,21 @@ export default function ConsultantDashboardPage() {
       const uniqueClientIds = [...new Set(pendingClientIds)];
       
       try {
-        const clientPromises = uniqueClientIds.map(id => getDoc(doc(db, 'users', id)));
-        const clientDocs = await Promise.all(clientPromises);
-        const clients = clientDocs
-          .filter(doc => doc.exists())
-          .map(doc => ({ id: doc.id, ...doc.data() } as User));
-        setPendingClients(clients);
+        // Fetch only clients that are not already in the main `users` list to avoid redundant fetches
+        const existingUserIds = users.map(u => u.id);
+        const idsToFetch = uniqueClientIds.filter(id => !existingUserIds.includes(id));
+
+        if (idsToFetch.length > 0) {
+            const clientPromises = idsToFetch.map(id => getDoc(doc(db, 'users', id)));
+            const clientDocs = await Promise.all(clientPromises);
+            const newClients = clientDocs
+              .filter(doc => doc.exists())
+              .map(doc => ({ id: doc.id, ...doc.data() } as User));
+            setPendingClients(prev => [...prev.filter(c => !idsToFetch.includes(c.id)), ...newClients]);
+        } else {
+            setPendingClients([]);
+        }
+
       } catch (error) {
         console.error("Error fetching pending clients:", error);
         toast({ title: 'Error', description: 'Could not load client information.', variant: 'destructive'});
@@ -53,7 +61,7 @@ export default function ConsultantDashboardPage() {
       }
     };
     fetchPendingClients();
-  }, [pendingInvites, toast]);
+  }, [pendingInvites, users, toast]);
 
   if (user?.role !== 'TaxConsultant') {
     return (
@@ -64,7 +72,8 @@ export default function ConsultantDashboardPage() {
   }
 
   const linkedClients = users.filter(u => user?.linkedClientIds?.includes(u.id));
-  const getPendingClientById = (id: string) => pendingClients.find(c => c.id === id);
+  const getPendingClientById = (id: string) => [...users, ...pendingClients].find(c => c.id === id);
+
 
   const handleViewClient = (clientId: string) => {
     router.push(`/consultant/clients/${clientId}`);
