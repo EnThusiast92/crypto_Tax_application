@@ -58,13 +58,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
         } catch (error) {
             console.error("Error fetching user document on auth state change:", error);
-            // Don't sign out, maybe it's a temporary network issue.
-            // But we should stop loading.
+        } finally {
+            setLoading(false);
         }
       } else {
         setUser(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -121,8 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error("Login successful, but user data not found in database.");
     }
     const loggedInUser = { id: userDoc.id, ...userDoc.data() } as User;
-    // The onAuthStateChanged listener will set the user state.
-    // We return the user here so the UI can react immediately if needed.
+    setUser(loggedInUser);
     return loggedInUser;
   };
 
@@ -173,7 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await setDoc(userDocRef, newUser);
       userData = { ...newUser, id: firebaseUser.uid };
     }
-    // onAuthStateChanged will handle setting the user state.
+    setUser(userData);
     return userData;
   };
 
@@ -193,9 +192,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       toast({ title: "Action Forbidden", description: "You cannot delete your own account.", variant: "destructive" });
       return;
     }
-    // Deleting a user from Firestore doesn't delete their auth entry.
-    // A more complete solution would use a Cloud Function to handle this.
-    // For this app, we'll just delete the Firestore record.
     await deleteDoc(doc(db, "users", userId));
     toast({ title: "User Deleted", description: "The user has been deleted." });
   };
