@@ -22,6 +22,7 @@ import {
   onSnapshot,
   Timestamp,
   documentId,
+  writeBatch,
 } from 'firebase/firestore';
 import { 
     createUserWithEmailAndPassword, 
@@ -80,18 +81,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // --- Role-based Data Fetching ---
     
-    // Fetch users based on role
+    let usersQuery;
     if (user.role === 'Developer' || user.role === 'Staff') {
-        const usersUnsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
-            setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
-        });
-        unsubscribes.push(usersUnsubscribe);
+        usersQuery = query(collection(db, "users"));
     } else if (user.role === 'TaxConsultant' && user.linkedClientIds && user.linkedClientIds.length > 0) {
-        const usersQuery = query(collection(db, "users"), where(documentId(), "in", user.linkedClientIds));
-        const usersUnsubscribe = onSnapshot(usersQuery, (snapshot) => {
-            setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
-        });
-        unsubscribes.push(usersUnsubscribe);
+        usersQuery = query(collection(db, "users"), where(documentId(), "in", user.linkedClientIds));
     } else if (user.role === 'Client' && user.linkedConsultantId) {
         // Only fetch the single consultant's document
         const consultantRef = doc(db, "users", user.linkedConsultantId);
@@ -103,30 +97,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
         });
         unsubscribes.push(usersUnsubscribe);
-    } else {
-        // If user is a Client or Consultant with no links, or another role, clear users.
+    }
+
+    if (usersQuery) {
+        const usersUnsubscribe = onSnapshot(usersQuery, (snapshot) => {
+            setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
+        });
+        unsubscribes.push(usersUnsubscribe);
+    } else if (!user.linkedConsultantId) {
+        // If user is a Client or Consultant with no links, clear users.
         setUsers([]);
     }
 
     // Fetch invitations based on role
+    let invitesQuery;
     if (user.role === 'Developer' || user.role === 'Staff') {
-        const invitesUnsubscribe = onSnapshot(collection(db, "invitations"), (snapshot) => {
-            setInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
-        });
-        unsubscribes.push(invitesUnsubscribe);
+        invitesQuery = query(collection(db, "invitations"));
     } else if (user.role === 'TaxConsultant') {
-        const invitesQuery = query(collection(db, "invitations"), where("toConsultantEmail", "==", user.email));
-        const invitesUnsubscribe = onSnapshot(invitesQuery, (snapshot) => {
-            setInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
-        });
-        unsubscribes.push(invitesUnsubscribe);
+        invitesQuery = query(collection(db, "invitations"), where("toConsultantEmail", "==", user.email));
     } else if (user.role === 'Client') {
-        const invitesQuery = query(collection(db, "invitations"), where("fromClientId", "==", user.id));
+        invitesQuery = query(collection(db, "invitations"), where("fromClientId", "==", user.id));
+    }
+
+    if (invitesQuery) {
         const invitesUnsubscribe = onSnapshot(invitesQuery, (snapshot) => {
             setInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
         });
         unsubscribes.push(invitesUnsubscribe);
     }
+
 
     return () => {
         unsubscribes.forEach(unsub => unsub());
@@ -176,10 +175,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { user: firebaseUser } = userCredential;
 
     const newUserRef = doc(db, 'users', firebaseUser.uid);
+    const role: Role = data.isTaxConsultant ? 'TaxConsultant' : 'Client';
+
     const newUserDoc: Omit<User, 'id'> = {
       name: data.name,
       email: data.email,
-      role: data.isTaxConsultant ? 'TaxConsultant' : 'Client',
+      role: role,
       avatarUrl: `https://i.pravatar.cc/150?u=${data.email}`,
       createdAt: Timestamp.now(),
       linkedClientIds: [],
