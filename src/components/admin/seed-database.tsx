@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
-import { collection, doc, writeBatch, Timestamp, setDoc } from 'firebase/firestore';
+import { collection, doc, writeBatch, Timestamp } from 'firebase/firestore';
 import type { User, Transaction, AppSettings } from '@/lib/types';
 
 export function SeedDatabase() {
@@ -17,6 +17,7 @@ export function SeedDatabase() {
         setIsSeeding(true);
         try {
             console.log('🟡 Seeding started...');
+            const { writeBatch, doc, collection, Timestamp } = await import('firebase/firestore');
             const batch = writeBatch(db);
 
             // 1. Seed App Settings

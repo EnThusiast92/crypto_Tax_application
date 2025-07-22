@@ -4,7 +4,7 @@
 import * as React from 'react';
 import type { AppSettings, SettingsContextType, FeatureToggles, SiteConfig, StaffPermissions } from '@/lib/types';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 const SettingsContext = React.createContext<SettingsContextType | undefined>(undefined);
 
@@ -34,10 +34,15 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     
     const unsubscribe = onSnapshot(settingsRef, (docSnap) => {
         if (docSnap.exists()) {
-            setSettings(docSnap.data() as AppSettings);
+            const firestoreSettings = docSnap.data() as Partial<AppSettings>;
+            // Merge Firestore settings with local defaults to prevent crashes
+            const mergedSettings: AppSettings = {
+                toggles: { ...defaultSettings.toggles, ...firestoreSettings.toggles },
+                permissions: { ...defaultSettings.permissions, ...firestoreSettings.permissions },
+                config: { ...defaultSettings.config, ...firestoreSettings.config },
+            };
+            setSettings(mergedSettings);
         } else {
-            // If no settings exist in Firestore, use local defaults.
-            // This can happen on first load before the first user is registered and settings are created.
             console.warn("App settings not found in Firestore. Using local defaults.");
             setSettings(defaultSettings);
         }
@@ -54,7 +59,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const updateSettings = async (newSettings: Partial<AppSettings>) => {
     const settingsRef = doc(db, 'app', 'settings');
     // Using set with merge:true is safe and will create the doc if it doesn't exist.
-    await setDoc(settingsRef, newSettings, { merge: true });
+    await (await import('firebase/firestore')).setDoc(settingsRef, newSettings, { merge: true });
   };
 
   const updateFeatureToggle = (key: keyof FeatureToggles, value: boolean) => {
