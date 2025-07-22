@@ -17,6 +17,8 @@ import { useToast } from '@/hooks/use-toast';
 import type { RegisterFormValues } from '@/lib/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+
 
 const registerSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -35,13 +37,12 @@ function RegisterPageContent() {
   const [isSubmittingManual, setIsSubmittingManual] = React.useState(false);
   const [isSubmittingGoogle, setIsSubmittingGoogle] = React.useState(false);
   
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<FormValues>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
+      name: '',
+      email: '',
+      password: '',
       isTaxConsultant: false,
     }
   });
@@ -100,51 +101,70 @@ function RegisterPageContent() {
           <CardDescription>Enter your information to create an account.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                placeholder="Satoshi Nakamoto"
-                {...register('name')}
-                disabled={isSubmitting}
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Satoshi Nakamoto" {...field} disabled={isSubmitting} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-              {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="satoshi@gmx.com"
-                {...register('email')}
-                disabled={isSubmitting}
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="satoshi@gmx.com" {...field} disabled={isSubmitting} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-              {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                {...register('password')}
-                disabled={isSubmitting}
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" {...field} disabled={isSubmitting}/>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-              {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
-            </div>
-            <div className="flex items-center space-x-2">
-                <Checkbox id="isTaxConsultant" {...register('isTaxConsultant')} disabled={isSubmitting} />
-                <Label
-                    htmlFor="isTaxConsultant"
-                    className="text-sm font-normal text-muted-foreground"
-                >
-                   I am a Tax Consultant
-                </Label>
-            </div>
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmittingManual ? 'Creating Account...' : 'Create an account'}
-            </Button>
-          </form>
+              <FormField
+                control={form.control}
+                name="isTaxConsultant"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormLabel className="text-sm font-normal text-muted-foreground">
+                      I am a Tax Consultant
+                    </FormLabel>
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmittingManual ? 'Creating Account...' : 'Create an account'}
+              </Button>
+            </form>
+          </Form>
           
           <div className="relative my-4">
             <div className="absolute inset-0 flex items-center">
