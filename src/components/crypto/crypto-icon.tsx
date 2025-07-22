@@ -26,29 +26,6 @@ interface CryptoIconProps {
   className?: string;
 }
 
-// Module-level cache to store the coin list promise and the symbol-to-id mapping.
-let coinListPromise: Promise<any[]> | null = null;
-const coinIdCache = new Map<string, string>();
-
-async function getCoinList() {
-    if (!coinListPromise) {
-        coinListPromise = fetch('https://api.coingecko.com/api/v3/coins/list')
-            .then(res => {
-                if (!res.ok) {
-                    throw new Error('Failed to fetch coin list');
-                }
-                return res.json();
-            })
-            .catch(err => {
-                // Reset promise on error to allow retries
-                coinListPromise = null;
-                throw err;
-            });
-    }
-    return coinListPromise;
-}
-
-
 export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
   const [iconUrl, setIconUrl] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -64,42 +41,23 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
     
     let isCancelled = false;
     
-    const fetchAndSetIconUrl = async () => {
+    const fetchIcon = async () => {
       setIsLoading(true);
       setError(false);
-
       try {
-        // First, check if we have a cached coin ID for this symbol
-        if (coinIdCache.has(assetSymbol)) {
-          const coinId = coinIdCache.get(assetSymbol)!;
-          const url = `https://assets.coingecko.com/coins/images/${coinId}/small.png`;
-          if (!isCancelled) {
-            setIconUrl(url);
-            setIsLoading(false);
-          }
-          return;
+        const res = await fetch(`/api/crypto/icon?symbol=${assetSymbol}`);
+        if (!res.ok) {
+          throw new Error('Failed to fetch icon from API route');
         }
-
-        // If not cached, fetch the list (or wait for the ongoing fetch)
-        const coinList = await getCoinList();
-        
-        const coin = coinList.find((c: any) => c.symbol === assetSymbol);
-
-        if (coin?.id) {
-          // Cache the found ID
-          coinIdCache.set(assetSymbol, coin.id);
-          const url = `https://coin-images.coingecko.com/coins/images/${coin.id}/small.png`;
-          
-          if (!isCancelled) {
-            setIconUrl(url);
-          }
+        const data = await res.json();
+        if (data.iconUrl && !isCancelled) {
+          setIconUrl(data.iconUrl);
         } else {
-           if (!isCancelled) setError(true);
+          if (!isCancelled) setError(true);
         }
-
       } catch (err) {
         if (!isCancelled) {
-          console.error(`Failed to fetch icon for ${asset}:`, err);
+          console.error(`Error fetching icon for ${asset}:`, err);
           setError(true);
         }
       } finally {
@@ -109,12 +67,12 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
       }
     };
 
-    fetchAndSetIconUrl();
+    fetchIcon();
       
     return () => {
-        isCancelled = true;
+      isCancelled = true;
     };
-  }, [assetSymbol]);
+  }, [assetSymbol, asset]);
   
   if (isLoading) {
     return <Skeleton className={cn("rounded-full", className)} />;
@@ -133,7 +91,7 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           className="object-contain rounded-full"
           onError={() => setError(true)} 
-          unoptimized // Necessary for external URLs from services like Coingecko
+          unoptimized
         />
     </div>
   );
