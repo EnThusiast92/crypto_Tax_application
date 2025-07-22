@@ -10,25 +10,22 @@ const firebaseConfig = {
   apiKey: "AIzaSyBJSapORSs7ULz9rsExA7s8xUIzjUO_iXw",
   authDomain: "cryptotaxapp-21586.firebaseapp.com",
   projectId: "cryptotaxapp-21586",
-  storageBucket: "cryptotaxapp-21586.appspot.com",
+  storageBucket: "cryptotaxapp-21586.firebasestorage.app",
   messagingSenderId: "296139586728",
   appId: "1:296139586728:web:288ab5819d2aae474b169d",
   measurementId: "G-LZ5F7CGQGX"
 };
 
-// Initialize Firebase
+// Initialize Firebase for client-side
 let app: FirebaseApp;
-let db: Firestore;
-let auth: Auth;
-
 if (getApps().length === 0) {
   app = initializeApp(firebaseConfig);
 } else {
   app = getApp();
 }
 
-db = getFirestore(app);
-auth = getAuth(app);
+const db: Firestore = getFirestore(app);
+const auth: Auth = getAuth(app);
 
 try {
   enableNetwork(db);
