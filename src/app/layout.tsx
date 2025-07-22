@@ -10,10 +10,10 @@ import { SettingsProvider } from '@/context/settings-context';
 import { usePathname } from 'next/navigation';
 
 function AppContent({ children }: { children: React.ReactNode }) {
-  const { user, isFirebaseReady } = useAuth();
+  const { user, loading } = useAuth();
   const pathname = usePathname();
 
-  if (!isFirebaseReady) {
+  if (loading) {
     return (
         <div className="flex h-screen w-full items-center justify-center">
             <div className="flex flex-col items-center gap-4">

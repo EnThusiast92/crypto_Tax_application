@@ -38,7 +38,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [users, setUsers] = React.useState<User[]>([]);
   const [invitations, setInvitations] = React.useState<Invitation[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [isFirebaseReady, setIsFirebaseReady] = React.useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
@@ -46,36 +45,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
+        // User is signed in, see if we have their data, otherwise sign out.
         const userRef = doc(db, 'users', firebaseUser.uid);
-        const unsubUser = onSnapshot(userRef, (userSnap) => {
-          if (userSnap.exists()) {
-            setUser({ id: userSnap.id, ...userSnap.data() } as User);
-          } else {
-            setUser(null); 
-            console.warn("Authenticated user not found in Firestore. Logging out.");
-            signOut(auth);
-          }
-           setLoading(false);
-           setIsFirebaseReady(true);
-        }, (error) => {
-            console.error("Error in user snapshot listener:", error);
-            setUser(null);
-            setLoading(false);
-            setIsFirebaseReady(true);
-        });
-        return () => unsubUser();
+        const userSnap = await getDoc(userRef);
+
+        if (userSnap.exists()) {
+          setUser({ id: userSnap.id, ...userSnap.data() } as User);
+        } else {
+           // This case can happen if the user was deleted from Firestore but not Auth.
+           console.warn("User exists in Auth, but not in Firestore. Forcing sign out.");
+           await signOut(auth);
+           setUser(null);
+        }
       } else {
+        // User is signed out.
         setUser(null);
-        setLoading(false);
-        setIsFirebaseReady(true);
       }
+      setLoading(false);
     });
 
+    // Cleanup subscription on unmount
     return () => unsubscribe();
   }, []);
 
   React.useEffect(() => {
-    if (!isFirebaseReady) return; 
+    if (loading) return; 
 
     const usersUnsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
         setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
@@ -89,10 +83,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         usersUnsubscribe();
         invitationsUnsubscribe();
     }
-  }, [isFirebaseReady]);
+  }, [loading]);
 
   React.useEffect(() => {
-    if (loading || !isFirebaseReady) return;
+    if (loading) return;
 
     const publicPages = ['/login', '/register', '/'];
     const isPublicPage = publicPages.includes(pathname);
@@ -111,7 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
         }
     }
-  }, [user, loading, isFirebaseReady, pathname, router]);
+  }, [user, loading, pathname, router]);
 
 
   const login = async (email: string, password: string): Promise<User> => {
@@ -119,10 +113,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const userDocRef = doc(db, 'users', userCredential.user.uid);
     const userDoc = await getDoc(userDocRef);
     if (!userDoc.exists()) {
-        throw new Error("User data not found in Firestore.");
+        await signOut(auth);
+        throw new Error("Login successful, but user data not found in database.");
     }
     const userData = { id: userDoc.id, ...userDoc.data() } as User;
-    // The onAuthStateChanged listener will set the user state
+    setUser(userData); // Manually set user state
     return userData;
   };
 
@@ -144,7 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     await setDoc(doc(db, "users", firebaseUser.uid), newUser);
     const userWithId: User = { ...newUser, id: firebaseUser.uid };
-    // The onAuthStateChanged listener will set the user state
+    setUser(userWithId); // Manually set user state after registration
     return userWithId;
   };
   
@@ -156,11 +151,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const userDocRef = doc(db, 'users', firebaseUser.uid);
     const userDoc = await getDoc(userDocRef);
 
+    let userData: User;
+
     if (userDoc.exists()) {
       // User already exists, just log them in
-      const userData = { id: userDoc.id, ...userDoc.data() } as User;
-       // The onAuthStateChanged listener will set the user state
-      return userData;
+      userData = { id: userDoc.id, ...userDoc.data() } as User;
     } else {
       // New user, create a document in Firestore
       const newUser: Omit<User, 'id'> = {
@@ -173,10 +168,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         linkedConsultantId: '',
       };
       await setDoc(userDocRef, newUser);
-      const userWithId: User = { ...newUser, id: firebaseUser.uid };
-      // The onAuthStateChanged listener will set the user state
-      return userWithId;
+      userData = { ...newUser, id: firebaseUser.uid };
     }
+    setUser(userData); // Manually set user state
+    return userData;
   };
 
   const logout = async () => {
@@ -289,7 +284,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const value = { user, users, invitations, loading, isFirebaseReady, login, logout, register, updateUserRole, deleteUser, updateUser, removeConsultantAccess, sendInvitation, acceptInvitation, rejectInvitation, signInWithGoogle };
+  const value = { user, users, invitations, loading, login, logout, register, updateUserRole, deleteUser, updateUser, removeConsultantAccess, sendInvitation, acceptInvitation, rejectInvitation, signInWithGoogle };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
