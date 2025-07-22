@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { seedDatabase } from '@/lib/data';
+import { app } from '@/lib/firebase';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -28,6 +29,15 @@ export default function LoginPage() {
   const { login, isFirebaseReady } = useAuth();
   const { toast } = useToast();
   const [isSeeding, setIsSeeding] = React.useState(false);
+
+  React.useEffect(() => {
+    // This will print your Firebase config in the browser console
+    if (app) {
+      console.log('Firebase app options:', app.options);
+    } else {
+      console.error('Firebase app object is not available.');
+    }
+  }, []);
 
   const {
     register,
