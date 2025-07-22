@@ -41,18 +41,21 @@ export default function ConsultantDashboardPage() {
         const idsToFetch = uniqueClientIds.filter(id => !existingUserIds.includes(id));
 
         if (idsToFetch.length > 0) {
+            // Since `users` from context might not have the pending client yet,
+            // we manually fetch them if needed.
             const clientPromises = idsToFetch.map(id => getDoc(doc(db, 'users', id)));
             const clientDocs = await Promise.all(clientPromises);
             const newClients = clientDocs
               .filter(doc => doc.exists())
               .map(doc => ({ id: doc.id, ...doc.data() } as User));
             setPendingClients(prev => [...prev.filter(c => !idsToFetch.includes(c.id)), ...newClients]);
-        } else {
-            // This handles the case where the client data might already be in `users`
-            // but the invitation is new. We ensure the pendingClients list is accurate.
-            const allPossibleClients = users.filter(u => uniqueClientIds.includes(u.id));
-            setPendingClients(allPossibleClients);
         }
+        
+        // This ensures the pendingClients list is accurate based on current `users` and newly fetched ones.
+        const allPossibleClients = [...users, ...pendingClients];
+        const updatedPendingClients = allPossibleClients.filter(u => uniqueClientIds.includes(u.id));
+        setPendingClients(updatedPendingClients);
+
 
       } catch (error) {
         console.error("Error fetching pending clients:", error);
