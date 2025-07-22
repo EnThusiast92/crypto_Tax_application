@@ -226,29 +226,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user || user.role !== 'Client') {
       throw new Error("Only clients can send invitations.");
     }
-
-    // This query is just to provide a better user experience, it's not for security.
-    // The security is enforced by Firestore rules.
-    const existingInviteQuery = query(
-      collection(db, 'invitations'),
-      where('fromClientId', '==', user.id),
-      where('toConsultantEmail', '==', consultantEmail),
-      where('status', '==', 'pending')
-    );
-
-    const existingInviteSnapshot = await getDocs(existingInviteQuery);
-    if (!existingInviteSnapshot.empty) {
-      throw new Error("You already have a pending invitation for this consultant.");
-    }
     
-    // Create the invitation document. The client has permission to do this.
-    const newInvitation: Omit<Invitation, 'id'> = {
-        fromClientId: user.id,
-        toConsultantEmail: consultantEmail,
-        status: 'pending',
-        createdAt: Timestamp.now(),
-    };
-    await addDoc(collection(db, 'invitations'), newInvitation);
+    try {
+        await runTransaction(db, async (transaction) => {
+            // 1. Find the consultant by email
+            const usersRef = collection(db, 'users');
+            const consultantQuery = query(usersRef, where("email", "==", consultantEmail));
+            const consultantSnapshot = await getDocs(consultantQuery);
+
+            if (consultantSnapshot.empty) {
+                throw new Error("No user found with this email address.");
+            }
+
+            const consultantDoc = consultantSnapshot.docs[0];
+            const consultantData = consultantDoc.data() as User;
+
+            // 2. Check if the user is a TaxConsultant
+            if (consultantData.role !== 'TaxConsultant') {
+                throw new Error("This user is not a Tax Consultant.");
+            }
+            
+            // 3. Check for existing pending invitation
+            const invitationsRef = collection(db, 'invitations');
+            const existingInviteQuery = query(
+                invitationsRef,
+                where('fromClientId', '==', user.id),
+                where('toConsultantEmail', '==', consultantEmail),
+                where('status', '==', 'pending')
+            );
+            const existingInviteSnapshot = await getDocs(existingInviteQuery);
+
+            if (!existingInviteSnapshot.empty) {
+                throw new Error("You already have a pending invitation for this consultant.");
+            }
+
+            // 4. Create the new invitation
+            const newInvitationRef = doc(collection(db, 'invitations'));
+            const newInvitation: Omit<Invitation, 'id'> = {
+                fromClientId: user.id,
+                toConsultantEmail: consultantEmail,
+                status: 'pending',
+                createdAt: Timestamp.now(),
+            };
+            transaction.set(newInvitationRef, newInvitation);
+        });
+    } catch (e: any) {
+        console.error("Invitation transaction failed: ", e);
+        throw e; // Re-throw the error to be caught by the calling component
+    }
   };
   
   const acceptInvitation = async (invitationId: string) => {
@@ -304,7 +329,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const batch = writeBatch(db);
 
       // Client removes consultant's ID from their own document
-      batch.update(clientRef, { linkedConsultantId: "" });
+      batch.update(clientRef, { linkedConsultantId: '' });
       
       // Client removes their own ID from the consultant's document
       batch.update(consultantRef, { linkedClientIds: arrayRemove(clientId) });
