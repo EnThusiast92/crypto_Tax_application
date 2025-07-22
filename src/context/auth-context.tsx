@@ -67,6 +67,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => unsubscribe();
   }, []);
+  
+    React.useEffect(() => {
+    if (!user) {
+        setUsers([]);
+        setInvitations([]);
+        return;
+    }
+
+    if (user.role === 'Developer') {
+      const usersUnsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
+        setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
+      });
+
+      const invitesUnsubscribe = onSnapshot(collection(db, "invitations"), (snapshot) => {
+        setInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
+      });
+      return () => {
+        usersUnsubscribe();
+        invitesUnsubscribe();
+      };
+    } else if (user.role === 'TaxConsultant') {
+      const invitesQuery = query(collection(db, "invitations"), where("toConsultantEmail", "==", user.email));
+      const invitesUnsubscribe = onSnapshot(invitesQuery, (snapshot) => {
+          setInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
+      });
+      
+      const usersUnsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
+        setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
+      });
+      
+      return () => {
+          invitesUnsubscribe();
+          usersUnsubscribe();
+      };
+
+    } else if (user.role === 'Client') {
+        const invitesQuery = query(collection(db, "invitations"), where("fromClientId", "==", user.id));
+        const invitesUnsubscribe = onSnapshot(invitesQuery, (snapshot) => {
+            setInvitations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation)));
+        });
+        
+        const usersUnsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
+            setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
+        });
+        return () => {
+            invitesUnsubscribe();
+            usersUnsubscribe();
+        };
+    }
+
+  }, [user]);
 
   const login = async (email: string, password: string): Promise<User | null> => {
     try {
@@ -247,3 +298,5 @@ export function useAuth() {
   }
   return context;
 }
+
+    
