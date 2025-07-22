@@ -55,15 +55,13 @@ export const misclassifiedTransactions: Transaction[] = [
 
 const now = Timestamp.now();
 
-const rawUsers: Omit<User, 'id'>[] = [
+const rawUsers: Omit<User, 'id' | 'linkedClientIds' | 'linkedConsultantId'>[] = [
     {
         name: 'Admin',
         email: 'admin@cryptotaxpro.com',
         avatarUrl: 'https://i.pravatar.cc/150?u=admin@cryptotaxpro.com',
         createdAt: now,
         role: 'Developer',
-        linkedClientIds: [],
-        linkedConsultantId: '',
     },
     {
         name: 'Satoshi Nakamoto',
@@ -71,8 +69,6 @@ const rawUsers: Omit<User, 'id'>[] = [
         avatarUrl: 'https://i.pravatar.cc/150?u=satoshi@gmx.com',
         createdAt: now,
         role: 'Client',
-        linkedConsultantId: 'user-charles', // placeholder
-        linkedClientIds: [],
     },
      {
         name: 'Gavin Wood',
@@ -80,8 +76,6 @@ const rawUsers: Omit<User, 'id'>[] = [
         avatarUrl: 'https://i.pravatar.cc/150?u=gavin@eth.org',
         createdAt: now,
         role: 'Client',
-        linkedConsultantId: '',
-        linkedClientIds: [],
     },
     {
         name: 'Charles Hoskinson',
@@ -89,8 +83,6 @@ const rawUsers: Omit<User, 'id'>[] = [
         avatarUrl: 'https://i.pravatar.cc/150?u=charles@iohk.io',
         createdAt: now,
         role: 'TaxConsultant',
-        linkedClientIds: ['user-satoshi'], // placeholder
-        linkedConsultantId: '',
     },
      {
         name: 'Hayden Adams',
@@ -98,8 +90,6 @@ const rawUsers: Omit<User, 'id'>[] = [
         avatarUrl: 'https://i.pravatar.cc/150?u=hayden@uniswap.org',
         createdAt: now,
         role: 'TaxConsultant',
-        linkedClientIds: [],
-        linkedConsultantId: '',
     },
     {
         name: 'Vitalik Buterin',
@@ -107,8 +97,6 @@ const rawUsers: Omit<User, 'id'>[] = [
         avatarUrl: 'https://i.pravatar.cc/150?u=vitalik@ethereum.org',
         createdAt: now,
         role: 'Staff',
-        linkedClientIds: [],
-        linkedConsultantId: '',
     }
 ];
 
@@ -125,40 +113,47 @@ export async function seedDatabase() {
   try {
     console.log('🟡 Seeding started...');
     
-    const userIdsByEmail: Record<string, string> = {};
+    const usersCol = collection(db, 'users');
+    const userRefs = new Map<string, string>(); // Maps email to generated user ID
 
-    const usersToSeed: User[] = rawUsers.map(user => {
-      const id = `user-${user.email.split('@')[0]}`;
-      userIdsByEmail[user.email] = id;
-      return { ...user, id };
+    // Prepare users and generate IDs first
+    const usersToCreate = rawUsers.map(user => {
+      const userRef = doc(usersCol);
+      userRefs.set(user.email, userRef.id);
+      return {
+        ...user,
+        id: userRef.id,
+        linkedClientIds: [], // Default empty array
+        linkedConsultantId: '', // Default empty string
+      };
     });
 
-    const batch1 = writeBatch(db);
-    const usersCol = collection(db, 'users');
-    const invitationsCol = collection(db, 'invitations');
+    // Now, create relationships using the generated IDs
+    const satoshi = usersToCreate.find(u => u.email === 'satoshi@gmx.com');
+    const charles = usersToCreate.find(u => u.email === 'charles@iohk.io');
 
-    usersToSeed.forEach((user) => {
+    if (satoshi && charles) {
+      satoshi.linkedConsultantId = charles.id;
+      charles.linkedClientIds.push(satoshi.id);
+    }
+    
+    // Begin Batch 1: Users and Invitations
+    const batch1 = writeBatch(db);
+
+    usersToCreate.forEach(user => {
       const userRef = doc(usersCol, user.id);
-      
-      const userData: any = {...user};
-      if(user.email === 'satoshi@gmx.com') {
-          userData.linkedConsultantId = userIdsByEmail['charles@iohk.io'];
-      }
-      if(user.email === 'charles@iohk.io') {
-          userData.linkedClientIds = [userIdsByEmail['satoshi@gmx.com']];
-      }
-      delete userData.id;
+      const { id, ...userData } = user; // Exclude ID from document data
       batch1.set(userRef, userData);
     });
 
+    const invitationsCol = collection(db, 'invitations');
     rawInvitations.forEach(inv => {
-      const fromClientId = userIdsByEmail[inv.fromClientEmail];
+      const fromClientId = userRefs.get(inv.fromClientEmail);
       if (fromClientId) {
-          const invitationRef = doc(invitationsCol);
-          const id = invitationRef.id;
-          batch1.set(invitationRef, { 
-              id,
-              fromClientId,
+          const invRef = doc(invitationsCol);
+          batch1.set(invRef, { 
+              id: invRef.id,
+              fromClientId: fromClientId,
               toConsultantEmail: inv.toConsultantEmail,
               status: inv.status,
           });
@@ -168,7 +163,8 @@ export async function seedDatabase() {
     await batch1.commit();
     console.log('✅ Users and invitations seeded');
 
-    const satoshiId = userIdsByEmail['satoshi@gmx.com'];
+    // Begin Batch 2: Transactions for Satoshi
+    const satoshiId = userRefs.get('satoshi@gmx.com');
     if (satoshiId) {
         const txCol = collection(db, `users/${satoshiId}/transactions`);
         const batch2 = writeBatch(db);
