@@ -18,7 +18,11 @@ function AppContent({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     if (!loading && user && isPublicPage) {
-        router.push('/dashboard');
+        if (user.role === 'TaxConsultant') {
+            router.push('/consultant/dashboard');
+        } else {
+            router.push('/dashboard');
+        }
     }
   }, [user, loading, isPublicPage, router]);
 
