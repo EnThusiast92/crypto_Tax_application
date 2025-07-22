@@ -3,6 +3,9 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore, enableNetwork } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
+import { config } from 'dotenv';
+
+config(); // Load environment variables from .env
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
