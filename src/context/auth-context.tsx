@@ -229,7 +229,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     const invitationsRef = collection(db, 'invitations');
     
-    // Check if an invite already exists for this consultant to prevent spam.
     const q = query(
         invitationsRef,
         where('fromClientId', '==', user.id),
@@ -241,7 +240,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error("You already have a pending invitation for this consultant.");
     }
     
-    // Create the new invitation document.
     const newInvitation: Omit<Invitation, 'id'> = {
         fromClientId: user.id,
         toConsultantEmail: consultantEmail,
@@ -270,7 +268,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!clientDoc.exists()) throw new Error("Client account not found!");
       if (clientDoc.data().linkedConsultantId) throw new Error("Client is already linked to another consultant.");
 
-      // Perform the updates within the transaction
       transaction.update(clientRef, { linkedConsultantId: user.id });
       transaction.update(consultantRef, { linkedClientIds: arrayUnion(invitation.fromClientId) });
       transaction.update(invRef, { status: 'accepted' });
@@ -303,10 +300,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const consultantRef = doc(db, "users", consultantId);
       const batch = writeBatch(db);
 
-      // Client removes consultant's ID from their own document
-      batch.update(clientRef, { linkedConsultantId: '' });
-      
-      // Client removes their own ID from the consultant's document
+      batch.update(clientRef, { linkedConsultantId: "" });
       batch.update(consultantRef, { linkedClientIds: arrayRemove(clientId) });
       
       await batch.commit();

@@ -29,13 +29,20 @@ export default function SettingsPage() {
         )
     }
     
-    // Find the linked consultant and any sent invites
     const linkedConsultant = users.find(u => u.id === user.linkedConsultantId);
     const sentInvite = invitations.find(inv => inv.fromClientId === user.id && inv.status === 'pending');
     
-    const handleRemoveAccess = () => {
-        if (user && user.id) {
-            removeConsultantAccess(user.id);
+    const handleRemoveAccess = async () => {
+        if (user && user.id && user.linkedConsultantId) {
+            try {
+                await removeConsultantAccess(user.id);
+                toast({
+                    title: 'Access Removed',
+                    description: 'The consultant no longer has access to your data.',
+                });
+            } catch (error) {
+                 toast({ title: "Error", description: (error as Error).message, variant: "destructive" });
+            }
         }
     };
     

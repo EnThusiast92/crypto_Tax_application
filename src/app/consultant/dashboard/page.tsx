@@ -12,12 +12,14 @@ import { ArrowRight, Check, X, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ConsultantDashboardPage() {
   const { user, users, invitations, acceptInvitation, rejectInvitation } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [pendingClients, setPendingClients] = React.useState<User[]>([]);
+  const [loadingClients, setLoadingClients] = React.useState(true);
 
   if (user?.role !== 'TaxConsultant') {
     return (
@@ -28,12 +30,13 @@ export default function ConsultantDashboardPage() {
   }
 
   const pendingInvites = invitations.filter(inv => inv.toConsultantEmail === user.email && inv.status === 'pending');
+  const linkedClients = users.filter(u => user?.linkedClientIds?.includes(u.id));
 
   React.useEffect(() => {
     const fetchPendingClients = async () => {
+      setLoadingClients(true);
       const pendingClientIds = pendingInvites.map(invite => invite.fromClientId);
       if (pendingClientIds.length > 0) {
-        // To prevent a Firestore query error with an empty array
         const uniqueClientIds = [...new Set(pendingClientIds)];
         const clientPromises = uniqueClientIds.map(id => getDoc(doc(db, 'users', id)));
         const clientDocs = await Promise.all(clientPromises);
@@ -44,12 +47,12 @@ export default function ConsultantDashboardPage() {
       } else {
         setPendingClients([]);
       }
+      setLoadingClients(false);
     };
     fetchPendingClients();
-  }, [invitations]); // This now correctly depends on invitations
+  }, [invitations]);
 
   const getPendingClientById = (id: string) => pendingClients.find(c => c.id === id);
-  const linkedClients = users.filter(u => user?.linkedClientIds?.includes(u.id));
 
   const handleViewClient = (clientId: string) => {
     router.push(`/consultant/clients/${clientId}`);
@@ -103,38 +106,44 @@ export default function ConsultantDashboardPage() {
                 <CardDescription>You have new client invitations waiting for your approval.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-                {pendingInvites.map(invite => {
-                    const client = getPendingClientById(invite.fromClientId);
-                    if (!client) return (
-                        <div key={invite.id} className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
-                           <p>Loading client info...</p>
-                        </div>
-                    );
-                    return (
-                        <div key={invite.id} className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
-                             <div className="flex items-center gap-4">
-                                <Avatar>
-                                    <AvatarImage src={client.avatarUrl} alt={client.name} />
-                                    <AvatarFallback>{client.name.charAt(0).toUpperCase()}</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                    <p className="font-semibold">{client.name}</p>
-                                    <p className="text-sm text-muted-foreground">{client.email}</p>
+                {loadingClients ? (
+                    <div className="flex items-center justify-between p-4 rounded-lg border bg-card">
+                       <p>Loading client info...</p>
+                    </div>
+                ) : (
+                    pendingInvites.map(invite => {
+                        const client = getPendingClientById(invite.fromClientId);
+                        if (!client) return (
+                           <div key={invite.id} className="flex items-center justify-between p-4 rounded-lg border bg-card transition-colors">
+                               <p>Could not load client info for invite {invite.id}.</p>
+                            </div>
+                        );
+                        return (
+                            <div key={invite.id} className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
+                                 <div className="flex items-center gap-4">
+                                    <Avatar>
+                                        <AvatarImage src={client.avatarUrl} alt={client.name} />
+                                        <AvatarFallback>{client.name.charAt(0).toUpperCase()}</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <p className="font-semibold">{client.name}</p>
+                                        <p className="text-sm text-muted-foreground">{client.email}</p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button variant="destructive" size="sm" onClick={() => handleReject(invite.id)}>
+                                        <X className="mr-2 h-4 w-4" />
+                                        Reject
+                                    </Button>
+                                    <Button variant="accent" size="sm" onClick={() => handleAccept(invite.id)}>
+                                        <Check className="mr-2 h-4 w-4" />
+                                        Accept
+                                    </Button>
                                 </div>
                             </div>
-                            <div className="flex gap-2">
-                                <Button variant="destructive" size="sm" onClick={() => handleReject(invite.id)}>
-                                    <X className="mr-2 h-4 w-4" />
-                                    Reject
-                                </Button>
-                                <Button variant="accent" size="sm" onClick={() => handleAccept(invite.id)}>
-                                    <Check className="mr-2 h-4 w-4" />
-                                    Accept
-                                </Button>
-                            </div>
-                        </div>
-                    )
-                })}
+                        )
+                    })
+                )}
             </CardContent>
         </Card>
       )}
