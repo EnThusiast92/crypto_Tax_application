@@ -104,19 +104,19 @@ function LoginPageContent() {
                 {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
               </div>
               <div className="grid gap-2">
-                <div className="flex items-center">
-                  <Label htmlFor="password">Password</Label>
-                  <Link href="#" className="ml-auto inline-block text-sm underline">
-                    Forgot your password?
-                  </Link>
-                </div>
+                <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
                   type="password"
                   {...register('password')}
                   disabled={isSubmitting}
                 />
-                {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+                <div className="text-right">
+                    <Link href="#" className="inline-block text-sm underline">
+                        Forgot your password?
+                    </Link>
+                </div>
+                {errors.password && <p className="text-sm text-destructive mt-1">{errors.password.message}</p>}
               </div>
               <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmittingManual ? 'Logging in...' : 'Login'}
