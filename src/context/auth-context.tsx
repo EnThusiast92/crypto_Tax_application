@@ -48,24 +48,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setLoading(true);
       if (firebaseUser) {
-        try {
-          const userRef = doc(db, 'users', firebaseUser.uid);
-          const userSnap = await getDoc(userRef);
-
+        // Set up a snapshot listener for the user's document
+        const userRef = doc(db, 'users', firebaseUser.uid);
+        const userUnsubscribe = onSnapshot(userRef, (userSnap) => {
           if (userSnap.exists()) {
             const userData = { id: userSnap.id, ...userSnap.data() } as User;
             setUser(userData);
           } else {
-             console.log("User authenticated, but Firestore doc not found yet. It will be created shortly.");
+            console.log("User authenticated, but Firestore doc not found yet.");
+            setUser(null);
           }
-        } catch (error) {
-           console.error("Auth state change error:", error);
+           setLoading(false);
+        }, (error) => {
+           console.error("User snapshot error:", error);
            setUser(null);
-        }
+           setLoading(false);
+        });
+        return () => userUnsubscribe();
       } else {
         setUser(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -78,55 +81,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
     }
 
-    const unsubscribes: (() => void)[] = [];
+    let unsubscribes: (() => void)[] = [];
 
-    // --- Role-based Data Fetching ---
-    
+    // --- User Data Fetching based on Role ---
     let usersQuery;
-    // For Developers or Staff, fetch all users.
     if (user.role === 'Developer' || user.role === 'Staff') {
         usersQuery = query(collection(db, "users"));
         const usersUnsubscribe = onSnapshot(usersQuery, (snapshot) => {
             setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
         }, (error) => console.error("Users snapshot error:", error));
         unsubscribes.push(usersUnsubscribe);
-    } 
-    // For Tax Consultants, fetch only their linked clients AND themselves.
-    else if (user.role === 'TaxConsultant') {
-        const clientIds = user.linkedClientIds?.length ? user.linkedClientIds : ['dummy-id']; // Prevent empty 'in' query error
+    } else if (user.role === 'TaxConsultant') {
+        const clientIds = user.linkedClientIds?.length ? user.linkedClientIds : ['dummy-id-to-prevent-crash'];
         const selfAndClients = [...clientIds, user.id];
         usersQuery = query(collection(db, "users"), where(documentId(), "in", selfAndClients));
         const usersUnsubscribe = onSnapshot(usersQuery, (snapshot) => {
             setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
         }, (error) => console.error("Consultant's clients snapshot error:", error));
         unsubscribes.push(usersUnsubscribe);
-    } 
-    // For Clients, fetch only their linked consultant AND themselves.
-    else if (user.role === 'Client') {
+    } else if (user.role === 'Client') {
         const idsToFetch = [user.id];
-        if (user.linkedConsultantId) {
-            idsToFetch.push(user.linkedConsultantId);
+        if (user.linkedConsultantId) idsToFetch.push(user.linkedConsultantId);
+        if (idsToFetch.length > 0) {
+            usersQuery = query(collection(db, "users"), where(documentId(), "in", idsToFetch));
+            const usersUnsubscribe = onSnapshot(usersQuery, (snapshot) => {
+                setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
+            }, (error) => console.error("Client's consultant snapshot error:", error));
+            unsubscribes.push(usersUnsubscribe);
+        } else {
+           setUsers([user]); // Just show self if no consultant
         }
-        usersQuery = query(collection(db, "users"), where(documentId(), "in", idsToFetch));
-        const usersUnsubscribe = onSnapshot(usersQuery, (snapshot) => {
-            setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
-        }, (error) => console.error("Client's consultant snapshot error:", error));
-        unsubscribes.push(usersUnsubscribe);
     }
 
 
-    // Fetch invitations based on role
+    // --- Invitations Fetching based on Role ---
     let invitesQuery;
-    // For Developers or Staff, fetch all invitations.
     if (user.role === 'Developer' || user.role === 'Staff') {
         invitesQuery = query(collection(db, "invitations"));
-    } 
-    // For Tax Consultants, fetch invitations sent to them.
-    else if (user.role === 'TaxConsultant') {
+    } else if (user.role === 'TaxConsultant') {
         invitesQuery = query(collection(db, "invitations"), where("toConsultantEmail", "==", user.email));
-    } 
-    // For Clients, fetch invitations they sent.
-    else if (user.role === 'Client') {
+    } else if (user.role === 'Client') {
         invitesQuery = query(collection(db, "invitations"), where("fromClientId", "==", user.id));
     }
 
@@ -137,11 +131,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         unsubscribes.push(invitesUnsubscribe);
     }
 
-
     return () => {
         unsubscribes.forEach(unsub => unsub());
     };
-  }, [user]);
+  }, [user]); // This useEffect now depends on the entire user object, so it re-runs when linkedClientIds changes.
 
   const fetchAndSetUser = async (firebaseUser: FirebaseUser): Promise<User | null> => {
       const userDocRef = doc(db, 'users', firebaseUser.uid);
