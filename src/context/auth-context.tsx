@@ -29,7 +29,8 @@ import {
     signOut, 
     onAuthStateChanged,
     GoogleAuthProvider,
-    signInWithPopup
+    signInWithPopup,
+    User as FirebaseUser,
 } from 'firebase/auth';
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
@@ -52,28 +53,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (userSnap.exists()) {
             const userData = { id: userSnap.id, ...userSnap.data() } as User;
             setUser(userData);
-            if (router.pathname === '/login' || router.pathname === '/register') {
-                router.push('/dashboard');
-            }
           } else {
-             console.warn("User exists in Auth, but not in Firestore. This can happen if registration was interrupted. Forcing sign out.");
-             await signOut(auth);
-             setUser(null);
+             // This case is important for the first time a user registers.
+             // The user doc might not be created yet when this listener fires.
+             // We'll let the register/login functions handle setting the initial user state.
+             console.log("User authenticated, but Firestore doc not found yet. It will be created shortly.");
           }
         } catch (error) {
            console.error("Auth state change error:", error);
            setUser(null);
-        } finally {
-            setLoading(false);
         }
       } else {
         setUser(null);
-        setLoading(false);
       }
+      setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [router]);
+  }, []);
   
     React.useEffect(() => {
     if (!user) {
@@ -126,8 +123,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   }, [user]);
 
+  const fetchAndSetUser = async (firebaseUser: FirebaseUser): Promise<User | null> => {
+      const userDocRef = doc(db, 'users', firebaseUser.uid);
+      const userDoc = await getDoc(userDocRef);
+      if (userDoc.exists()) {
+          const userData = { id: userDoc.id, ...userDoc.data() } as User;
+          setUser(userData);
+          return userData;
+      }
+      return null;
+  }
+
   const login = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    return await fetchAndSetUser(userCredential.user);
   };
   
    const signInWithGoogle = async () => {
@@ -149,6 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           };
           await setDoc(userDocRef, newUser);
       }
+      return await fetchAndSetUser(firebaseUser);
   };
 
   const register = async (data: RegisterFormValues) => {
@@ -167,10 +177,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     
     await setDoc(newUserRef, newUserDoc);
+    const userData = { id: firebaseUser.uid, ...newUserDoc } as User;
+    setUser(userData);
+    return userData;
   };
   
   const logout = async () => {
     await signOut(auth);
+    setUser(null);
     router.push('/login');
   };
   
@@ -180,6 +194,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteUser = async (userId: string) => {
+    // This is a simplified delete. In a real app, you'd want to handle this
+    // via a server-side function to also delete the Auth user.
     await deleteDoc(doc(db, "users", userId));
   };
 

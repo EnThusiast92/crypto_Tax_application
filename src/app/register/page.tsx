@@ -3,6 +3,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -30,6 +31,7 @@ type FormValues = z.infer<typeof registerSchema>;
 function RegisterPageContent() {
   const { register: registerUser, signInWithGoogle } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
   const [isSubmittingManual, setIsSubmittingManual] = React.useState(false);
   const [isSubmittingGoogle, setIsSubmittingGoogle] = React.useState(false);
   
@@ -55,6 +57,7 @@ function RegisterPageContent() {
           title: 'Registration Successful',
           description: "We've created your account for you.",
         });
+        router.push('/dashboard');
       }
     } catch (error) {
       toast({
@@ -76,6 +79,7 @@ function RegisterPageContent() {
                 title: 'Google Sign-Up Successful',
                 description: 'Welcome to TaxWise!',
             });
+            router.push('/dashboard');
         }
     } catch (error) {
         toast({

@@ -26,6 +26,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 function LoginPageContent() {
   const { login, signInWithGoogle } = useAuth();
+  const router = useRouter();
   const { toast } = useToast();
   const [isSubmittingManual, setIsSubmittingManual] = React.useState(false);
   const [isSubmittingGoogle, setIsSubmittingGoogle] = React.useState(false);
@@ -42,7 +43,7 @@ function LoginPageContent() {
     setIsSubmittingManual(true);
     try {
       await login(data.email, data.password);
-      // The redirect is handled by the AuthProvider's onAuthStateChanged listener
+      router.push('/dashboard');
     } catch (error) {
       toast({
         title: 'Login Failed',
@@ -58,7 +59,7 @@ function LoginPageContent() {
     setIsSubmittingGoogle(true);
     try {
         await signInWithGoogle();
-        // The redirect is handled by the AuthProvider's onAuthStateChanged listener
+        router.push('/dashboard');
     } catch (error) {
         toast({
             title: 'Google Sign-In Failed',

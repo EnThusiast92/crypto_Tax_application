@@ -3,23 +3,30 @@
 
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import * as React from 'react';
 import { AuthProvider, useAuth } from '@/context/auth-context';
 import { AuthenticatedApp } from '@/components/layout/authenticated-app';
 
 function AppContent({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
+
   const noShellPages = ['/login', '/register', '/'];
   const isPublicPage = noShellPages.includes(pathname);
 
-  // If it's a public page, just render the children. No providers, no auth checks.
+  React.useEffect(() => {
+    if (!loading && user && isPublicPage) {
+        router.push('/dashboard');
+    }
+  }, [user, loading, isPublicPage, router]);
+
+
   if (isPublicPage) {
     return <>{children}</>;
   }
 
-  // For protected pages, wrap them in the full authenticated app structure.
-  // The AuthProvider inside AuthenticatedApp will handle loading and redirects.
   return <AuthenticatedApp>{children}</AuthenticatedApp>;
 }
 
@@ -39,7 +46,9 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased">
-        <AppContent>{children}</AppContent>
+        <AuthProvider>
+            <AppContent>{children}</AppContent>
+        </AuthProvider>
         <Toaster />
       </body>
     </html>

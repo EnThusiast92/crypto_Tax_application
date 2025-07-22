@@ -6,17 +6,23 @@ import { AuthProvider, useAuth } from '@/context/auth-context';
 import { SettingsProvider } from '@/context/settings-context';
 import { TransactionsProvider } from '@/context/transactions-context';
 import AppShell from '@/components/app-shell';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
     const { user, loading } = useAuth();
     const router = useRouter();
+    const pathname = usePathname();
     
     React.useEffect(() => {
         if (!loading && !user) {
-            router.push('/login');
+            // Redirect to login only if we are not already on a public page
+            // This prevents redirect loops if the user is already on the login page
+            const isPublicPage = ['/login', '/register', '/'].includes(pathname);
+            if (!isPublicPage) {
+                router.push('/login');
+            }
         }
-    }, [user, loading, router]);
+    }, [user, loading, router, pathname]);
 
     if (loading) {
         return (
@@ -43,16 +49,16 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
         )
     }
 
-    return null; // Or a fallback loading state
+    // If not loading and no user, we are likely about to redirect, so we can return null
+    // or a minimal loader to avoid flashing content.
+    return null;
 }
 
 
 export function AuthenticatedApp({ children }: { children: React.ReactNode }) {
     return (
-        <AuthProvider>
-            <AuthGuard>
-                {children}
-            </AuthGuard>
-        </AuthProvider>
+        <AuthGuard>
+            {children}
+        </AuthGuard>
     );
 }
