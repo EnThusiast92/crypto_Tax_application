@@ -1,3 +1,4 @@
+
 // app/api/crypto/icon/route.ts
 import { NextResponse } from 'next/server';
 
@@ -22,15 +23,18 @@ async function ensureMap() {
     const list: { id: string; symbol: string }[] = await resp.json();
     const newMap: Record<string, string> = {};
     for (const coin of list) {
-        newMap[coin.symbol.toLowerCase()] = coin.id;
+        // We might have duplicates, like "chat". The first one in the list is usually the most popular.
+        if (!newMap[coin.symbol.toLowerCase()]) {
+            newMap[coin.symbol.toLowerCase()] = coin.id;
+        }
     }
     symbolToIdMap = newMap;
     lastFetchTimestamp = now;
-    console.log('Successfully fetched and cached the coin list.');
+    console.log(`Successfully fetched and cached ${Object.keys(newMap).length} coins.`);
   } catch (error) {
     console.error('Error fetching or processing CoinGecko coin list:', error);
-    // If fetching fails, we prevent further requests for the cache duration to avoid spamming the API.
-    lastFetchTimestamp = now; 
+    // If fetching fails, we prevent further requests for a shorter duration to avoid spamming the API on intermittent failures.
+    lastFetchTimestamp = Date.now() + (5 * 60 * 1000); // Wait 5 minutes before retrying on failure
     throw error; // Re-throw to be caught by the handler
   }
 }
