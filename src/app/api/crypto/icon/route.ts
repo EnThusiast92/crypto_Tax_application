@@ -1,3 +1,4 @@
+
 // app/api/crypto/icon/route.ts
 
 import { NextResponse } from 'next/server';
