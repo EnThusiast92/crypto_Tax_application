@@ -1,38 +1,32 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // A user can manage their own document.
+    // Users can only read and write to their own user document.
     match /users/{userId} {
-      allow read, update, delete: if request.auth.uid == userId;
-      allow create: if request.auth.uid != null;
-    }
-    
-    // A user can manage their own wallets subcollection.
-    match /users/{userId}/wallets/{walletId} {
-      allow read, write, create, delete: if request.auth.uid == userId;
+      allow read, write, delete: if request.auth != null && request.auth.uid == userId;
+
+      // Users can only read and write to their own wallets subcollection.
+      match /wallets/{walletId} {
+        allow read, write, delete: if request.auth != null && request.auth.uid == userId;
+      }
     }
 
+    // Invitations can be read by the client who sent it or the consultant it was sent to.
+    // They can be created by any authenticated client and deleted by the sender.
     match /invitations/{invitationId} {
-      // Allow read/delete if the user is the sender OR the intended recipient.
-      allow read, delete: if request.auth.uid != null && 
-                           (exists(/databases/$(database)/documents/invitations/$(invitationId)) && (
-                             resource.data.fromClientId == request.auth.uid ||
-                             resource.data.toConsultantEmail == request.auth.token.email
-                           ));
-      // Allow creation by any authenticated user (app logic should control who can send).
-      allow create: if request.auth.uid != null;
-      // Allow consultants to accept/update their invites.
-      allow update: if request.auth.uid != null &&
-                       (exists(/databases/$(database)/documents/invitations/$(invitationId)) &&
-                         resource.data.toConsultantEmail == request.auth.token.email);
+      allow read: if request.auth != null && 
+                   (request.auth.uid == resource.data.fromClientId || request.auth.token.email == resource.data.toConsultantEmail);
+      allow create: if request.auth != null && request.resource.data.fromClientId == request.auth.uid;
+      allow delete: if request.auth != null && request.auth.uid == resource.data.fromClientId;
+      allow update: if request.auth != null && request.auth.token.email == resource.data.toConsultantEmail;
     }
-    
+
+    // App settings are readable by any authenticated user, but only writable by developers.
     match /app/settings {
-        allow read: if request.auth.uid != null;
-        allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Developer';
+       allow read: if request.auth != null;
+       allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Developer';
     }
   }
 }
