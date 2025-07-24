@@ -3,54 +3,69 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    function isOwner(userId) {
-      return request.auth != null && request.auth.uid == userId;
-    }
-    
-    function isLinked(otherUserDoc) {
-      // Allow if I am a client and the other user is my consultant
-      let isMyConsultant = request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.linkedConsultantId == otherUserDoc.id;
-      // Allow if I am a consultant and the other user is one of my clients
-      let isMyClient = request.auth != null && otherUserDoc.id in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.linkedClientIds;
-      // Allow if a developer or staff member is accessing
-      let isAdminOrStaff = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Developer', 'Staff'];
 
-      return isMyConsultant || isMyClient || isAdminOrStaff;
-    }
-
+    // Rules for the users collection
     match /users/{userId} {
-      // Allow create for any authenticated user (on sign-up)
-      allow create: if request.auth != null;
-      
-      // Allow read if you are the owner OR if you are linked to that user
-      allow read: if isOwner(userId) || isLinked(get(/databases/$(database)/documents/users/$(userId)));
-      
-      // Only allow updates/deletes if you are the owner
-      allow update, delete: if isOwner(userId);
+      // Allow a user to read their own document
+      allow read: if request.auth != null && request.auth.uid == userId;
 
-      // Users can only read/write their own wallets subcollection
-      match /wallets/{walletId} {
-        allow read, write, delete: if isOwner(userId);
-      }
-      
-      // Users can only read/write their own transactions subcollection
-      match /transactions/{transactionId} {
-         allow read, write, delete: if isOwner(userId);
-      }
+      // Allow a user to update their own document
+      allow update: if request.auth != null && request.auth.uid == userId;
+
+      // Allow a user to be created
+      allow create: if request.auth != null;
+
+      // Allow admins to do anything
+      allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Developer';
     }
 
+    // Rules for the wallets subcollection
+    match /users/{userId}/wallets/{walletId} {
+      // Allow a user to read and write only their own wallets
+      allow read, write, delete: if request.auth != null && request.auth.uid == userId;
+
+      // Allow admins to do anything
+      allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Developer';
+    }
+
+    // Rules for the invitations collection
     match /invitations/{invitationId} {
-        allow create: if request.auth != null;
-        allow read: if request.auth != null && (resource.data.fromClientId == request.auth.uid || resource.data.toConsultantEmail == request.auth.token.email);
-        allow delete: if request.auth != null && (resource.data.fromClientId == request.auth.uid || resource.data.toConsultantEmail == request.auth.token.email);
-        allow update: if request.auth != null && resource.data.toConsultantEmail == request.auth.token.email;
+        // A user can create an invitation for themselves
+        allow create: if request.auth != null && request.resource.data.fromClientId == request.auth.uid;
+        
+        // A consultant can read an invite sent to them
+        allow read: if request.auth != null && request.auth.token.email == resource.data.toConsultantEmail;
+        
+        // The user who sent the invite can delete it (cancel)
+        // A consultant can delete it (accept/reject)
+        allow delete: if request.auth != null && 
+                      (request.auth.uid == resource.data.fromClientId || request.auth.token.email == resource.data.toConsultantEmail);
+
+        allow update: if request.auth != null && request.auth.token.email == resource.data.toConsultantEmail;
+
+        // Allow admins to do anything
+        allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Developer';
     }
     
+    // Rules for the transactions subcollection
+    match /users/{userId}/transactions/{transactionId} {
+        // A user can read/write their own transactions
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+        
+        // A linked consultant can read the client's transactions
+        allow read: if request.auth != null && get(/databases/$(database)/documents/users/$(userId)).data.linkedConsultantId == request.auth.uid;
+
+        // Allow admins to do anything
+        allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Developer';
+    }
+    
+    // Rules for the app settings document
     match /app/settings {
-      allow read: if request.auth != null;
-      // Only allow developers to write to app settings
-      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Developer';
+        // Allow any authenticated user to read app settings
+        allow read: if request.auth != null;
+
+        // Only allow developers to write to app settings
+        allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Developer';
     }
   }
 }
