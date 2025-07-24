@@ -28,24 +28,19 @@ service cloud.firestore {
     match /users/{userId} {
       allow create: if isSignedIn();
       allow get: if isSignedIn();
-      // Allow any signed-in user to query the users collection,
-      // which is needed to check if a consultant exists before sending an invite.
       allow list: if isSignedIn();
-
-      allow update: if isOwner(userId)
-                    || (hasRole('TaxConsultant') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['linkedConsultantId']))
-                    || (hasRole('Client') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['linkedClientIds']));
-    }
-    
-    // ================== WALLETS SUBCOLLECTION ==================
-    match /users/{userId}/wallets/{walletId} {
-      allow write: if isOwner(userId);
-      allow read: if isOwner(userId) 
-                  || (hasRole('TaxConsultant') && userId in getUserData(request.auth.uid).linkedClientIds);
+      allow update: if isOwner(userId);
     }
 
     // ================== TRANSACTIONS SUBCOLLECTION ==================
     match /users/{userId}/transactions/{transactionId} {
+      allow write: if isOwner(userId);
+      allow read: if isOwner(userId) 
+                  || (hasRole('TaxConsultant') && userId in getUserData(request.auth.uid).linkedClientIds);
+    }
+    
+    // ================== WALLETS SUBCOLLECTION ==================
+    match /users/{userId}/wallets/{walletId} {
       allow write: if isOwner(userId);
       allow read: if isOwner(userId) 
                   || (hasRole('TaxConsultant') && userId in getUserData(request.auth.uid).linkedClientIds);
