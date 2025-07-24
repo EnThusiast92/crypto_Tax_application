@@ -3,69 +3,36 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Rules for the users collection
+    
+    // A user can manage their own document.
     match /users/{userId} {
-      // Allow a user to read their own document
-      allow read: if request.auth != null && request.auth.uid == userId;
-
-      // Allow a user to update their own document
-      allow update: if request.auth != null && request.auth.uid == userId;
-
-      // Allow a user to be created
-      allow create: if request.auth != null;
-
-      // Allow admins to do anything
-      allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Developer';
+      allow read, update, delete: if request.auth.uid == userId;
+      allow create: if request.auth.uid != null;
     }
-
-    // Rules for the wallets subcollection
+    
+    // A user can manage their own wallets subcollection.
     match /users/{userId}/wallets/{walletId} {
-      // Allow a user to read and write only their own wallets
-      allow read, write, delete: if request.auth != null && request.auth.uid == userId;
-
-      // Allow admins to do anything
-      allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Developer';
+      allow read, write, create, delete: if request.auth.uid == userId;
     }
 
-    // Rules for the invitations collection
     match /invitations/{invitationId} {
-        // A user can create an invitation for themselves
-        allow create: if request.auth != null && request.resource.data.fromClientId == request.auth.uid;
-        
-        // A consultant can read an invite sent to them
-        allow read: if request.auth != null && request.auth.token.email == resource.data.toConsultantEmail;
-        
-        // The user who sent the invite can delete it (cancel)
-        // A consultant can delete it (accept/reject)
-        allow delete: if request.auth != null && 
-                      (request.auth.uid == resource.data.fromClientId || request.auth.token.email == resource.data.toConsultantEmail);
-
-        allow update: if request.auth != null && request.auth.token.email == resource.data.toConsultantEmail;
-
-        // Allow admins to do anything
-        allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Developer';
+      // Allow read/delete if the user is the sender OR the intended recipient.
+      allow read, delete: if request.auth.uid != null && 
+                           (exists(/databases/$(database)/documents/invitations/$(invitationId)) && (
+                             resource.data.fromClientId == request.auth.uid ||
+                             resource.data.toConsultantEmail == request.auth.token.email
+                           ));
+      // Allow creation by any authenticated user (app logic should control who can send).
+      allow create: if request.auth.uid != null;
+      // Allow consultants to accept/update their invites.
+      allow update: if request.auth.uid != null &&
+                       (exists(/databases/$(database)/documents/invitations/$(invitationId)) &&
+                         resource.data.toConsultantEmail == request.auth.token.email);
     }
     
-    // Rules for the transactions subcollection
-    match /users/{userId}/transactions/{transactionId} {
-        // A user can read/write their own transactions
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-        
-        // A linked consultant can read the client's transactions
-        allow read: if request.auth != null && get(/databases/$(database)/documents/users/$(userId)).data.linkedConsultantId == request.auth.uid;
-
-        // Allow admins to do anything
-        allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Developer';
-    }
-    
-    // Rules for the app settings document
     match /app/settings {
-        // Allow any authenticated user to read app settings
-        allow read: if request.auth != null;
-
-        // Only allow developers to write to app settings
-        allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Developer';
+        allow read: if request.auth.uid != null;
+        allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Developer';
     }
   }
 }
