@@ -4,6 +4,22 @@ import type { Timestamp } from 'firebase/firestore';
 
 export type Role = 'Developer' | 'Staff' | 'Client' | 'TaxConsultant';
 
+export type WalletType = 'DEX' | 'CEX';
+export type WalletStatus = 'connected' | 'error';
+
+export type Wallet = {
+  id: string;
+  userId: string;
+  name: string;
+  type: WalletType;
+  identifier: string; // Public address or API key
+  // Note: apiSecret should be stored and accessed via a secure backend mechanism like Firebase Secrets, not directly in the document.
+  reportedBalance: number;
+  lastSyncAt: Timestamp;
+  createdAt: Timestamp;
+  status: WalletStatus;
+};
+
 export type Transaction = {
   id: string;
   date: string;
