@@ -79,80 +79,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    let unsubs: (() => void)[] = [];
+    const unsubs: (() => void)[] = [];
 
-    const setupListeners = (currentUser: User) => {
-        // Devs and Staff see everyone, no need for complex queries
-        if (currentUser.role === 'Developer' || currentUser.role === 'Staff') {
-            const allUsersUnsub = onSnapshot(collection(db, "users"), (snapshot) => {
-                const allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
-                setUsers(allUsers);
-            });
-            unsubs.push(allUsersUnsub);
-            return; // Exit early
+    // Listener for invitations
+    const invitationsQuery = user.role === 'Client'
+      ? query(collection(db, "invitations"), where("fromClientId", "==", user.id))
+      : query(collection(db, "invitations"), where("toConsultantEmail", "==", user.email));
+      
+    const invsUnsub = onSnapshot(invitationsQuery, (snapshot) => {
+        const fetchedInvitations = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation));
+        setInvitations(fetchedInvitations);
+    });
+    unsubs.push(invsUnsub);
+      
+    // Listener for users
+    let usersQuery;
+    if (user.role === 'Developer' || user.role === 'Staff') {
+        usersQuery = query(collection(db, 'users'));
+    } else {
+        const userIdsToFetch = new Set<string>([user.id]);
+        if (user.role === 'Client' && user.linkedConsultantId) {
+            userIdsToFetch.add(user.linkedConsultantId);
+        }
+        if (user.role === 'TaxConsultant' && user.linkedClientIds?.length > 0) {
+            user.linkedClientIds.forEach(id => userIdsToFetch.add(id));
         }
 
-        // Listener for invitations relevant to the current user
-        const invitationsQuery = currentUser.role === 'Client'
-            ? query(collection(db, "invitations"), where("fromClientId", "==", currentUser.id))
-            : query(collection(db, "invitations"), where("toConsultantEmail", "==", currentUser.email));
-
-        const invsUnsub = onSnapshot(invitationsQuery, (invitationsSnapshot) => {
-            const fetchedInvitations = invitationsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation));
-            setInvitations(fetchedInvitations);
-
-            const userIdsToFetch = new Set<string>([currentUser.id]);
-
-            // For a Client
-            if (currentUser.linkedConsultantId) {
-                userIdsToFetch.add(currentUser.linkedConsultantId);
-            }
-            
-            // For a TaxConsultant
-            if (currentUser.linkedClientIds?.length > 0) {
-              currentUser.linkedClientIds.forEach(id => userIdsToFetch.add(id));
-            }
-            
-            // Add users from any pending invitations
-            fetchedInvitations.forEach(inv => {
-                if (currentUser.role === 'Client') {
-                   // A client doesn't need to see the consultant's full profile from this query
-                } else { // I am a consultant
-                    userIdsToFetch.add(inv.fromClientId);
-                }
+        // Fetch users from pending invitations for consultants
+        if(user.role === 'TaxConsultant') {
+            invitations.forEach(inv => {
+                if(inv.status === 'pending') userIdsToFetch.add(inv.fromClientId)
             });
+        }
+        
+        const finalUserIds = Array.from(userIdsToFetch).filter(Boolean);
+        if (finalUserIds.length > 0) {
+            usersQuery = query(collection(db, 'users'), where(documentId(), 'in', finalUserIds));
+        }
+    }
 
-            const finalUserIds = Array.from(userIdsToFetch).filter(Boolean);
-
-            if (finalUserIds.length > 0) {
-                // Remove the previous users listener to avoid duplicate data
-                if (unsubs.length > 1) {
-                    const oldUserUnsub = unsubs.pop();
-                    if(oldUserUnsub) oldUserUnsub();
-                }
-                
-                const usersQuery = query(collection(db, 'users'), where(documentId(), 'in', finalUserIds));
-                const usersUnsub = onSnapshot(usersQuery, (usersSnapshot) => {
-                    const fetchedUsers = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
-                    setUsers(fetchedUsers);
-                });
-                unsubs.push(usersUnsub);
-            } else {
-                setUsers([currentUser]);
-            }
+    if (usersQuery) {
+        const usersUnsub = onSnapshot(usersQuery, (snapshot) => {
+            const fetchedUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+            setUsers(fetchedUsers);
         }, (error) => {
-            console.error("Error fetching invitations snapshot:", error);
+            console.error("Error fetching users snapshot:", error);
+            // If we have an error, at least set the current user to avoid a completely empty state
+            setUsers([user]);
         });
-
-        unsubs.push(invsUnsub);
-    };
-    
-    setupListeners(user);
+        unsubs.push(usersUnsub);
+    } else {
+        setUsers([user]);
+    }
 
     return () => {
       unsubs.forEach(unsub => unsub());
     };
-  }, [user]);
+  }, [user, invitations]);
 
 
   const fetchAndSetUser = async (firebaseUser: FirebaseUser): Promise<User | null> => {
