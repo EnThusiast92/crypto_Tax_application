@@ -13,12 +13,20 @@ export type Wallet = {
   name: string;
   type: WalletType;
   identifier: string; // Public address or API key
-  // Note: apiSecret should be stored and accessed via a secure backend mechanism like Firebase Secrets, not directly in the document.
   reportedBalance: number;
+  transactionsCount: number;
   lastSyncAt: Timestamp;
   createdAt: Timestamp;
   status: WalletStatus;
 };
+
+export type AddWalletFormValues = {
+  name: string;
+  type: WalletType;
+  publicAddress?: string;
+  apiKey?: string;
+  apiSecret?: string;
+}
 
 export type Transaction = {
   id: string;
@@ -137,4 +145,10 @@ export type SettingsContextType = {
   updateFeatureToggle: (key: keyof FeatureToggles, value: boolean) => void;
   updateSiteConfig: (key: keyof SiteConfig, value: string) => void;
   updateStaffPermission: (key: keyof StaffPermissions, value: boolean) => void;
+};
+
+export type WalletsContextType = {
+  wallets: Wallet[];
+  loading: boolean;
+  addWallet: (newWalletData: AddWalletFormValues) => Promise<void>;
 };

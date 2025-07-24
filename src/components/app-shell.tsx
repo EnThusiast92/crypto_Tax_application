@@ -30,6 +30,7 @@ import {
   Shield,
   UserCog,
   Briefcase,
+  Wallet,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
@@ -39,6 +40,7 @@ import { useToast } from '@/hooks/use-toast';
 const baseLinks = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Transactions', href: '/transactions', icon: List },
+  { name: 'Wallets', href: '/wallets', icon: Wallet },
   { name: 'Import', href: '/import', icon: Upload, featureFlag: 'csvImport' },
   { name: 'Reports', href: '/reports', icon: FileText, featureFlag: 'taxReport' },
   { name: 'Classifier', href: '/classifier', icon: Sparkles },

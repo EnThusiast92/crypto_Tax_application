@@ -1,10 +1,12 @@
 
+
 'use client';
 
 import * as React from 'react';
 import { AuthProvider, useAuth } from '@/context/auth-context';
 import { SettingsProvider } from '@/context/settings-context';
 import { TransactionsProvider } from '@/context/transactions-context';
+import { WalletsProvider } from '@/context/wallets-context';
 import AppShell from '@/components/app-shell';
 import { useRouter, usePathname } from 'next/navigation';
 
@@ -43,7 +45,9 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
          return (
             <SettingsProvider>
                 <TransactionsProvider>
-                    <AppShell>{children}</AppShell>
+                    <WalletsProvider>
+                        <AppShell>{children}</AppShell>
+                    </WalletsProvider>
                 </TransactionsProvider>
             </SettingsProvider>
         )
