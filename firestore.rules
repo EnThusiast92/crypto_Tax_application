@@ -3,77 +3,60 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper functions
-    function isAuth() {
-      return request.auth != null;
-    }
-
-    // Check if the requesting user is the owner of the document
+    
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
 
-    // Check if the user has a specific role
-    function hasRole(role) {
-      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
-    }
-
-    // Check if user is a Developer
-    function isDeveloper() {
-      return hasRole('Developer');
-    }
-    
-    // Check if user is a Staff
-    function isStaff() {
-      return hasRole('Staff');
-    }
-
-    // Check if a client has granted access to the requesting consultant
-    function clientHasGrantedAccess(clientId) {
-      let client = get(/databases/$(database)/documents/users/$(clientId)).data;
-      return client.linkedConsultantId == request.auth.uid;
-    }
-
-    // Check if the requesting user is the linked consultant for a client
-    function isLinkedConsultantFor(clientId) {
-      return isAuth() && hasRole('TaxConsultant') && clientHasGrantedAccess(clientId);
-    }
-    
-    // Rules for the 'users' collection
+    // A user can be created by anyone (for registration)
     match /users/{userId} {
-      allow read: if isOwner(userId) || isDeveloper() || isStaff() || isLinkedConsultantFor(userId);
-      allow write: if isOwner(userId) || isDeveloper();
+      allow create; 
       
-      // Rules for the 'transactions' subcollection
+      // Users can read/update their own document.
+      // Consultants can read the documents of their linked clients.
+      allow read, update: if isOwner(userId) || 
+                       (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                        resource.data.linkedConsultantId == request.auth.uid);
+      
+      // Developers and Staff can read/write any user document
+      allow read, update, delete: if exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                         (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Developer' ||
+                          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Staff');
+
+      // Nested rule for the 'transactions' subcollection
       match /transactions/{transactionId} {
-        allow read, write: if isOwner(userId) || isDeveloper() || isStaff() || isLinkedConsultantFor(userId);
+        // The owner of the parent user document can read/write transactions.
+        // A linked consultant can also read the transactions.
+        allow read, write: if isOwner(userId) ||
+                         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                          get(/databases/$(database)/documents/users/$(userId)).data.linkedConsultantId == request.auth.uid);
       }
-      
-      // Rules for the 'wallets' subcollection
+
+      // Nested rule for the 'wallets' subcollection
       match /wallets/{walletId} {
-        allow read, write: if request.auth.uid == userId;
+        // The owner of the parent user document can read/write wallets.
+        // A linked consultant can also read the wallets.
+        allow read, write: if isOwner(userId) ||
+                         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                          get(/databases/$(database)/documents/users/$(userId)).data.linkedConsultantId == request.auth.uid);
       }
     }
-    
-    // Rules for the 'invitations' collection
+
+    // Invitations can be created by clients.
+    // They can be read by the involved client or consultant.
+    // They can be deleted (rejected/cancelled) by the involved client or consultant.
     match /invitations/{invitationId} {
-      allow read: if isAuth() && (
-                    resource.data.fromClientId == request.auth.uid ||
-                    resource.data.toConsultantEmail == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.email
-                  );
-      allow create: if isAuth() && request.resource.data.fromClientId == request.auth.uid;
-      allow update: if isAuth() && hasRole('TaxConsultant'); // Consultant can accept
-      allow delete: if isAuth() && (
-                    resource.data.fromClientId == request.auth.uid ||
-                    hasRole('TaxConsultant')
-                  );
+        allow create: if request.auth.uid == request.resource.data.fromClientId;
+        allow read, delete: if request.auth.uid == resource.data.fromClientId ||
+                             request.auth.token.email == resource.data.toConsultantEmail;
+        allow update: if request.auth.token.email == resource.data.toConsultantEmail; // for accepting
     }
-    
-    // Rules for the 'app' collection (settings)
+
+    // App-wide settings are read-only for authenticated users, writable only by developers.
     match /app/settings {
-        allow read: if isAuth();
-        allow write: if isDeveloper();
+      allow read: if request.auth != null;
+      allow write: if exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Developer';
     }
   }
 }
