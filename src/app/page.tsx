@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Facebook, Twitter, Instagram, ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react';
+import { Facebook, Twitter, Instagram, CheckCircle } from 'lucide-react';
 import Image from 'next/image';
 
 export default function LandingPage() {
