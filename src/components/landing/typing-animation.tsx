@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 
 interface TypingAnimationProps {
@@ -22,43 +22,49 @@ export function TypingAnimation({
   const [text, setText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [loopNum, setLoopNum] = useState(0);
-  const [typingTimeout, setTypingTimeout] = useState(typingSpeed);
+
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (!texts || texts.length === 0) return;
-
     const handleTyping = () => {
       const i = loopNum % texts.length;
       const fullText = texts[i];
 
       if (isDeleting) {
-        setText(currentText => fullText.substring(0, currentText.length - 1));
-        setTypingTimeout(deletingSpeed);
+        setText((prev) => prev.substring(0, prev.length - 1));
       } else {
-        setText(currentText => fullText.substring(0, currentText.length + 1));
-        setTypingTimeout(typingSpeed);
-      }
-
-      if (!isDeleting && text === fullText) {
-        // Pause at the end of typing
-        setTimeout(() => setIsDeleting(true), delay);
-      } else if (isDeleting && text === '') {
-        setIsDeleting(false);
-        setLoopNum(currentLoop => currentLoop + 1);
+        setText((prev) => fullText.substring(0, prev.length + 1));
       }
     };
-    
-    const timer = setTimeout(handleTyping, typingTimeout);
 
-    return () => clearTimeout(timer);
-  }, [text, isDeleting, loopNum, texts, typingSpeed, deletingSpeed, delay, typingTimeout]);
+    timeoutRef.current = setTimeout(handleTyping, isDeleting ? deletingSpeed : typingSpeed);
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [text, isDeleting, loopNum, texts, typingSpeed, deletingSpeed]);
   
-  // Set initial text only once
   useEffect(() => {
-    if(texts && texts.length > 0 && loopNum === 0) {
-      setText(texts[0].substring(0, 1));
+    const i = loopNum % texts.length;
+    const fullText = texts[i];
+
+    if (!isDeleting && text === fullText) {
+      timeoutRef.current = setTimeout(() => {
+        setIsDeleting(true);
+      }, delay);
+    } else if (isDeleting && text === '') {
+      setIsDeleting(false);
+      setLoopNum((prev) => prev + 1);
     }
-  }, [texts, loopNum]);
+    
+    return () => {
+        if(timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+        }
+    }
+  }, [text, isDeleting, delay, loopNum, texts.length]);
 
 
   return (
