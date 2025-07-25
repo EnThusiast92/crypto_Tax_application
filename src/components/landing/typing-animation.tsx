@@ -19,7 +19,7 @@ export function TypingAnimation({
   deletingSpeed = 50,
   delay = 2000,
 }: TypingAnimationProps) {
-  const [text, setText] = useState(texts[0] || '');
+  const [text, setText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [loopNum, setLoopNum] = useState(0);
 
@@ -27,22 +27,23 @@ export function TypingAnimation({
     const i = loopNum % texts.length;
     const fullText = texts[i];
 
-    setText(
-      isDeleting
-        ? fullText.substring(0, text.length - 1)
-        : fullText.substring(0, text.length + 1)
-    );
+    if (isDeleting) {
+      setText(currentText => fullText.substring(0, currentText.length - 1));
+    } else {
+      setText(currentText => fullText.substring(0, currentText.length + 1));
+    }
 
     if (!isDeleting && text === fullText) {
       setTimeout(() => setIsDeleting(true), delay);
     } else if (isDeleting && text === '') {
       setIsDeleting(false);
       setLoopNum(currentLoop => (currentLoop + 1));
-      setText(fullText.substring(0, 1));
     }
   }, [isDeleting, text, loopNum, texts, delay]);
 
   useEffect(() => {
+    if (!texts || texts.length === 0) return;
+    
     const timer = setTimeout(
       () => {
         handleTyping();
@@ -51,7 +52,14 @@ export function TypingAnimation({
     );
 
     return () => clearTimeout(timer);
-  }, [text, handleTyping, isDeleting, deletingSpeed, typingSpeed]);
+  }, [text, isDeleting, texts, typingSpeed, deletingSpeed, handleTyping]);
+  
+  // Set initial text
+  useEffect(() => {
+    if(texts && texts.length > 0) {
+      setText(texts[0].substring(0, 1));
+    }
+  }, [texts]);
 
   return (
     <span
