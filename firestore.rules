@@ -1,63 +1,79 @@
+
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ================== HELPER FUNCTIONS ==================
-    function isSignedIn() {
-      return request.auth.uid != null;
+    // Helper functions
+    function isAuth() {
+      return request.auth != null;
     }
 
-    function getUserData(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data;
-    }
-
-    function hasRole(role) {
-      return isSignedIn() && getUserData(request.auth.uid).role == role;
-    }
-    
+    // Check if the requesting user is the owner of the document
     function isOwner(userId) {
-        return request.auth.uid == userId;
+      return request.auth.uid == userId;
     }
 
-    // ================== GLOBAL DEVELOPER RULE ==================
-    match /{path=**} {
-      allow read, write: if hasRole('Developer');
+    // Check if the user has a specific role
+    function hasRole(role) {
+      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
     }
 
-    // ================== USERS COLLECTION ==================
+    // Check if user is a Developer
+    function isDeveloper() {
+      return hasRole('Developer');
+    }
+    
+    // Check if user is a Staff
+    function isStaff() {
+      return hasRole('Staff');
+    }
+
+    // Check if a client has granted access to the requesting consultant
+    function clientHasGrantedAccess(clientId) {
+      let client = get(/databases/$(database)/documents/users/$(clientId)).data;
+      return client.linkedConsultantId == request.auth.uid;
+    }
+
+    // Check if the requesting user is the linked consultant for a client
+    function isLinkedConsultantFor(clientId) {
+      return isAuth() && hasRole('TaxConsultant') && clientHasGrantedAccess(clientId);
+    }
+    
+    // Rules for the 'users' collection
     match /users/{userId} {
-      allow create: if isSignedIn();
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow update: if isOwner(userId)
-                    || (hasRole('TaxConsultant') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['linkedClientIds']))
-                    || (hasRole('Client') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['linkedConsultantId']));
-      allow delete: if isOwner(userId);
-    }
-
-    // ================== TRANSACTIONS SUBCOLLECTION ==================
-    match /users/{userId}/transactions/{transactionId} {
-      allow read, write: if isOwner(userId) 
-                  || (hasRole('TaxConsultant') && userId in getUserData(request.auth.uid).linkedClientIds);
-    }
-    
-    // ================== WALLETS SUBCOLLECTION ==================
-    match /users/{userId}/wallets/{walletId} {
-      allow read, write: if isOwner(userId);
+      allow read: if isOwner(userId) || isDeveloper() || isStaff() || isLinkedConsultantFor(userId);
+      allow write: if isOwner(userId) || isDeveloper();
+      
+      // Rules for the 'transactions' subcollection
+      match /transactions/{transactionId} {
+        allow read, write: if isOwner(userId) || isDeveloper() || isStaff() || isLinkedConsultantFor(userId);
+      }
+      
+      // Rules for the 'wallets' subcollection
+      match /wallets/{walletId} {
+        allow read, write: if request.auth.uid == userId;
+      }
     }
     
-    // ================== INVITATIONS COLLECTION ==================
+    // Rules for the 'invitations' collection
     match /invitations/{invitationId} {
-        allow create: if hasRole('Client');
-        allow get, list: if isSignedIn() && (resource.data.toConsultantEmail == getUserData(request.auth.uid).email || resource.data.fromClientId == request.auth.uid);
-        allow update: if hasRole('TaxConsultant') && resource.data.toConsultantEmail == getUserData(request.auth.uid).email;
-        allow delete: if isSignedIn() && (resource.data.fromClientId == request.auth.uid || resource.data.toConsultantEmail == getUserData(request.auth.uid).email);
+      allow read: if isAuth() && (
+                    resource.data.fromClientId == request.auth.uid ||
+                    resource.data.toConsultantEmail == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.email
+                  );
+      allow create: if isAuth() && request.resource.data.fromClientId == request.auth.uid;
+      allow update: if isAuth() && hasRole('TaxConsultant'); // Consultant can accept
+      allow delete: if isAuth() && (
+                    resource.data.fromClientId == request.auth.uid ||
+                    hasRole('TaxConsultant')
+                  );
     }
-
-    // ================== APP SETTINGS ==================
-    match /app/{docId} {
-      allow read: if isSignedIn();
-      allow write: if hasRole('Developer');
+    
+    // Rules for the 'app' collection (settings)
+    match /app/settings {
+        allow read: if isAuth();
+        allow write: if isDeveloper();
     }
   }
 }
