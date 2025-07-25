@@ -125,17 +125,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }, (error) => {
             console.error("Error fetching users snapshot:", error);
             // If we have an error, at least set the current user to avoid a completely empty state
-            setUsers([user]);
+            if (user) {
+              setUsers([user]);
+            }
         });
         unsubs.push(usersUnsub);
-    } else {
+    } else if (user) {
         setUsers([user]);
     }
 
     return () => {
       unsubs.forEach(unsub => unsub());
     };
-  }, [user, invitations]);
+  }, [user]);
 
 
   const fetchAndSetUser = async (firebaseUser: FirebaseUser): Promise<User | null> => {
