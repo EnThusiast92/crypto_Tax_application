@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import type { User, AuthContextType, RegisterFormValues, Role, EditUserFormValues, Invitation, AppSettings } from '@/lib/types';
+import type { User, AuthContextType, RegisterFormValues, Role, EditUserFormValues, Invitation } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { auth, db } from '@/lib/firebase';
 import {
@@ -37,41 +37,10 @@ import {
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = React.useState<User | null>(null);
+function useUserData(user: User | null) {
   const [users, setUsers] = React.useState<User[]>([]);
   const [invitations, setInvitations] = React.useState<Invitation[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const router = useRouter();
-  
-  React.useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setLoading(true);
-      if (firebaseUser) {
-        const userRef = doc(db, 'users', firebaseUser.uid);
-        const userUnsubscribe = onSnapshot(userRef, (userSnap) => {
-          if (userSnap.exists()) {
-            const userData = { id: userSnap.id, ...userSnap.data() } as User;
-            setUser(userData);
-          } else {
-            setUser(null);
-          }
-           setLoading(false);
-        }, (error) => {
-           console.error("User snapshot error:", error);
-           setUser(null);
-           setLoading(false);
-        });
-        return () => userUnsubscribe();
-      } else {
-        setUser(null);
-        setLoading(false);
-      }
-    });
 
-    return () => unsubscribe();
-  }, []);
-  
   React.useEffect(() => {
     if (!user) {
       setUsers([]);
@@ -79,7 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const unsubs: (() => void)[] = [];
+    const unsubs: (() => void) = [];
 
     // Listener for invitations
     const invitationsQuery = user.role === 'Client'
@@ -87,59 +56,91 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       : query(collection(db, "invitations"), where("toConsultantEmail", "==", user.email));
       
     const invsUnsub = onSnapshot(invitationsQuery, (snapshot) => {
-        const fetchedInvitations = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invitation));
+        const fetchedInvitations = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Invitation));
         setInvitations(fetchedInvitations);
-    });
-    unsubs.push(invsUnsub);
-      
-    // Listener for users
-    let usersQuery;
-    if (user.role === 'Developer' || user.role === 'Staff') {
-        usersQuery = query(collection(db, 'users'));
-    } else {
-        const userIdsToFetch = new Set<string>([user.id]);
+
+        // This part needs to run inside the invitation listener to react to new invites
+        let userIdsToFetch = new Set<string>([user.id]);
         if (user.role === 'Client' && user.linkedConsultantId) {
             userIdsToFetch.add(user.linkedConsultantId);
         }
         if (user.role === 'TaxConsultant' && user.linkedClientIds?.length > 0) {
             user.linkedClientIds.forEach(id => userIdsToFetch.add(id));
         }
-
-        // Fetch users from pending invitations for consultants
         if(user.role === 'TaxConsultant') {
-            invitations.forEach(inv => {
+            fetchedInvitations.forEach(inv => {
                 if(inv.status === 'pending') userIdsToFetch.add(inv.fromClientId)
             });
         }
         
-        const finalUserIds = Array.from(userIdsToFetch).filter(Boolean);
-        if (finalUserIds.length > 0) {
-            usersQuery = query(collection(db, 'users'), where(documentId(), 'in', finalUserIds));
-        }
-    }
-
-    if (usersQuery) {
-        const usersUnsub = onSnapshot(usersQuery, (snapshot) => {
-            const fetchedUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
-            setUsers(fetchedUsers);
-        }, (error) => {
-            console.error("Error fetching users snapshot:", error);
-            // If we have an error, at least set the current user to avoid a completely empty state
-            if (user) {
-              setUsers([user]);
+        let usersQuery;
+        if (user.role === 'Developer' || user.role === 'Staff') {
+            usersQuery = query(collection(db, 'users'));
+        } else {
+            const finalUserIds = Array.from(userIdsToFetch).filter(Boolean);
+            if (finalUserIds.length > 0) {
+                usersQuery = query(collection(db, 'users'), where(documentId(), 'in', finalUserIds));
             }
-        });
-        unsubs.push(usersUnsub);
-    } else if (user) {
-        setUsers([user]);
-    }
+        }
+        
+        if (usersQuery) {
+            const usersUnsub = onSnapshot(usersQuery, (userSnapshot) => {
+                const fetchedUsers = userSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as User));
+                setUsers(fetchedUsers);
+            }, (error) => {
+                console.error("Error fetching users snapshot:", error);
+                if (user) setUsers([user]);
+            });
+            unsubs.push(usersUnsub);
+        } else if(user) {
+          setUsers([user]);
+        }
 
+    }, (error) => {
+        console.error("Error fetching invitations:", error);
+    });
+    unsubs.push(invsUnsub);
+      
     return () => {
       unsubs.forEach(unsub => unsub());
     };
   }, [user]);
 
+  return { users, invitations };
+}
 
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = React.useState<User | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const router = useRouter();
+  const { users, invitations } = useUserData(user);
+  
+  React.useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setLoading(true);
+      if (firebaseUser) {
+        const userRef = doc(db, 'users', firebaseUser.uid);
+        try {
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            setUser({ id: userSnap.id, ...userSnap.data() } as User);
+          } else {
+            setUser(null);
+          }
+        } catch (error) {
+          console.error("Error fetching user document:", error);
+          setUser(null);
+        }
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+  
   const fetchAndSetUser = async (firebaseUser: FirebaseUser): Promise<User | null> => {
       const userDocRef = doc(db, 'users', firebaseUser.uid);
       const userDoc = await getDoc(userDocRef);
@@ -315,7 +316,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           where('status', '==', 'accepted')
       );
       const acceptedInvites = await getDocs(q);
-      acceptedInvites.forEach(doc => batch.delete(doc.ref));
+      acceptedInvites.forEach(d => batch.delete(d.ref));
 
       await batch.commit();
   };
