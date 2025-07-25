@@ -29,13 +29,15 @@ service cloud.firestore {
       allow create: if isSignedIn();
       allow get: if isSignedIn();
       allow list: if isSignedIn();
-      allow update: if isOwner(userId);
+      allow update: if isOwner(userId)
+                    || (hasRole('TaxConsultant') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['linkedClientIds']))
+                    || (hasRole('Client') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['linkedConsultantId']));
+      allow delete: if isOwner(userId);
     }
 
     // ================== TRANSACTIONS SUBCOLLECTION ==================
     match /users/{userId}/transactions/{transactionId} {
-      allow write: if isOwner(userId);
-      allow read: if isOwner(userId) 
+      allow read, write: if isOwner(userId) 
                   || (hasRole('TaxConsultant') && userId in getUserData(request.auth.uid).linkedClientIds);
     }
     
