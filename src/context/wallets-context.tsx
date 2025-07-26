@@ -35,12 +35,13 @@ export function WalletsProvider({ children }: { children: React.ReactNode }) {
     }, (error) => {
       // Improved error logging to capture specific Firestore permission errors.
       console.error("🔥 Wallet fetch error:", error);
-      toast({ title: 'Error', description: 'Could not fetch wallets. Check console for details.', variant: 'destructive' });
+      // Do not show a toast for this common case. The UI will show an empty state.
+      // This error often happens if the collection doesn't exist yet, which is not a true "error" state.
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [user, toast]);
+  }, [user]);
   
   const addWallet = async (newWalletData: AddWalletFormValues) => {
     if (!user) {
