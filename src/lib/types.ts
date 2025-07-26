@@ -5,7 +5,7 @@ import type { Timestamp } from 'firebase/firestore';
 export type Role = 'Developer' | 'Staff' | 'Client' | 'TaxConsultant';
 
 export type WalletType = 'DEX' | 'CEX';
-export type WalletStatus = 'connected' | 'error';
+export type WalletStatus = 'connected' | 'syncing' | 'synced' | 'sync_failed';
 
 export type Wallet = {
   id: string;

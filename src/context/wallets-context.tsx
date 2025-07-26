@@ -70,7 +70,7 @@ export function WalletsProvider({ children }: { children: React.ReactNode }) {
         transactionsCount: 0,
         lastSyncAt: Timestamp.now(),
         createdAt: Timestamp.now(),
-        status: 'connected',
+        status: 'synced',
       };
 
       await addDoc(walletsCol, newWallet);
