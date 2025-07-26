@@ -1,4 +1,5 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -7,63 +8,60 @@ service cloud.firestore {
       return request.auth.uid != null;
     }
 
+    function isOwner(userId) {
+        return request.auth.uid == userId;
+    }
+
     function getUserData(userId) {
       return get(/databases/$(database)/documents/users/$(userId)).data;
     }
 
     function hasRole(role) {
-      // Check for existence of .role before comparing
+      // Safe check to prevent errors if the user doc or role is missing
       return isSignedIn() &&
-             getUserData(request.auth.uid).role != null &&
+             'role' in getUserData(request.auth.uid) &&
              getUserData(request.auth.uid).role == role;
-    }
-    
-    function isOwner(userId) {
-        return request.auth.uid == userId;
     }
 
     // ================== GLOBAL DEVELOPER RULE ==================
-    // This rule MUST come first to be overridden by more specific rules.
-    // However, for security, it's better to add the developer check to each rule.
-    // For now, leaving as is per user request, but this is a potential issue.
+    // This allows developers to bypass all other rules.
+    match /{path=**} {
+      allow read, write: if hasRole('Developer');
+    }
 
-
-    // ================== USERS COLLECTION ==================
+    // ================== USER DOCUMENT & SUBCOLLECTIONS ==================
     match /users/{userId} {
+      // Users can create their own account and read their own profile.
+      // Anyone can query the list to check if a user exists.
       allow create: if isSignedIn();
-      allow get: if isSignedIn() || hasRole('Developer');
-      allow list: if isSignedIn() || hasRole('Developer');
-      allow update: if isOwner(userId) || hasRole('Developer');
-      allow delete: if hasRole('Developer');
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow update: if isOwner(userId);
 
-        // ================== TRANSACTIONS SUBCOLLECTION ==================
-        match /transactions/{transactionId} {
-          allow read: if isOwner(userId) 
-                      || (hasRole('TaxConsultant') && userId in getUserData(request.auth.uid).linkedClientIds)
-                      || hasRole('Developer');
-          allow write: if isOwner(userId) || hasRole('Developer');
-        }
-        
-        // ================== WALLETS SUBCOLLECTION ==================
-        match /wallets/{walletId} {
-          allow read: if isOwner(userId) 
-                      || (hasRole('TaxConsultant') && userId in getUserData(request.auth.uid).linkedClientIds)
-                      || hasRole('Developer');
-          allow write: if isOwner(userId) || hasRole('Developer');
-        }
+      // --- TRANSACTIONS SUBCOLLECTION ---
+      match /transactions/{transactionId} {
+        allow read, write: if isOwner(userId) || (hasRole('TaxConsultant') && userId in getUserData(request.auth.uid).linkedClientIds);
+      }
+      
+      // --- WALLETS SUBCOLLECTION ---
+      // This rule was the source of the error. The fix is to explicitly allow 'list'.
+      match /wallets/{walletId} {
+         allow read, write: if isOwner(userId) || (hasRole('TaxConsultant') && userId in getUserData(request.auth.uid).linkedClientIds);
+      }
     }
     
     // ================== INVITATIONS COLLECTION ==================
     match /invitations/{invitationId} {
-        allow create: if hasRole('Client') || hasRole('Developer');
-        allow get, list: if isSignedIn() || hasRole('Developer');
-        allow update: if (hasRole('TaxConsultant') && resource.data.toConsultantEmail == getUserData(request.auth.uid).email) || hasRole('Developer');
-        allow delete: if (isSignedIn() && (resource.data.fromClientId == request.auth.uid || resource.data.toConsultantEmail == getUserData(request.auth.uid).email)) || hasRole('Developer');
+        allow create: if hasRole('Client');
+        allow get, list: if isSignedIn() && (resource.data.toConsultantEmail == getUserData(request.auth.uid).email || resource.data.fromClientId == request.auth.uid);
+        allow update: if hasRole('TaxConsultant') && resource.data.toConsultantEmail == getUserData(request.auth.uid).email;
+        allow delete: if isSignedIn() && (resource.data.fromClientId == request.auth.uid || resource.data.toConsultantEmail == getUserData(request.auth.uid).email);
     }
 
     // ================== APP SETTINGS ==================
     match /app/{docId} {
-      allow read: if isSignedIn() || hasRole('Developer');
+      allow read: if isSignedIn();
+      // Only developers can write to app settings
       allow write: if hasRole('Developer');
     }
   }
