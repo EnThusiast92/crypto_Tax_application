@@ -12,14 +12,17 @@ service cloud.firestore {
     }
 
     function hasRole(role) {
-      return isSignedIn() && getUserData(request.auth.uid).role == role;
+      // Safely check for user data and role property existence
+      let userData = getUserData(request.auth.uid);
+      return isSignedIn() && userData != null && 'role' in userData && userData.role == role;
     }
     
     function isOwner(userId) {
-        return request.auth.uid == userId;
+      return request.auth.uid == userId;
     }
 
     // ================== GLOBAL DEVELOPER RULE ==================
+    // This rule must come first to act as a master override.
     match /{path=**} {
       allow read, write: if hasRole('Developer');
     }
@@ -46,9 +49,8 @@ service cloud.firestore {
     
     // ================== WALLETS SUBCOLLECTION ==================
     match /users/{userId}/wallets/{walletId} {
-      allow write: if isOwner(userId);
-      allow read: if isOwner(userId) 
-                  || (hasRole('TaxConsultant') && userId in getUserData(request.auth.uid).linkedClientIds);
+        allow read, write: if isOwner(userId)
+                    || (hasRole('TaxConsultant') && userId in getUserData(request.auth.uid).linkedClientIds);
     }
     
     // ================== INVITATIONS COLLECTION ==================
