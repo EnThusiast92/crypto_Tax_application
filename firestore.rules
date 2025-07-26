@@ -1,5 +1,4 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -8,60 +7,62 @@ service cloud.firestore {
       return request.auth.uid != null;
     }
 
+    // This function can be used in rules for GET, CREATE, UPDATE, DELETE but NOT for LIST queries.
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    // Safer hasRole function to be used for non-list rules.
+    function hasRole(role) {
+      return isSignedIn() &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             getUserData().role == role;
+    }
+    
     function isOwner(userId) {
         return request.auth.uid == userId;
     }
 
-    function getUserData(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data;
-    }
-
-    function hasRole(role) {
-      // Safe check to prevent errors if the user doc or role is missing
-      return isSignedIn() &&
-             'role' in getUserData(request.auth.uid) &&
-             getUserData(request.auth.uid).role == role;
-    }
-
     // ================== GLOBAL DEVELOPER RULE ==================
-    // This allows developers to bypass all other rules.
+    // Developers can read/write anything. This rule should be placed first.
     match /{path=**} {
       allow read, write: if hasRole('Developer');
     }
 
-    // ================== USER DOCUMENT & SUBCOLLECTIONS ==================
+    // ================== USERS COLLECTION ==================
     match /users/{userId} {
-      // Users can create their own account and read their own profile.
-      // Anyone can query the list to check if a user exists.
       allow create: if isSignedIn();
       allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow update: if isOwner(userId);
+      allow list: if isSignedIn(); // Allows querying the users collection.
 
-      // --- TRANSACTIONS SUBCOLLECTION ---
-      match /transactions/{transactionId} {
-        allow read, write: if isOwner(userId) || (hasRole('TaxConsultant') && userId in getUserData(request.auth.uid).linkedClientIds);
-      }
-      
-      // --- WALLETS SUBCOLLECTION ---
-      // This rule was the source of the error. The fix is to explicitly allow 'list'.
-      match /wallets/{walletId} {
-         allow read, write: if isOwner(userId) || (hasRole('TaxConsultant') && userId in getUserData(request.auth.uid).linkedClientIds);
-      }
+      allow update: if isOwner(userId);
+    }
+    
+    // ================== TRANSACTIONS SUBCOLLECTION ==================
+    match /users/{userId}/transactions/{transactionId} {
+      allow read, write: if isOwner(userId) || (hasRole('TaxConsultant') && userId in getUserData().linkedClientIds);
+    }
+
+    // ================== WALLETS SUBCOLLECTION (CORRECTED) ==================
+    // This rule allows a user to read/write/list their own wallets.
+    // It also allows a linked consultant to read the wallets.
+    // Importantly, the read rule for owners does not use `get`, so it works for `list` queries.
+    match /users/{userId}/wallets/{walletId} {
+      allow write: if isOwner(userId);
+      allow read: if isOwner(userId) || (hasRole('TaxConsultant') && userId in getUserData().linkedClientIds);
     }
     
     // ================== INVITATIONS COLLECTION ==================
     match /invitations/{invitationId} {
         allow create: if hasRole('Client');
-        allow get, list: if isSignedIn() && (resource.data.toConsultantEmail == getUserData(request.auth.uid).email || resource.data.fromClientId == request.auth.uid);
-        allow update: if hasRole('TaxConsultant') && resource.data.toConsultantEmail == getUserData(request.auth.uid).email;
-        allow delete: if isSignedIn() && (resource.data.fromClientId == request.auth.uid || resource.data.toConsultantEmail == getUserData(request.auth.uid).email);
+        allow get, list: if isSignedIn();
+        allow update: if hasRole('TaxConsultant');
+        allow delete: if isSignedIn();
     }
 
     // ================== APP SETTINGS ==================
     match /app/{docId} {
       allow read: if isSignedIn();
-      // Only developers can write to app settings
       allow write: if hasRole('Developer');
     }
   }
