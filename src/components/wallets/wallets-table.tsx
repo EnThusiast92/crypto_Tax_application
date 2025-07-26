@@ -7,6 +7,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table';
+import { useRouter } from 'next/navigation';
 
 import {
   Table,
@@ -21,11 +22,16 @@ import { columns } from './columns';
 import { IconProvider } from '@/context/icon-context';
 
 function WalletsTableContent({ data }: { data: Wallet[] }) {
+  const router = useRouter();
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
+
+  const handleRowClick = (walletId: string) => {
+    router.push(`/wallets/${walletId}`);
+  };
 
   return (
     <div className="w-full">
@@ -50,9 +56,16 @@ function WalletsTableContent({ data }: { data: Wallet[] }) {
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && 'selected'}
+                  onClick={() => handleRowClick(row.original.id)}
+                  className="cursor-pointer"
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell key={cell.id} onClick={(e) => {
+                        // Prevent row click when interacting with dropdown menu
+                        if (cell.column.id === 'actions') {
+                            e.stopPropagation();
+                        }
+                    }}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}

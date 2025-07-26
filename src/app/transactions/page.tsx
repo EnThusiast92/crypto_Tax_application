@@ -16,10 +16,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useTransactions } from '@/context/transactions-context';
+import { useWallets } from '@/context/wallets-context';
 
 export default function TransactionsPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const { transactions, addTransaction } = useTransactions();
+  const { wallets } = useWallets();
 
   return (
     <>
@@ -40,23 +42,47 @@ export default function TransactionsPage() {
         <Card className="animate-in fade-in-0 slide-in-from-bottom-5 duration-500">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>All Transactions</CardTitle>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Filter className="h-4 w-4" />
-                  Advanced Filters
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Filter by Type</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuCheckboxItem checked>Buy</DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem>Sell</DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem>Staking</DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem>Airdrop</DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem>Gift</DropdownMenuCheckboxItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Filter className="h-4 w-4" />
+                    Filter by Wallet
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Filter by Wallet</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {wallets.length > 0 ? (
+                    wallets.map(wallet => (
+                      <DropdownMenuCheckboxItem key={wallet.id}>
+                        {wallet.name}
+                      </DropdownMenuCheckboxItem>
+                    ))
+                  ) : (
+                    <DropdownMenuLabel className="text-xs text-muted-foreground font-normal p-2">No wallets found</DropdownMenuLabel>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Filter className="h-4 w-4" />
+                    Filter by Type
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Filter by Type</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuCheckboxItem checked>Buy</DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem>Sell</DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem>Staking</DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem>Airdrop</DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem>Gift</DropdownMenuCheckboxItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </CardHeader>
           <CardContent>
             <TransactionsTable data={transactions} />

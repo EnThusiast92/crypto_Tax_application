@@ -24,15 +24,15 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
   const { toast } = useToast();
 
   React.useEffect(() => {
-    // Do not fetch transactions if there is no user.
     if (!user) {
-      setTransactions([]); // Clear transactions on logout
+      setTransactions([]);
       setLoading(false);
       return;
     }
 
     setLoading(true);
-    // Path to the user's specific transactions subcollection
+    // This now listens to the user's root transactions collection.
+    // This collection will contain transactions from all wallets, synced by the Cloud Function.
     const transactionsCol = collection(db, `users/${user.id}/transactions`);
     const q = query(transactionsCol, orderBy('date', 'desc'));
     
@@ -46,7 +46,6 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
         setLoading(false);
     });
 
-    // Cleanup the listener when the component unmounts or the user changes
     return () => unsubscribe();
   }, [user, toast]);
 
@@ -57,13 +56,13 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
     };
 
     try {
+      // All transactions, manual or synced, go into the same root collection.
       const transactionsCol = collection(db, `users/${user.id}/transactions`);
       const newTransaction = {
         ...newTransactionData,
         value: newTransactionData.quantity * newTransactionData.price,
       };
       await addDoc(transactionsCol, newTransaction);
-      // The onSnapshot listener will automatically update the local state.
     } catch (error) {
        console.error("Error adding transaction:", error);
        toast({ title: 'Error', description: 'Could not save the transaction.', variant: 'destructive' });
@@ -81,7 +80,7 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
         const batch = writeBatch(db);
 
         newTransactionsData.forEach(txData => {
-            const docRef = doc(transactionsCol); // Create a new doc with a random ID in the subcollection
+            const docRef = doc(transactionsCol);
             const newTransaction = {
                 ...txData,
                 value: txData.quantity * txData.price,
@@ -90,7 +89,6 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
         });
 
         await batch.commit();
-        // The onSnapshot listener will automatically update the local state.
         
     } catch (error) {
         console.error("Error adding transactions in batch:", error);

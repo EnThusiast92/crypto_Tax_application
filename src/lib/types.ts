@@ -41,6 +41,7 @@ export type Transaction = {
   classification: string;
   toAsset?: string;
   toQuantity?: number;
+  walletId?: string; // Link transaction to a specific wallet
 };
 
 export type StatCardData = {
