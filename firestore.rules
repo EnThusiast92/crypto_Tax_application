@@ -11,11 +11,12 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(userId)).data;
     }
 
-    function isRole(role) {
+    // Safer hasRole function to prevent errors on incomplete user docs
+    function hasRole(role) {
+      let userData = getUserData(request.auth.uid);
       return isSignedIn() &&
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             'role' in getUserData(request.auth.uid) &&
-             getUserData(request.auth.uid).role == role;
+             'role' in userData &&
+             userData.role == role;
     }
     
     function isOwner(userId) {
@@ -23,48 +24,46 @@ service cloud.firestore {
     }
 
     // ================== GLOBAL DEVELOPER RULE ==================
-    // Developer has god-mode access.
     match /{path=**} {
-      allow read, write: if isRole('Developer');
+      allow read, write: if hasRole('Developer');
     }
 
     // ================== USERS COLLECTION ==================
     match /users/{userId} {
       allow create: if isSignedIn();
       allow get: if isSignedIn();
-      // Allow any signed-in user to query the users collection,
-      // which is needed to check if a consultant exists before sending an invite.
       allow list: if isSignedIn();
-
       allow update: if isOwner(userId);
     }
 
     // ================== TRANSACTIONS SUBCOLLECTION ==================
     match /users/{userId}/transactions/{transactionId} {
-      allow read: if isOwner(userId) 
-                  || (isRole('TaxConsultant') && userId in getUserData(request.auth.uid).linkedClientIds);
       allow write: if isOwner(userId);
+      allow read: if isOwner(userId) 
+                  || (hasRole('TaxConsultant') && userId in getUserData(request.auth.uid).linkedClientIds);
     }
     
-    // ================== WALLETS SUBCOLLECTION ==================
+    // ================== WALLETS SUBCOLLECTION (CORRECTED) ==================
     match /users/{userId}/wallets/{walletId} {
-      allow read: if isOwner(userId)
-                  || (isRole('TaxConsultant') && userId in getUserData(request.auth.uid).linkedClientIds);
-      allow write: if isOwner(userId);
+        // A client can perform any action on their own wallets.
+        allow read, write: if isOwner(userId);
+        
+        // A tax consultant can read the wallets of their linked clients.
+        allow get, list: if hasRole('TaxConsultant') && userId in getUserData(request.auth.uid).linkedClientIds;
     }
-
+    
     // ================== INVITATIONS COLLECTION ==================
     match /invitations/{invitationId} {
-        allow create: if isRole('Client');
+        allow create: if hasRole('Client');
         allow get, list: if isSignedIn() && (resource.data.toConsultantEmail == getUserData(request.auth.uid).email || resource.data.fromClientId == request.auth.uid);
-        allow update: if isRole('TaxConsultant') && resource.data.toConsultantEmail == getUserData(request.auth.uid).email;
+        allow update: if hasRole('TaxConsultant') && resource.data.toConsultantEmail == getUserData(request.auth.uid).email;
         allow delete: if isSignedIn() && (resource.data.fromClientId == request.auth.uid || resource.data.toConsultantEmail == getUserData(request.auth.uid).email);
     }
 
     // ================== APP SETTINGS ==================
     match /app/{docId} {
       allow read: if isSignedIn();
-      allow write: if isRole('Developer');
+      allow write: if hasRole('Developer');
     }
   }
 }
