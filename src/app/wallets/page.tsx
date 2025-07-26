@@ -4,7 +4,6 @@
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, RefreshCw, Search, Info, ChevronDown } from 'lucide-react';
-import { ConnectWalletDialog } from '@/components/wallets/connect-wallet-dialog';
 import { useWallets } from '@/context/wallets-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
@@ -17,9 +16,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { IconProvider } from '@/context/icon-context';
+import Link from 'next/link';
 
 export default function WalletsPage() {
-    const [isDialogOpen, setIsDialogOpen] = React.useState(false);
     const { wallets, loading } = useWallets();
 
     return (
@@ -31,9 +30,11 @@ export default function WalletsPage() {
                         {!loading && <Badge variant="secondary" className="text-base">{wallets.length}</Badge>}
                     </div>
                     <div className="flex items-center gap-2">
-                        <Button onClick={() => setIsDialogOpen(true)} className="w-full sm:w-auto">
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Add wallet / exchange
+                        <Button asChild className="w-full sm:w-auto">
+                            <Link href="/wallets/add">
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Add wallet / exchange
+                            </Link>
                         </Button>
                         <Button variant="outline" className="w-full sm:w-auto">
                             <RefreshCw className="mr-2 h-4 w-4" />
@@ -78,7 +79,6 @@ export default function WalletsPage() {
                     )}
                 </main>
             </div>
-            <ConnectWalletDialog isOpen={isDialogOpen} onOpenChange={setIsDialogOpen} />
         </>
     )
 }

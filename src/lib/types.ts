@@ -20,6 +20,12 @@ export type Wallet = {
   status: WalletStatus;
 };
 
+export type StaticWallet = {
+    name: string;
+    iconUrl: string;
+    supported: boolean;
+}
+
 export type AddWalletFormValues = {
   name: string;
   type: WalletType;
