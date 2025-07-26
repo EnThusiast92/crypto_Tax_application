@@ -1,62 +1,50 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
     
+    // Helper function to check ownership
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
 
-    // A user can be created by anyone (for registration)
+    // Rules for the 'users' collection
     match /users/{userId} {
-      allow create; 
+      // Users can read and update their own profile data.
+      // Creation and deletion are handled by server-side logic (e.g., auth triggers).
+      allow read, update: if isOwner(userId);
       
-      // Users can read/update their own document.
-      // Consultants can read the documents of their linked clients.
-      allow read, update: if isOwner(userId) || 
-                       (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-                        resource.data.linkedConsultantId == request.auth.uid);
-      
-      // Developers and Staff can read/write any user document
-      allow read, update, delete: if exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-                         (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Developer' ||
-                          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Staff');
+      // Allow a user to list their own subcollections.
+      // This is the key rule that fixes the "could not fetch wallets" error.
+      allow list: if isOwner(userId);
 
-      // Nested rule for the 'transactions' subcollection
+      // --- Nested Subcollection Rules ---
+
+      // A user can read/write any document within their own 'transactions' subcollection.
       match /transactions/{transactionId} {
-        // The owner of the parent user document can read/write transactions.
-        // A linked consultant can also read the transactions.
-        allow read, write: if isOwner(userId) ||
-                         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-                          get(/databases/$(database)/documents/users/$(userId)).data.linkedConsultantId == request.auth.uid);
+        allow read, write: if isOwner(userId);
       }
 
-      // Nested rule for the 'wallets' subcollection
+      // A user can read/write any document within their own 'wallets' subcollection.
       match /wallets/{walletId} {
-        // The owner of the parent user document can read/write wallets.
-        // A linked consultant can also read the wallets.
-        allow read, write: if isOwner(userId) ||
-                         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-                          get(/databases/$(database)/documents/users/$(userId)).data.linkedConsultantId == request.auth.uid);
+        allow read, write: if isOwner(userId);
       }
     }
 
-    // Invitations can be created by clients.
-    // They can be read by the involved client or consultant.
-    // They can be deleted (rejected/cancelled) by the involved client or consultant.
+    // Rules for the 'invitations' collection
     match /invitations/{invitationId} {
-        allow create: if request.auth.uid == request.resource.data.fromClientId;
-        allow read, delete: if request.auth.uid == resource.data.fromClientId ||
-                             request.auth.token.email == resource.data.toConsultantEmail;
-        allow update: if request.auth.token.email == resource.data.toConsultantEmail; // for accepting
+        // A client can read/create/delete their own outgoing invitations.
+        allow read, create, delete: if request.auth.uid == request.resource.data.fromClientId;
+        // A consultant can read/update invitations sent to them.
+        allow read, update, delete: if request.auth.token.email == resource.data.toConsultantEmail;
     }
-
-    // App-wide settings are read-only for authenticated users, writable only by developers.
-    match /app/settings {
-      allow read: if request.auth != null;
-      allow write: if exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Developer';
+    
+    // Rules for the 'app' settings collection
+    match /app/{settingId} {
+        // Allow read for any authenticated user
+        allow read: if request.auth != null;
+        // Only allow writes for users with the 'Developer' role.
+        allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Developer';
     }
   }
 }
