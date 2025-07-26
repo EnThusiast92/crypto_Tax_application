@@ -1,0 +1,99 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ================== HELPER FUNCTIONS ==================
+    function isSignedIn() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    // Safely get user data. Returns null if the document does not exist.
+    function getUserData(userId) {
+      let doc = get(/databases/$(database)/documents/users/$(userId));
+      if (doc == null) {
+        return null;
+      }
+      return doc.data;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Safely check user role.
+    function hasRole(role) {
+      if (!isSignedIn()) {
+        return false;
+      }
+      let userData = getUserData(request.auth.uid);
+      return userData != null && userData.role == role;
+    }
+    
+    function isConsultantForUser(userId) {
+      if (!hasRole('TaxConsultant')) {
+        return false;
+      }
+      let consultantData = getUserData(request.auth.uid);
+      // Check if consultantData is not null and linkedClientIds is a list containing the userId
+      return consultantData != null && consultantData.linkedClientIds is list && userId in consultantData.linkedClientIds;
+    }
+
+    // ================== GLOBAL DEVELOPER RULE (MUST BE FIRST) ==================
+    // This allows any developer to bypass all other rules.
+    match /{path=**} {
+      allow read, write: if hasRole('Developer');
+    }
+
+    // ================== USERS COLLECTION ==================
+    match /users/{userId} {
+      // Any signed-in user can create their own account document.
+      allow create: if isOwner(userId);
+      
+      // A user can read their own document.
+      // A consultant can read their linked clients' documents.
+      allow get: if isOwner(userId) || isConsultantForUser(userId);
+      
+      // Any authenticated user can list users (e.g., to search for a consultant).
+      allow list: if isSignedIn();
+
+      // A user can only update their own document.
+      allow update: if isOwner(userId);
+      
+      // A user can only delete their own document.
+      allow delete: if isOwner(userId);
+    }
+
+    // ================== TRANSACTIONS & WALLETS SUBCOLLECTIONS ==================
+    match /users/{userId}/{collection}/{docId} {
+      // To read documents (get) or query the collection (list):
+      // - You must be the owner of the subcollection OR
+      // - You must be a Tax Consultant linked to that user.
+      allow read: if isOwner(userId) || isConsultantForUser(userId);
+      
+      // To write documents (create, update, delete):
+      // - You must be the owner of the subcollection.
+      allow write: if isOwner(userId);
+    }
+    
+    // ================== INVITATIONS COLLECTION ==================
+    match /invitations/{invitationId} {
+      allow create: if hasRole('Client');
+      
+      // You can read an invitation if you sent it or if it was sent to you.
+      allow read: if isSignedIn() && 
+                    (resource.data.fromClientId == request.auth.uid || resource.data.toConsultantEmail == getUserData(request.auth.uid).email);
+                    
+      allow update: if hasRole('TaxConsultant') && resource.data.toConsultantEmail == getUserData(request.auth.uid).email;
+      
+      allow delete: if isSignedIn() &&
+                    (resource.data.fromClientId == request.auth.uid || resource.data.toConsultantEmail == getUserData(request.auth.uid).email);
+    }
+
+    // ================== APP SETTINGS ==================
+    match /app/{settingId} {
+      allow read: if isSignedIn();
+      // Only developers can write to app settings. This is covered by the global developer rule.
+    }
+  }
+}
