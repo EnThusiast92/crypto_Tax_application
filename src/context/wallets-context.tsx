@@ -17,7 +17,8 @@ export function WalletsProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
 
   React.useEffect(() => {
-    if (!user) {
+    // Explicitly check for user and user.id to prevent invalid queries.
+    if (!user?.id) {
       setWallets([]);
       setLoading(false);
       return;
@@ -32,8 +33,9 @@ export function WalletsProvider({ children }: { children: React.ReactNode }) {
       setWallets(userWallets);
       setLoading(false);
     }, (error) => {
-      console.error("Error fetching wallets snapshot:", error);
-      toast({ title: 'Error', description: 'Could not fetch wallets.', variant: 'destructive' });
+      // Improved error logging to capture specific Firestore permission errors.
+      console.error("🔥 Wallet fetch error:", error);
+      toast({ title: 'Error', description: 'Could not fetch wallets. Check console for details.', variant: 'destructive' });
       setLoading(false);
     });
 
