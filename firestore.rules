@@ -11,12 +11,12 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(userId)).data;
     }
 
-    // Safer hasRole function to prevent errors on incomplete user docs
     function hasRole(role) {
-      let userData = getUserData(request.auth.uid);
+      // Note: This function can fail if the user document or role field does not exist.
       return isSignedIn() &&
-             'role' in userData &&
-             userData.role == role;
+             getUserData(request.auth.uid) != null &&
+             getUserData(request.auth.uid).role != null &&
+             getUserData(request.auth.uid).role == role;
     }
     
     function isOwner(userId) {
@@ -33,7 +33,9 @@ service cloud.firestore {
       allow create: if isSignedIn();
       allow get: if isSignedIn();
       allow list: if isSignedIn();
-      allow update: if isOwner(userId);
+      allow update: if isOwner(userId)
+                    || (hasRole('TaxConsultant') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['linkedConsultantId']))
+                    || (hasRole('Client') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['linkedClientIds']));
     }
 
     // ================== TRANSACTIONS SUBCOLLECTION ==================
@@ -42,14 +44,10 @@ service cloud.firestore {
       allow read: if isOwner(userId) 
                   || (hasRole('TaxConsultant') && userId in getUserData(request.auth.uid).linkedClientIds);
     }
-    
-    // ================== WALLETS SUBCOLLECTION (CORRECTED) ==================
+
+    // ================== WALLETS SUBCOLLECTION (DEBUG RULE) ==================
     match /users/{userId}/wallets/{walletId} {
-        // A client can perform any action on their own wallets.
-        allow read, write: if isOwner(userId);
-        
-        // A tax consultant can read the wallets of their linked clients.
-        allow get, list: if hasRole('TaxConsultant') && userId in getUserData(request.auth.uid).linkedClientIds;
+      allow read, write: if request.auth.uid == userId;
     }
     
     // ================== INVITATIONS COLLECTION ==================
@@ -63,7 +61,6 @@ service cloud.firestore {
     // ================== APP SETTINGS ==================
     match /app/{docId} {
       allow read: if isSignedIn();
-      allow write: if hasRole('Developer');
     }
   }
 }
