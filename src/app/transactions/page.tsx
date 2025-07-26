@@ -22,6 +22,26 @@ export default function TransactionsPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const { transactions, addTransaction } = useTransactions();
   const { wallets } = useWallets();
+  const [selectedWallets, setSelectedWallets] = React.useState<Set<string>>(new Set());
+
+  const handleWalletSelect = (walletId: string) => {
+    setSelectedWallets(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(walletId)) {
+        newSet.delete(walletId);
+      } else {
+        newSet.add(walletId);
+      }
+      return newSet;
+    });
+  };
+
+  const filteredTransactions = React.useMemo(() => {
+    if (selectedWallets.size === 0) {
+      return transactions;
+    }
+    return transactions.filter(tx => tx.walletId && selectedWallets.has(tx.walletId));
+  }, [transactions, selectedWallets]);
 
   return (
     <>
@@ -47,7 +67,7 @@ export default function TransactionsPage() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="gap-2">
                     <Filter className="h-4 w-4" />
-                    Filter by Wallet
+                    Filter by Wallet {selectedWallets.size > 0 && `(${selectedWallets.size})`}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -55,7 +75,12 @@ export default function TransactionsPage() {
                   <DropdownMenuSeparator />
                   {wallets.length > 0 ? (
                     wallets.map(wallet => (
-                      <DropdownMenuCheckboxItem key={wallet.id}>
+                      <DropdownMenuCheckboxItem
+                        key={wallet.id}
+                        checked={selectedWallets.has(wallet.id)}
+                        onCheckedChange={() => handleWalletSelect(wallet.id)}
+                        onSelect={(e) => e.preventDefault()} // Prevent menu from closing on item click
+                      >
                         {wallet.name}
                       </DropdownMenuCheckboxItem>
                     ))
@@ -85,7 +110,7 @@ export default function TransactionsPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <TransactionsTable data={transactions} />
+            <TransactionsTable data={filteredTransactions} />
           </CardContent>
         </Card>
       </div>
