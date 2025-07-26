@@ -4,7 +4,6 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth-context';
-import { holdings } from '@/lib/data';
 import { OnboardingSteps } from '@/components/dashboard/onboarding-steps';
 import { PortfolioChart } from '@/components/dashboard/portfolio-chart';
 import { SummaryBar } from '@/components/dashboard/summary-bar';
@@ -90,7 +89,7 @@ export default function DashboardPage() {
           <TabsContent value="overview" className="space-y-6 mt-4">
             <PortfolioChart />
             <SummaryBar />
-            <HoldingsTable data={holdings} />
+            <HoldingsTable />
           </TabsContent>
         </Tabs>
       </div>

@@ -1,10 +1,14 @@
 
 'use client';
 
+import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { portfolioChartData } from '@/lib/data';
 import { Info } from 'lucide-react';
+import { useWallets } from '@/context/wallets-context';
+import { useTransactions } from '@/context/transactions-context';
+import { Skeleton } from '../ui/skeleton';
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -19,34 +23,76 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export function PortfolioChart() {
+    const { wallets, loading: walletsLoading } = useWallets();
+    const { transactions, loading: transactionsLoading } = useTransactions();
+
+    const { totalValue, costBasis, unrealizedGains, unrealizedGainsPercent } = React.useMemo(() => {
+        const totalValue = wallets.reduce((acc, wallet) => acc + wallet.reportedBalance, 0);
+        
+        const costBasis = transactions
+            .filter(tx => tx.type === 'Buy')
+            .reduce((acc, tx) => acc + tx.value, 0);
+
+        const unrealizedGains = totalValue - costBasis;
+        const unrealizedGainsPercent = costBasis > 0 ? (unrealizedGains / costBasis) * 100 : 0;
+
+        return { totalValue, costBasis, unrealizedGains, unrealizedGainsPercent };
+
+    }, [wallets, transactions]);
+
+    const isLoading = walletsLoading || transactionsLoading;
+
+    const formatCurrency = (value: number) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
+
   return (
     <Card className="bg-card/75">
       <CardContent className="p-6">
-        <div className="flex flex-col md:flex-row justify-between mb-4">
-          <div>
-            <p className="text-sm text-muted-foreground flex items-center gap-1">
-              Total value <Info className="w-3 h-3" />
-            </p>
-            <div className="flex items-end gap-2">
-              <p className="text-4xl font-bold">£160,168</p>
-              <p className="text-lg font-semibold text-green-400 mb-1">+55.4%</p>
+        {isLoading ? (
+            <div className="flex flex-col md:flex-row justify-between mb-4">
+                <div>
+                    <Skeleton className="h-4 w-24 mb-2" />
+                    <Skeleton className="h-10 w-48 mb-1" />
+                </div>
+                 <div className="flex gap-6 mt-4 md:mt-0">
+                    <div>
+                        <Skeleton className="h-4 w-20 mb-2" />
+                        <Skeleton className="h-8 w-32" />
+                    </div>
+                    <div>
+                        <Skeleton className="h-4 w-28 mb-2" />
+                        <Skeleton className="h-8 w-32" />
+                    </div>
+                </div>
             </div>
-          </div>
-          <div className="flex gap-6 mt-4 md:mt-0">
-            <div>
-              <p className="text-sm text-muted-foreground flex items-center gap-1">
-                Cost basis <Info className="w-3 h-3" />
-              </p>
-              <p className="text-2xl font-semibold">£103,071</p>
+        ) : (
+            <div className="flex flex-col md:flex-row justify-between mb-4">
+                <div>
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                    Total value <Info className="w-3 h-3" />
+                    </p>
+                    <div className="flex items-end gap-2">
+                    <p className="text-4xl font-bold">{formatCurrency(totalValue)}</p>
+                    <p className={`text-lg font-semibold ${unrealizedGainsPercent >= 0 ? 'text-green-400' : 'text-red-400'} mb-1`}>
+                        {unrealizedGainsPercent >= 0 ? '+' : ''}{unrealizedGainsPercent.toFixed(2)}%
+                    </p>
+                    </div>
+                </div>
+                <div className="flex gap-6 mt-4 md:mt-0">
+                    <div>
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                        Cost basis <Info className="w-3 h-3" />
+                    </p>
+                    <p className="text-2xl font-semibold">{formatCurrency(costBasis)}</p>
+                    </div>
+                    <div>
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                        Unrealized gains <Info className="w-3 h-3" />
+                    </p>
+                    <p className="text-2xl font-semibold">{formatCurrency(unrealizedGains)}</p>
+                    </div>
+                </div>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground flex items-center gap-1">
-                Unrealized gains <Info className="w-3 h-3" />
-              </p>
-              <p className="text-2xl font-semibold">£57,097</p>
-            </div>
-          </div>
-        </div>
+        )}
 
         <div className="h-[250px] w-full">
           <ResponsiveContainer width="100%" height="100%">
