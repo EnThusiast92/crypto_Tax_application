@@ -1,6 +1,4 @@
-
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -14,6 +12,9 @@ service cloud.firestore {
     }
 
     function hasRole(role) {
+      // This is a potentially unsafe function if user doc doesn't exist.
+      // It is kept this way based on the provided working rules.
+      // A safer version would check if `getUserData()` returns null.
       return isSignedIn() && getUserData(request.auth.uid).role == role;
     }
     
@@ -22,6 +23,7 @@ service cloud.firestore {
     }
 
     // ================== GLOBAL DEVELOPER RULE ==================
+    // This rule is evaluated if no other rule matches.
     match /{path=**} {
       allow read, write: if hasRole('Developer');
     }
@@ -30,7 +32,7 @@ service cloud.firestore {
     match /users/{userId} {
       allow create: if isSignedIn();
       allow get: if isSignedIn();
-      allow list: if isSignedIn();
+      allow list: if isSignedIn(); // Needed for consultant existence check
       allow update: if isOwner(userId)
                     || (hasRole('TaxConsultant') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['linkedConsultantId']))
                     || (hasRole('Client') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['linkedClientIds']));
@@ -43,7 +45,7 @@ service cloud.firestore {
                   || (hasRole('TaxConsultant') && userId in getUserData(request.auth.uid).linkedClientIds);
     }
     
-    // ================== WALLETS SUBCOLLECTION ==================
+    // ================== WALLETS SUBCOLLECTION (FIXED) ==================
     match /users/{userId}/wallets/{walletId} {
       allow write: if isOwner(userId);
       allow read: if isOwner(userId) 
