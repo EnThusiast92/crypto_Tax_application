@@ -7,16 +7,15 @@ service cloud.firestore {
       return request.auth.uid != null;
     }
 
-    // This function can be used in rules for GET, CREATE, UPDATE, DELETE but NOT for LIST queries.
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
     }
-    
-    // Safer hasRole function to be used for non-list rules.
-    function hasRole(role) {
+
+    function isRole(role) {
       return isSignedIn() &&
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             getUserData().role == role;
+             'role' in getUserData(request.auth.uid) &&
+             getUserData(request.auth.uid).role == role;
     }
     
     function isOwner(userId) {
@@ -24,46 +23,48 @@ service cloud.firestore {
     }
 
     // ================== GLOBAL DEVELOPER RULE ==================
-    // Developers can read/write anything. This rule should be placed first.
+    // Developer has god-mode access.
     match /{path=**} {
-      allow read, write: if hasRole('Developer');
+      allow read, write: if isRole('Developer');
     }
 
     // ================== USERS COLLECTION ==================
     match /users/{userId} {
       allow create: if isSignedIn();
       allow get: if isSignedIn();
-      allow list: if isSignedIn(); // Allows querying the users collection.
+      // Allow any signed-in user to query the users collection,
+      // which is needed to check if a consultant exists before sending an invite.
+      allow list: if isSignedIn();
 
       allow update: if isOwner(userId);
     }
-    
+
     // ================== TRANSACTIONS SUBCOLLECTION ==================
     match /users/{userId}/transactions/{transactionId} {
-      allow read, write: if isOwner(userId) || (hasRole('TaxConsultant') && userId in getUserData().linkedClientIds);
-    }
-
-    // ================== WALLETS SUBCOLLECTION (CORRECTED) ==================
-    // This rule allows a user to read/write/list their own wallets.
-    // It also allows a linked consultant to read the wallets.
-    // Importantly, the read rule for owners does not use `get`, so it works for `list` queries.
-    match /users/{userId}/wallets/{walletId} {
+      allow read: if isOwner(userId) 
+                  || (isRole('TaxConsultant') && userId in getUserData(request.auth.uid).linkedClientIds);
       allow write: if isOwner(userId);
-      allow read: if isOwner(userId) || (hasRole('TaxConsultant') && userId in getUserData().linkedClientIds);
     }
     
+    // ================== WALLETS SUBCOLLECTION ==================
+    match /users/{userId}/wallets/{walletId} {
+      allow read: if isOwner(userId)
+                  || (isRole('TaxConsultant') && userId in getUserData(request.auth.uid).linkedClientIds);
+      allow write: if isOwner(userId);
+    }
+
     // ================== INVITATIONS COLLECTION ==================
     match /invitations/{invitationId} {
-        allow create: if hasRole('Client');
-        allow get, list: if isSignedIn();
-        allow update: if hasRole('TaxConsultant');
-        allow delete: if isSignedIn();
+        allow create: if isRole('Client');
+        allow get, list: if isSignedIn() && (resource.data.toConsultantEmail == getUserData(request.auth.uid).email || resource.data.fromClientId == request.auth.uid);
+        allow update: if isRole('TaxConsultant') && resource.data.toConsultantEmail == getUserData(request.auth.uid).email;
+        allow delete: if isSignedIn() && (resource.data.fromClientId == request.auth.uid || resource.data.toConsultantEmail == getUserData(request.auth.uid).email);
     }
 
     // ================== APP SETTINGS ==================
     match /app/{docId} {
       allow read: if isSignedIn();
-      allow write: if hasRole('Developer');
+      allow write: if isRole('Developer');
     }
   }
 }
