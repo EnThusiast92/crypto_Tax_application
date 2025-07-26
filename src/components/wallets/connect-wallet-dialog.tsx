@@ -126,32 +126,36 @@ export function ConnectWalletDialog({ isOpen, onOpenChange }: ConnectWalletDialo
                           className="grid grid-cols-2 gap-4"
                         >
                           <FormItem>
-                            <FormControl>
-                              <RadioGroupItem value="DEX" id="dex" className="sr-only" checked={field.value === 'DEX'} />
-                            </FormControl>
-                            <FormLabel
-                              htmlFor="dex"
-                              className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary cursor-pointer"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="mb-3 h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                              </svg>
-                              DEX Wallet
-                            </FormLabel>
+                            <div className="rounded-md border-2 border-muted bg-popover hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
+                              <FormControl>
+                                <RadioGroupItem value="DEX" id="dex" className="sr-only" />
+                              </FormControl>
+                              <FormLabel
+                                htmlFor="dex"
+                                className="flex flex-col items-center justify-between p-4 cursor-pointer"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="mb-3 h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
+                                DEX Wallet
+                              </FormLabel>
+                            </div>
                           </FormItem>
                           <FormItem>
-                            <FormControl>
-                              <RadioGroupItem value="CEX" id="cex" className="sr-only" checked={field.value === 'CEX'} />
-                            </FormControl>
-                            <FormLabel
-                              htmlFor="cex"
-                              className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary cursor-pointer"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="mb-3 h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 8v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                              </svg>
-                              CEX Exchange
-                            </FormLabel>
+                            <div className="rounded-md border-2 border-muted bg-popover hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
+                              <FormControl>
+                                <RadioGroupItem value="CEX" id="cex" className="sr-only" />
+                              </FormControl>
+                              <FormLabel
+                                htmlFor="cex"
+                                className="flex flex-col items-center justify-between p-4 cursor-pointer"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="mb-3 h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 8v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                </svg>
+                                CEX Exchange
+                              </FormLabel>
+                            </div>
                           </FormItem>
                         </RadioGroup>
                       </FormControl>
