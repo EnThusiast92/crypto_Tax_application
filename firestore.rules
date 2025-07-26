@@ -1,5 +1,5 @@
-rules_version = '2';
 
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -13,8 +13,7 @@ service cloud.firestore {
     }
 
     function hasRole(role) {
-      // This is a safe check. If the user doc or role is missing, it returns false.
-      return isSignedIn() && getUserData(request.auth.uid) != null && getUserData(request.auth.uid).role == role;
+      return isSignedIn() && getUserData(request.auth.uid).role == role;
     }
     
     function isOwner(userId) {
@@ -30,18 +29,29 @@ service cloud.firestore {
     match /users/{userId} {
       allow create: if isSignedIn();
       allow get: if isSignedIn();
+      // Allow any signed-in user to query the users collection,
+      // which is needed to check if a consultant exists before sending an invite.
       allow list: if isSignedIn();
+
       allow update: if isOwner(userId)
                     || (hasRole('TaxConsultant') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['linkedConsultantId']))
                     || (hasRole('Client') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['linkedClientIds']));
     }
 
-    // ================== TRANSACTIONS & WALLETS SUBCOLLECTIONS ==================
-    match /users/{userId}/{collection}/{docId} {
-      // Users can read/write their own transactions and wallets
-      // Consultants can read transactions/wallets of their linked clients
-      allow read, write: if isOwner(userId) 
+    // ================== TRANSACTIONS SUBCOLLECTION ==================
+    match /users/{userId}/transactions/{transactionId} {
+      allow write: if isOwner(userId);
+      allow read: if isOwner(userId) 
                   || (hasRole('TaxConsultant') && userId in getUserData(request.auth.uid).linkedClientIds);
+    }
+    
+    // ================== WALLETS SUBCOLLECTION ==================
+    match /users/{userId}/wallets/{walletId} {
+      // Allow the owner or a linked consultant to read (get, list) wallets.
+      allow read: if isOwner(userId) 
+                  || (hasRole('TaxConsultant') && userId in getUserData(request.auth.uid).linkedClientIds);
+      // Only allow the owner to create, update, or delete wallets.
+      allow write: if isOwner(userId);
     }
     
     // ================== INVITATIONS COLLECTION ==================

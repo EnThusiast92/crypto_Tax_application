@@ -68,6 +68,9 @@ export function ConnectWalletDialog({ isOpen, onOpenChange }: ConnectWalletDialo
     defaultValues: {
       name: '',
       type: 'DEX',
+      publicAddress: '',
+      apiKey: '',
+      apiSecret: '',
     },
   });
 
