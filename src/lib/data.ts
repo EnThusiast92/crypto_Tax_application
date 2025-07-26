@@ -1,5 +1,5 @@
 
-import type { Transaction, User, StatCardData, StaticWallet } from './types';
+import type { Transaction, User, StatCardData, StaticWallet, Holding } from './types';
 import { ArrowUpRight, ArrowDownLeft, Banknote, Landmark } from 'lucide-react';
 import { db } from './firebase';
 import { collection, writeBatch, doc, Timestamp } from 'firebase/firestore';
@@ -75,3 +75,69 @@ export const allWallets: StaticWallet[] = [
 ].filter((wallet, index, self) => 
     index === self.findIndex((w) => (w.name === wallet.name))
 ); // Remove duplicates
+
+
+export const portfolioChartData = [
+  { name: 'Jan', value: 90000 },
+  { name: 'Feb', value: 110000 },
+  { name: 'Mar', value: 105000 },
+  { name: 'Apr', value: 120000 },
+  { name: 'May', value: 130000 },
+  { name: 'Jun', value: 125000 },
+  { name: 'Jul', value: 140000 },
+  { name: 'Aug', value: 150000 },
+  { name: 'Sep', value: 145000 },
+  { name: 'Oct', value: 155000 },
+  { name: 'Nov', value: 170000 },
+  { name: 'Dec', value: 160168 },
+];
+
+const generateSparkline = () => Array.from({ length: 20 }, () => ({ value: Math.random() * 100 }));
+
+export const holdings: Holding[] = [
+  {
+    asset: 'BTC',
+    balance: 1.4537,
+    cost: 71259,
+    marketValue: 126834,
+    roi: 0.7799,
+    hasIssue: false,
+    chartData: generateSparkline(),
+  },
+  {
+    asset: 'SOL',
+    balance: 242.3503,
+    cost: 31764,
+    marketValue: 33323,
+    roi: 0.0491,
+    hasIssue: true,
+    chartData: generateSparkline(),
+  },
+  {
+    asset: 'ETH',
+    balance: 0.0025,
+    cost: 5,
+    marketValue: 7,
+    roi: 0.4257,
+    hasIssue: false,
+    chartData: generateSparkline(),
+  },
+  {
+    asset: 'MATIC',
+    balance: 19.6985,
+    cost: 22,
+    marketValue: 3,
+    roi: -0.8451,
+    hasIssue: false,
+    chartData: generateSparkline(),
+  },
+  {
+    asset: 'USDC',
+    balance: 0.6983,
+    cost: 1,
+    marketValue: 1,
+    roi: -0.0189,
+    hasIssue: false,
+    chartData: generateSparkline(),
+  },
+];

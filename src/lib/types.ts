@@ -1,5 +1,4 @@
 
-
 import type { Timestamp } from 'firebase/firestore';
 
 export type Role = 'Developer' | 'Staff' | 'Client' | 'TaxConsultant';
@@ -49,6 +48,17 @@ export type Transaction = {
   toQuantity?: number;
   walletId?: string; // Link transaction to a specific wallet
 };
+
+export type Holding = {
+  asset: string;
+  balance: number;
+  cost: number;
+  marketValue: number;
+  roi: number;
+  hasIssue: boolean;
+  chartData: { value: number }[];
+};
+
 
 export type StatCardData = {
   title: string;

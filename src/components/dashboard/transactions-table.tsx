@@ -1,4 +1,5 @@
 
+// This file is no longer used by the new dashboard and can be considered for deletion in a future cleanup.
 'use client';
 
 import * as React from 'react';

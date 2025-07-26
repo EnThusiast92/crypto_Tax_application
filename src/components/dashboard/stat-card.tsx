@@ -1,3 +1,5 @@
+
+// This file is no longer used by the new dashboard and can be considered for deletion in a future cleanup.
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { StatCardData } from '@/lib/types';
 import { cn } from '@/lib/utils';

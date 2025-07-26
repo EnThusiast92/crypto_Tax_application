@@ -4,18 +4,29 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth-context';
-import { statCards } from '@/lib/data';
-import { StatCard } from '@/components/dashboard/stat-card';
-import { TransactionsTable } from '@/components/dashboard/transactions-table';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { holdings } from '@/lib/data';
+import { OnboardingSteps } from '@/components/dashboard/onboarding-steps';
+import { PortfolioChart } from '@/components/dashboard/portfolio-chart';
+import { SummaryBar } from '@/components/dashboard/summary-bar';
+import { HoldingsTable } from '@/components/dashboard/holdings-table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { FileDown } from 'lucide-react';
-import { useTransactions } from '@/context/transactions-context';
+import { Calendar as CalendarIcon } from 'lucide-react';
+import { DateRange } from 'react-day-picker';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { IconProvider } from '@/context/icon-context';
 
 export default function DashboardPage() {
-  const { transactions } = useTransactions();
   const { user } = useAuth();
   const router = useRouter();
+
+  const [date, setDate] = React.useState<DateRange | undefined>({
+    from: new Date(2025, 3, 6),
+    to: new Date(2026, 3, 5),
+  });
 
   React.useEffect(() => {
     if (user?.role === 'TaxConsultant') {
@@ -23,42 +34,66 @@ export default function DashboardPage() {
     }
   }, [user, router]);
 
-  // Prevent rendering the dashboard for the wrong role or while user is loading
   if (!user || user.role === 'TaxConsultant') {
-    return null; // or a loading spinner
+    return null;
   }
 
-  const recentTransactions = transactions.slice(0, 5);
-
   return (
-    <div className="flex flex-col gap-8 animate-in fade-in-0 duration-1000">
-      <header>
-        <h1 className="text-3xl font-bold font-headline">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Welcome back! Here's a summary of your crypto tax situation.
-        </p>
-      </header>
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {statCards.map((card, index) => (
-          <div key={card.title} className="animate-in fade-in-0 slide-in-from-bottom-5 duration-500" style={{animationDelay: `${index * 100}ms`}}>
-            <StatCard {...card} />
+    <IconProvider>
+      <div className="flex flex-col gap-6 animate-in fade-in-0 duration-1000">
+        <OnboardingSteps name={user.name.split(' ')[0]} />
+
+        <Tabs defaultValue="overview">
+          <div className="flex justify-between items-center">
+            <TabsList>
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="nfts" disabled>NFTs</TabsTrigger>
+              <TabsTrigger value="tax-optimization" disabled>Tax optimization</TabsTrigger>
+            </TabsList>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  id="date"
+                  variant={"outline"}
+                  className={cn(
+                    "w-[260px] justify-start text-left font-normal",
+                    !date && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {date?.from ? (
+                    date.to ? (
+                      <>
+                        {format(date.from, "LLL dd, y")} -{" "}
+                        {format(date.to, "LLL dd, y")}
+                      </>
+                    ) : (
+                      format(date.from, "LLL dd, y")
+                    )
+                  ) : (
+                    <span>Pick a date</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={date?.from}
+                  selected={date}
+                  onSelect={setDate}
+                  numberOfMonths={2}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
-        ))}
+          <TabsContent value="overview" className="space-y-6 mt-4">
+            <PortfolioChart />
+            <SummaryBar />
+            <HoldingsTable data={holdings} />
+          </TabsContent>
+        </Tabs>
       </div>
-      <div className="animate-in fade-in-0 slide-in-from-bottom-5 duration-500" style={{animationDelay: `400ms`}}>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Recent Transactions</CardTitle>
-            <Button variant="outline" size="sm" className="gap-2">
-              <FileDown className="h-4 w-4" />
-              Export
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <TransactionsTable data={recentTransactions} />
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+    </IconProvider>
   );
 }
