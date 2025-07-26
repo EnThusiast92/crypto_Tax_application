@@ -16,6 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { IconProvider } from '@/context/icon-context';
 
 export default function WalletsPage() {
     const [isDialogOpen, setIsDialogOpen] = React.useState(false);
@@ -71,7 +72,9 @@ export default function WalletsPage() {
                            ))}
                         </div>
                     ) : (
-                        <WalletList wallets={wallets} />
+                        <IconProvider>
+                            <WalletList wallets={wallets} />
+                        </IconProvider>
                     )}
                 </main>
             </div>
