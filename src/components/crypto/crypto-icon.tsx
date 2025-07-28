@@ -35,16 +35,18 @@ export function CryptoIcon({ asset, className = 'w-6 h-6' }: CryptoIconProps) {
   const iconUrl = getIcon(assetSymbol);
 
   React.useEffect(() => {
-    if (!isLoading && !iconUrl && assetSymbol) {
+    // Only fetch if the icon isn't in our map at all (undefined)
+    if (!isLoading && iconUrl === undefined && assetSymbol) {
       fetchAndCacheIcon(assetSymbol);
     }
   }, [isLoading, iconUrl, assetSymbol, fetchAndCacheIcon]);
 
-  if (isLoading) {
+  if (isLoading && iconUrl === undefined) {
     return <Skeleton className={cn("rounded-full", className)} />;
   }
   
-  if (hasError || !iconUrl) {
+  // If we have an error, or the icon was fetched and explicitly marked as not found
+  if (hasError || iconUrl === 'not_found' || !iconUrl) {
     return <GenericIcon className={className} />;
   }
 

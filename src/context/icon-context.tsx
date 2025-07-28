@@ -17,7 +17,7 @@ const IconContext = React.createContext<IconContextType | undefined>(undefined);
 export const IconProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [iconMap, setIconMap] = React.useState<IconMap>({});
   const [isLoading, setIsLoading] = React.useState(true);
-  // Keep track of symbols we've already tried to fetch to prevent re-fetching on every render
+  // Keep track of symbols we've already tried to fetch to prevent re-fetching
   const attemptedFetches = React.useRef(new Set<string>());
 
   React.useEffect(() => {
@@ -44,8 +44,11 @@ export const IconProvider: FC<{ children: ReactNode }> = ({ children }) => {
   }, [iconMap]);
 
   const fetchAndCacheIcon = React.useCallback(async (symbol: string) => {
+    if (!symbol) return;
     const lowerSymbol = symbol.toLowerCase();
-    if (!lowerSymbol || iconMap[lowerSymbol] || attemptedFetches.current.has(lowerSymbol)) {
+    
+    // Do not re-fetch if it's already in the map or has been attempted
+    if (iconMap[lowerSymbol] || attemptedFetches.current.has(lowerSymbol)) {
       return;
     }
     
@@ -54,8 +57,14 @@ export const IconProvider: FC<{ children: ReactNode }> = ({ children }) => {
     try {
       const res = await fetch(`/api/crypto/icon?symbol=${lowerSymbol}`);
       if (!res.ok) {
-        // Don't throw an error, just log it. The component will handle the fallback.
+        // The API route now returns a specific 404 if not found, so this is a graceful failure.
+        // The component will handle the fallback. We don't need to throw an error.
         console.warn(`Could not fetch icon for ${symbol}. Status: ${res.status}`);
+        // Add a "not_found" sentinel value to prevent refetching
+        setIconMap(prevMap => ({
+          ...prevMap,
+          [lowerSymbol]: 'not_found',
+        }));
         return;
       }
       const data = await res.json();
@@ -64,9 +73,13 @@ export const IconProvider: FC<{ children: ReactNode }> = ({ children }) => {
           ...prevMap,
           [lowerSymbol]: data.iconUrl,
         }));
+      } else {
+         // Mark as not found if API returns ok but no URL
+         setIconMap(prevMap => ({ ...prevMap, [lowerSymbol]: 'not_found' }));
       }
     } catch (error) {
       console.error(`Error fetching icon for ${symbol}:`, error);
+      setIconMap(prevMap => ({ ...prevMap, [lowerSymbol]: 'not_found' }));
     }
   }, [iconMap]);
   
