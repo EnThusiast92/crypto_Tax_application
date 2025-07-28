@@ -4,8 +4,8 @@ import type {NextConfig} from 'next';
 const nextConfig: NextConfig = {
   /* config options here */
   // This is required for the Gitpod preview to work correctly.
-  allowedDevOrigins: ['*'],
   experimental: {
+    allowedDevOrigins: ['*'],
   },
   typescript: {
     ignoreBuildErrors: true,
