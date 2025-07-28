@@ -9,6 +9,7 @@ import { TransactionsProvider } from '@/context/transactions-context';
 import { WalletsProvider } from '@/context/wallets-context';
 import AppShell from '@/components/app-shell';
 import { useRouter, usePathname } from 'next/navigation';
+import { IconProvider } from '@/context/icon-context';
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
     const { user, loading } = useAuth();
@@ -46,7 +47,9 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
             <SettingsProvider>
                 <TransactionsProvider>
                     <WalletsProvider>
-                        <AppShell>{children}</AppShell>
+                        <IconProvider>
+                            <AppShell>{children}</AppShell>
+                        </IconProvider>
                     </WalletsProvider>
                 </TransactionsProvider>
             </SettingsProvider>

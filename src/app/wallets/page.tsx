@@ -15,7 +15,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { IconProvider } from '@/context/icon-context';
 import Link from 'next/link';
 
 export default function WalletsPage() {
@@ -73,9 +72,7 @@ export default function WalletsPage() {
                            ))}
                         </div>
                     ) : (
-                        <IconProvider>
-                            <WalletList wallets={wallets} />
-                        </IconProvider>
+                        <WalletList wallets={wallets} />
                     )}
                 </main>
             </div>

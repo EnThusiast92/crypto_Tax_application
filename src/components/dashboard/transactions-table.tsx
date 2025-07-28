@@ -26,9 +26,8 @@ import type { Transaction } from '@/lib/types';
 import { columns } from './columns';
 import { TransactionDetail } from '@/components/transactions/transaction-detail';
 import { cn } from '@/lib/utils';
-import { IconProvider } from '@/context/icon-context';
 
-function TransactionsTableContent({ data }: { data: Transaction[] }) {
+export function TransactionsTable({ data }: { data: Transaction[] }) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
@@ -170,12 +169,4 @@ function TransactionsTableContent({ data }: { data: Transaction[] }) {
       </div>
     </div>
   );
-}
-
-export function TransactionsTable({ data }: { data: Transaction[] }) {
-  return (
-    <IconProvider>
-      <TransactionsTableContent data={data} />
-    </IconProvider>
-  )
 }
